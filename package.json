@@ -1,0 +1,30 @@
+{
+  "name": "slotdemo",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CalvetMarc/SlotDemo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/CalvetMarc/SlotDemo/issues"
+  },
+  "homepage": "https://github.com/CalvetMarc/SlotDemo#readme",
+  "description": "",
+  "dependencies": {
+    "pixi.js": "^8.14.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^7.3.0"
+  }
+}
