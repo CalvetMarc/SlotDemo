@@ -1,0 +1,10 @@
+{
+  "bg_back": "assets/base/background/static/back.png",
+  "bg_fog": "assets/base/background/static/fog.png",
+
+  "bg_frame_back": "assets/base/background/static/frame_back.png",
+  "bg_frame": "assets/base/background/static/frame.png",
+
+  "bg_spikes": "assets/base/background/static/spikes.png",
+  "bg_wood": "assets/base/background/static/wood.png"
+}

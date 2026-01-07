@@ -1,0 +1,6 @@
+{
+    "paytable_static": "assets/base/info/static/paytable/paytable_static.json",
+
+    "pattern_lines": "assets/base/info/static/_src/lines.png",
+    "paytable_header": "assets/base/info/static/_src/win_table_header.png"
+}
