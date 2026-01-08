@@ -1,0 +1,29 @@
+{"frames": {
+
+"flies_16.png":
+{
+	"frame": {"x":1,"y":347,"w":369,"h":336},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":46,"y":84,"w":369,"h":336},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_19.png":
+{
+	"frame": {"x":1,"y":1,"w":369,"h":344},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":46,"y":74,"w":369,"h":344},
+	"sourceSize": {"w":500,"h":500}
+}},
+"meta": {
+	"app": "https://www.codeandweb.com/texturepacker",
+	"version": "1.1",
+	"image": "flies_loop-1.png",
+	"format": "RGBA8888",
+	"size": {"w":371,"h":684},
+	"scale": "1",
+	"related_multi_packs": [ "flies_loop-0.json" ],
+	"smartupdate": "$TexturePacker:SmartUpdate:ae3eeb3e2f02342a0755eadd5eccaabb:6cc609d1bd0714e46b3307b6d21bad04:6dd901a662ff3eeb7996be84eab81e9f$"
+}
+}

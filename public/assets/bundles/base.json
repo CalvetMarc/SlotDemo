@@ -1,7 +1,0 @@
-{
-  "background": "assets/bundles/background/base.background.json",
-  "info": "assets/bundles/info/base.info.json",
-  "slot": "assets/bundles/slot/base.slot.json",
-  "symbols": "assets/bundles/symbols/base.symbols.json",
-  "ui": "assets/bundles/ui/base.ui.json"
-}

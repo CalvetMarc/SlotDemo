@@ -1,0 +1,5 @@
+{  
+    "button_bg_active": "assets/base/ui/main_btn_up.png",
+    "button_bg_innactive": "assets/base/ui/main_btn_down.png",
+    "field_bg": "assets/base/ui/btn_up.png"
+}

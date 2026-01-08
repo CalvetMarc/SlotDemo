@@ -1,0 +1,84 @@
+{"frames": {
+
+"1.png":
+{
+	"frame": {"x":1,"y":395,"w":340,"h":340},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":37,"y":37,"w":340,"h":340},
+	"sourceSize": {"w":415,"h":415}
+},
+"2.png":
+{
+	"frame": {"x":1574,"y":352,"w":340,"h":342},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":37,"y":36,"w":340,"h":342},
+	"sourceSize": {"w":415,"h":415}
+},
+"3.png":
+{
+	"frame": {"x":1574,"y":1,"w":340,"h":349},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":37,"y":33,"w":340,"h":349},
+	"sourceSize": {"w":415,"h":415}
+},
+"A.png":
+{
+	"frame": {"x":1157,"y":1,"w":415,"h":415},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":415,"h":415},
+	"sourceSize": {"w":415,"h":415}
+},
+"J.png":
+{
+	"frame": {"x":343,"y":395,"w":340,"h":340},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":37,"y":37,"w":340,"h":340},
+	"sourceSize": {"w":415,"h":415}
+},
+"K.png":
+{
+	"frame": {"x":685,"y":395,"w":340,"h":340},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":37,"y":37,"w":340,"h":340},
+	"sourceSize": {"w":415,"h":415}
+},
+"Q.png":
+{
+	"frame": {"x":1027,"y":418,"w":324,"h":333},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":37,"y":44,"w":324,"h":333},
+	"sourceSize": {"w":415,"h":415}
+},
+"Scatter_01.png":
+{
+	"frame": {"x":1,"y":1,"w":578,"h":392},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":12,"y":40,"w":578,"h":392},
+	"sourceSize": {"w":596,"h":465}
+},
+"Wild_01.png":
+{
+	"frame": {"x":581,"y":1,"w":574,"h":392},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":12,"y":40,"w":574,"h":392},
+	"sourceSize": {"w":596,"h":465}
+}},
+"meta": {
+	"app": "https://www.codeandweb.com/texturepacker",
+	"version": "1.1",
+	"image": "symbols_static.png",
+	"format": "RGBA8888",
+	"size": {"w":1915,"h":743},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:9282629b445ac49f37c54937e09b4886:0ffc1208a4dd974ce8539623c371a773:a007f2a485e0827120082f345efe5b9a$"
+}
+}

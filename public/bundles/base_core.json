@@ -1,0 +1,6 @@
+{
+  "base_background_elements": "bundles/background/base_background.json",
+  "symbols_static": "assets/base/symbols/static/symbols_static.json",
+  "slot_elements": "bundles/slot/slot_machine.json",
+  "ui_elements": "bundles/ui/ui.json"
+}

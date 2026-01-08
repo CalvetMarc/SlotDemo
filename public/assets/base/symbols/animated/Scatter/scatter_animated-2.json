@@ -1,0 +1,85 @@
+{"frames": {
+
+"Scatter_07.png":
+{
+	"frame": {"x":1143,"y":395,"w":564,"h":406},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":26,"y":26,"w":564,"h":406},
+	"sourceSize": {"w":596,"h":465}
+},
+"Scatter_09.png":
+{
+	"frame": {"x":1,"y":789,"w":549,"h":424},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":41,"y":8,"w":549,"h":424},
+	"sourceSize": {"w":596,"h":465}
+},
+"Scatter_10.png":
+{
+	"frame": {"x":1099,"y":803,"w":544,"h":431},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":46,"y":1,"w":544,"h":431},
+	"sourceSize": {"w":596,"h":465}
+},
+"Scatter_17.png":
+{
+	"frame": {"x":579,"y":1,"w":573,"h":392},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":17,"y":40,"w":573,"h":392},
+	"sourceSize": {"w":596,"h":465}
+},
+"Scatter_18.png":
+{
+	"frame": {"x":1154,"y":1,"w":570,"h":392},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":20,"y":40,"w":570,"h":392},
+	"sourceSize": {"w":596,"h":465}
+},
+"Scatter_19.png":
+{
+	"frame": {"x":1,"y":395,"w":572,"h":392},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":18,"y":40,"w":572,"h":392},
+	"sourceSize": {"w":596,"h":465}
+},
+"Scatter_20.png":
+{
+	"frame": {"x":1,"y":1,"w":576,"h":392},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":14,"y":40,"w":576,"h":392},
+	"sourceSize": {"w":596,"h":465}
+},
+"Scatter_27.png":
+{
+	"frame": {"x":575,"y":395,"w":566,"h":405},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":24,"y":27,"w":566,"h":405},
+	"sourceSize": {"w":596,"h":465}
+},
+"Scatter_30.png":
+{
+	"frame": {"x":552,"y":802,"w":545,"h":429},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":45,"y":3,"w":545,"h":429},
+	"sourceSize": {"w":596,"h":465}
+}},
+"meta": {
+	"app": "https://www.codeandweb.com/texturepacker",
+	"version": "1.1",
+	"image": "scatter_animated-2.png",
+	"format": "RGBA8888",
+	"size": {"w":1725,"h":1235},
+	"scale": "1",
+	"related_multi_packs": [ "scatter_animated-0.json", "scatter_animated-1.json" ],
+	"smartupdate": "$TexturePacker:SmartUpdate:36962117933b85e92554e0335a6b087b:1ccc4eec41056249812b54dacefb048c:cd03fbd0f6fe69a7262ed0b0410bae52$"
+}
+}

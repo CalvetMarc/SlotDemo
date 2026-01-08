@@ -1,0 +1,223 @@
+{"frames": {
+
+"flies_appearing_01.png":
+{
+	"frame": {"x":1,"y":1488,"w":29,"h":17},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":135,"y":364,"w":29,"h":17},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_02.png":
+{
+	"frame": {"x":1624,"y":1229,"w":177,"h":103},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":129,"y":286,"w":177,"h":103},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_03.png":
+{
+	"frame": {"x":1047,"y":1317,"w":213,"h":230},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":107,"y":163,"w":213,"h":230},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_04.png":
+{
+	"frame": {"x":1624,"y":975,"w":247,"h":252},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":104,"y":151,"w":247,"h":252},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_05.png":
+{
+	"frame": {"x":1623,"y":712,"w":261,"h":256},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":93,"y":149,"w":261,"h":256},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_06.png":
+{
+	"frame": {"x":1337,"y":1263,"w":273,"h":269},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":92,"y":138,"w":273,"h":269},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_07.png":
+{
+	"frame": {"x":1343,"y":993,"w":268,"h":279},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":96,"y":130,"w":268,"h":279},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_08.png":
+{
+	"frame": {"x":1343,"y":712,"w":278,"h":279},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":83,"y":130,"w":278,"h":279},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_09.png":
+{
+	"frame": {"x":1047,"y":1029,"w":288,"h":286},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":85,"y":121,"w":288,"h":286},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_10.png":
+{
+	"frame": {"x":1036,"y":714,"w":305,"h":313},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":76,"y":106,"w":305,"h":313},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_11.png":
+{
+	"frame": {"x":766,"y":1,"w":376,"h":358},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":35,"y":82,"w":376,"h":358},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_12.png":
+{
+	"frame": {"x":384,"y":1,"w":380,"h":356},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":40,"y":79,"w":380,"h":356},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_13.png":
+{
+	"frame": {"x":750,"y":361,"w":369,"h":351},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":46,"y":80,"w":369,"h":351},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_14.png":
+{
+	"frame": {"x":1500,"y":372,"w":376,"h":338},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":35,"y":89,"w":376,"h":338},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_15.png":
+{
+	"frame": {"x":358,"y":728,"w":380,"h":338},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":40,"y":85,"w":380,"h":338},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_16.png":
+{
+	"frame": {"x":698,"y":728,"w":369,"h":336},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":46,"y":84,"w":369,"h":336},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_17.png":
+{
+	"frame": {"x":1121,"y":362,"w":377,"h":341},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":34,"y":77,"w":377,"h":341},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_18.png":
+{
+	"frame": {"x":354,"y":1110,"w":380,"h":345},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":40,"y":73,"w":380,"h":345},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_19.png":
+{
+	"frame": {"x":701,"y":1099,"w":369,"h":344},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":46,"y":74,"w":369,"h":344},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_20.png":
+{
+	"frame": {"x":1,"y":1110,"w":376,"h":351},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":35,"y":69,"w":376,"h":351},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_21.png":
+{
+	"frame": {"x":1,"y":728,"w":380,"h":355},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":40,"y":67,"w":380,"h":355},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_22.png":
+{
+	"frame": {"x":379,"y":372,"w":369,"h":354},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":46,"y":72,"w":369,"h":354},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_23.png":
+{
+	"frame": {"x":1144,"y":1,"w":376,"h":359},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":35,"y":70,"w":376,"h":359},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_24.png":
+{
+	"frame": {"x":1,"y":1,"w":381,"h":361},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":39,"y":72,"w":381,"h":361},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_25.png":
+{
+	"frame": {"x":1522,"y":1,"w":369,"h":359},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":46,"y":79,"w":369,"h":359},
+	"sourceSize": {"w":500,"h":500}
+},
+"flies_appearing_26.png":
+{
+	"frame": {"x":1,"y":364,"w":376,"h":362},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":35,"y":80,"w":376,"h":362},
+	"sourceSize": {"w":500,"h":500}
+}},
+"animations": {
+	"flies_appearing": ["flies_appearing_01.png","flies_appearing_02.png","flies_appearing_03.png","flies_appearing_04.png","flies_appearing_05.png","flies_appearing_06.png","flies_appearing_07.png","flies_appearing_08.png","flies_appearing_09.png","flies_appearing_10.png","flies_appearing_11.png","flies_appearing_12.png","flies_appearing_13.png","flies_appearing_14.png","flies_appearing_15.png","flies_appearing_16.png","flies_appearing_17.png","flies_appearing_18.png","flies_appearing_19.png","flies_appearing_20.png","flies_appearing_21.png","flies_appearing_22.png","flies_appearing_23.png","flies_appearing_24.png","flies_appearing_25.png","flies_appearing_26.png"]
+},
+"meta": {
+	"app": "https://www.codeandweb.com/texturepacker",
+	"version": "1.1",
+	"image": "flies_appear.png",
+	"format": "RGBA8888",
+	"size": {"w":1882,"h":1533},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:520a509981b75bf537cdb43fe5777e6f:80408ee6b89066d8540afc46ea3faa7c:21d16fe02891e0b108105b8332ab8a8d$"
+}
+}

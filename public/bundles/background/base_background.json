@@ -1,0 +1,7 @@
+{ 
+  "spikes": "assets/base/background/static/spikes.png",
+  "wood": "assets/base/background/static/wood.png",
+
+  "bats": "public/aseets/base/background/animated/bats/bats_animated.json",
+  "flies": "public/bundles/background/flies/flies.json"
+}

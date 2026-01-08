@@ -1,0 +1,101 @@
+{"frames": {
+
+"chest_01.png":
+{
+	"frame": {"x":616,"y":1280,"w":613,"h":311},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":19,"y":158,"w":613,"h":311},
+	"sourceSize": {"w":651,"h":501}
+},
+"chest_02.png":
+{
+	"frame": {"x":1231,"y":1250,"w":613,"h":358},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":19,"y":124,"w":613,"h":358},
+	"sourceSize": {"w":651,"h":501}
+},
+"chest_03.png":
+{
+	"frame": {"x":1231,"y":862,"w":613,"h":386},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":19,"y":98,"w":613,"h":386},
+	"sourceSize": {"w":651,"h":501}
+},
+"chest_04.png":
+{
+	"frame": {"x":616,"y":861,"w":613,"h":417},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":19,"y":70,"w":613,"h":417},
+	"sourceSize": {"w":651,"h":501}
+},
+"chest_12.png":
+{
+	"frame": {"x":1,"y":865,"w":613,"h":423},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":19,"y":46,"w":613,"h":423},
+	"sourceSize": {"w":651,"h":501}
+},
+"chest_13.png":
+{
+	"frame": {"x":616,"y":433,"w":613,"h":426},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":19,"y":61,"w":613,"h":426},
+	"sourceSize": {"w":651,"h":501}
+},
+"chest_14.png":
+{
+	"frame": {"x":1231,"y":432,"w":613,"h":428},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":19,"y":53,"w":613,"h":428},
+	"sourceSize": {"w":651,"h":501}
+},
+"chest_15.png":
+{
+	"frame": {"x":1231,"y":1,"w":613,"h":429},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":19,"y":48,"w":613,"h":429},
+	"sourceSize": {"w":651,"h":501}
+},
+"chest_21.png":
+{
+	"frame": {"x":1,"y":1,"w":613,"h":430},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":19,"y":57,"w":613,"h":430},
+	"sourceSize": {"w":651,"h":501}
+},
+"chest_22.png":
+{
+	"frame": {"x":1,"y":433,"w":613,"h":430},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":19,"y":57,"w":613,"h":430},
+	"sourceSize": {"w":651,"h":501}
+},
+"chest_23.png":
+{
+	"frame": {"x":616,"y":1,"w":613,"h":430},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":19,"y":57,"w":613,"h":430},
+	"sourceSize": {"w":651,"h":501}
+}},
+"meta": {
+	"app": "https://www.codeandweb.com/texturepacker",
+	"version": "1.1",
+	"image": "chest_animated-1.png",
+	"format": "RGBA8888",
+	"size": {"w":1845,"h":1609},
+	"scale": "1",
+	"related_multi_packs": [ "chest_animated-0.json" ],
+	"smartupdate": "$TexturePacker:SmartUpdate:1c16e032b708cb27b393a858671051d2:3a3f94a16e6946ef87187bf86f81daed:f4c750ac5cdaf5b3b2a4df0b6148ebb0$"
+}
+}
