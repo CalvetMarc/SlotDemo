@@ -5,8 +5,7 @@ async function main() {
 
   const app = new Application();
   await app.init({
-    width: 1920,
-    height: 1080,
+    resizeTo: window,
     backgroundColor: 0x000000,
     resolution: window.devicePixelRatio || 1,
     autoDensity: true,

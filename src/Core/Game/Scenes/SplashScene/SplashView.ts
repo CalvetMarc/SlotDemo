@@ -1,32 +1,37 @@
 import { Sprite, AnimatedSprite, Assets } from 'pixi.js';
 import { BaseView } from '../../../Abstractions/BaseView';
 
+type SplashLayout = {
+  logo: { x: number; y: number };
+  loading: { x: number; y: number };
+};
+
 export class SplashView extends BaseView {
-  private background!: Sprite;
   private logo!: Sprite;
   private loading?: AnimatedSprite;
 
   protected build(): void {
-    this.background = Sprite.from('background');
-    this.logo = Sprite.from('splash_logo');
-
-    this.background.anchor.set(0.5);
+    this.logo = new Sprite(Assets.get('splash_logo'));
     this.logo.anchor.set(0.5);
+    this.logo.scale.set(0.75);
 
-    this.background.position.set(960, 540);
-    this.logo.position.set(960, 420);
-
-    this.addChild(this.background, this.logo);
+    this.addChild(this.logo);
 
     if (Assets.cache.has('loading')) {
       const sheet = Assets.get('loading');
       this.loading = new AnimatedSprite(sheet.animations.loading);
       this.loading.anchor.set(0.5);
-      this.loading.position.set(960, 650);
-      this.loading.animationSpeed = 0.4;
+      this.loading.animationSpeed = -0.05;
       this.loading.play();
-
       this.addChild(this.loading);
+    }
+  }
+
+  public applyLayout(layout: SplashLayout): void {
+    this.logo.position.set(layout.logo.x, layout.logo.y);
+
+    if (this.loading) {
+      this.loading.position.set(layout.loading.x, layout.loading.y);
     }
   }
 

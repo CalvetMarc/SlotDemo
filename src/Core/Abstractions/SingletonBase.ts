@@ -1,16 +1,17 @@
-export abstract class SingletonBase<T extends SingletonBase<T>> {
-  private static _instance: any;
-
-  public static get I(): any {
-    if (!(this as any)._instance) {
-      (this as any)._instance = new (this as any)();
-    }
-    return (this as any)._instance;
-  }
+export abstract class SingletonBase {
+  protected static _instance: unknown;
 
   protected constructor() {
-    const ctor = this.constructor as any;
-    if (ctor._instance)
-      throw new Error(`${ctor.name} already has an instance!`);
+    const ctor = this.constructor as typeof SingletonBase;
+    if ((ctor as any)._instance) {
+      throw new Error(`${ctor.name} already has an instance`);
+    }
+  }
+
+  protected static getInstance<T>(this: new () => T): T {
+    if (!(this as any)._instance) {
+      (this as any)._instance = new this();
+    }
+    return (this as any)._instance;
   }
 }
