@@ -1,0 +1,54 @@
+{
+  "bundles": [
+    {
+      "name": "boot",
+      "assets": {
+        "background": "public/assets/splash/static/_src/back.png",
+        "fog": "public/assets/splash/static/_src/fog.png",
+        "splash_logo": "public/assets/splash/static/_src/splash_logo.png",
+        "loading": "public/assets/splash/animated/loading.json"
+      }
+    },
+    {
+      "name": "base",
+      "assets": {
+        "spikes": "assets/base/background/static/spikes.png",
+        "wood": "assets/base/background/static/wood.png",
+        "bats": "public/aseets/base/background/animated/bats/bats_animated.json",
+        "flies_appear": "assets/base/background/animated/flies/appear/flies_appear.json",
+        "flies_loop": "assets/base/background/animated/flies/loop/flies_loop-0.json",
+
+        "symbols_static": "assets/base/symbols/static/symbols_static.json",
+
+        "frame": "assets/base/slotMachine/static/_src/frame.png",
+        "frame_background": "assets/base/slotMachine/static/_src/frame_back.png",
+        "slot_logo": "assets/base/slotMachine/static/_src/slot_logo.png",
+
+        "button_bg_active": "assets/base/ui/main_btn_up.png",
+        "button_bg_innactive": "assets/base/ui/main_btn_down.png",
+        "field_bg": "assets/base/ui/btn_up.png"
+      }
+    },
+    {
+      "name": "win",
+      "assets": {
+        "j_animated": "assets/base/symbols/animated/J/j_animated.json",
+        "q_animated": "assets/base/symbols/animated/Q/q_animated.json",
+        "k_animated": "assets/base/symbols/animated/K/k_animated.json",
+        "a_animated": "assets/base/symbols/animated/A/a_animated.json",
+        "wolf_animated": "assets/base/symbols/animated/Wolf/wolf_animated.json",
+        "queen_animated": "assets/base/symbols/animated/Queen/queen_animated.json",
+        "king_animated": "assets/base/symbols/animated/King/king_animated.json",
+        "scatter_animated": "assets/base/symbols/animated/Scatter/scatter_animated.json",
+        "wild_animated": "assets/base/symbols/animated/Wild/wild_animated.json"
+      }
+    },
+    {
+      "name": "info",
+      "assets": {
+        "paytable_static": "assets/base/info/static/paytable/paytable_static.json",
+        "pattern_lines": "assets/base/info/static/_src/lines.png"
+      }
+    }
+  ]
+}

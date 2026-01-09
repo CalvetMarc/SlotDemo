@@ -1,7 +1,0 @@
-{
-  "background": "public/assets/splash/static/_src/back.png",
-  "fog": "public/assets/splash/static/_src/fog.png",
-  "splash_logo": "public/assets/splash/static/_src/splash_logo.png",
-  
-  "loading": "public/assets/splash/animated/loading.json"
-}
