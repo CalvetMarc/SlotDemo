@@ -9,18 +9,15 @@ export class BackgroundView extends Container {
     this.bg = Sprite.from('background');
     this.fog = Sprite.from('fog');
 
+    // 👈 clau
     this.bg.anchor.set(0.5);
     this.fog.anchor.set(0.5);
 
-    const gm = GameManager.I;
+    // 👈 el container es col·loca al centre del món
+    this.position.set(GameManager.I.gameSize.width * 0.5, GameManager.I.gameSize.height * 0.5);
 
-    // SEMPRE centre del món
-    this.bg.position.set(
-      gm['designWidth'] * 0.5,
-      gm['designHeight'] * 0.5
-    );
-
-    this.fog.position.copyFrom(this.bg.position);
+    this.bg.position.set(0, 0);
+    this.fog.position.set(0, 0);
 
     this.addChild(this.bg, this.fog);
   }

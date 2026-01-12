@@ -1,3 +1,5 @@
+import { Size } from "pixi.js";
+
 export type LayoutType = 'desktop' | 'mobile';
 
 type Point = { x: number; y: number };
@@ -13,32 +15,26 @@ export type LayoutComposition = {
   splash: SplashLayout;
 };
 
-export const LayoutsSize = {
-    desktop: {
-        width: 1920,
-        height: 1080
-    },
-    mobile: {
-        width: 1080,
-        height: 1920
-    }
+export const LayoutsSize: Size = {
+    width: 2500,
+    height: 1583
 } as const
 
 export const LayoutsCompositions: Record<LayoutType, LayoutComposition> = {
   desktop: {
     splash: {
-      background: {x: 960, y: 540},
-      logo: { x: 960, y: 420 },
-      loading: { x: 960, y: 950 },
-      fog: {x: 960, y: 540}
+      background: {x: 1250, y: 791.5},
+      logo: { x: 1250, y: 615 },
+      loading: { x: 1250, y: 1292 },
+      fog: {x: 1250, y: 791.5}
     }
   },
   mobile: {
     splash: {
-      background: {x: 540, y: 960},
-      logo: { x: 540, y: 720 },
-      loading: { x: 540, y: 1300 },
-      fog: {x: 540, y: 960}
+      background: {x: 1250, y: 791.5},
+      logo: { x: 1250, y: 615 },
+      loading: { x: 1250, y: 1292 },
+      fog: {x: 1250, y: 791.5}
     }
   }
 };

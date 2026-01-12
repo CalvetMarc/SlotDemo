@@ -26,9 +26,8 @@ export class SplashScene extends GameScene {
     this.view.init();
   }
 
-  protected onEnter(): void {
-    const layoutType = GameManager.I.layout;
-    const splashLayout = LayoutsCompositions[layoutType].splash;
+  protected async onEnter(): Promise<void> {
+    const splashLayout = LayoutsCompositions[GameManager.I.currentLayoutType].splash;
 
     this.view.applyLayout(splashLayout);
 
@@ -37,7 +36,7 @@ export class SplashScene extends GameScene {
   }
 
   protected onUpdate(): void {}
-  protected onExit(): void {}
+  protected async onExit(): Promise<void> {}
 
   protected onDestroy(): void {
     this.view.destroy();

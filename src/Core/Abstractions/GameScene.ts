@@ -24,7 +24,7 @@ export abstract class GameScene extends Container {
     this.onEnter();
   }
 
-  public exit(options?: { destroy?: boolean }) {
+  public async exit(options?: { destroy?: boolean }) {
     this.onExit();
 
     if (options?.destroy) {

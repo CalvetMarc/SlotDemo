@@ -13,7 +13,7 @@ export class SplashView extends BaseView {
   protected build(): void {
     this.logo = new Sprite(Assets.get('splash_logo'));
     this.logo.anchor.set(0.5);
-    this.logo.scale.set(0.75);
+    this.logo.scale.set(1);
 
     this.addChild(this.logo);
 
@@ -23,6 +23,7 @@ export class SplashView extends BaseView {
       this.loading.anchor.set(0.5);
       this.loading.animationSpeed = -0.05;
       this.loading.play();
+      this.loading.scale = 1.3;
       this.addChild(this.loading);
     }
   }

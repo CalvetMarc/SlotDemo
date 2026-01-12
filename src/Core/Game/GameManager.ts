@@ -4,18 +4,17 @@ import { Ticker } from 'pixi.js';
 import { SingletonBase } from '../Abstractions/SingletonBase';
 import { GameScene } from '../Abstractions/GameScene';
 import { SplashScene } from './Scenes/SplashScene';
-
-import { LayoutType, LayoutsSize } from '../Layout';
+import { LayoutsSize, LayoutType } from '../Layout';
 
 export class GameManager extends SingletonBase {
   private app!: Application;
   private currentScene?: GameScene;
+  private layoutType!: LayoutType
 
-  private layoutType!: LayoutType;
-  private designWidth!: number;
-  private designHeight!: number;
+  // 🔥 ROOT GLOBAL
+  private rootLayer = new Container();
 
-  // 🔥 LAYERS SEPARATS
+  // 🔥 LAYERS
   private backgroundLayer = new Container();
   private uiLayer = new Container();
 
@@ -30,19 +29,15 @@ export class GameManager extends SingletonBase {
   public init(app: Application): void {
     this.app = app;
 
-    // Layout inicial
-    this.layoutType = window.innerWidth < 768 ? 'mobile' : 'desktop';
+    // Afegim root al stage
+    this.app.stage.addChild(this.rootLayer);
 
-    const size = LayoutsSize[this.layoutType];
-    this.designWidth = size.width;
-    this.designHeight = size.height;
-
-    // Afegim layers a l'stage
-    this.app.stage.addChild(this.backgroundLayer);
-    this.app.stage.addChild(this.uiLayer);
+    // Dins del root
+    this.rootLayer.addChild(this.backgroundLayer);
+    this.rootLayer.addChild(this.uiLayer);
 
     window.addEventListener('resize', this.onResize);
-    this.onResize();
+    this.checkDisplay();
 
     this.app.ticker.add(this.update, this);
   }
@@ -59,7 +54,7 @@ export class GameManager extends SingletonBase {
 
   public async changeScene(scene: GameScene, destroyPrevious = true): Promise<void> {
     if (this.currentScene) {
-      this.currentScene.exit({ destroy: destroyPrevious });
+      await this.currentScene.exit({ destroy: destroyPrevious });
       this.uiLayer.removeChild(this.currentScene);
     }
 
@@ -68,13 +63,9 @@ export class GameManager extends SingletonBase {
     await scene.enter();
   }
 
-  // 🔹 GETTERS ÚTILS
+  // 🔹 GETTERS
   public get application(): Application {
     return this.app;
-  }
-
-  public get layout(): LayoutType {
-    return this.layoutType;
   }
 
   public get bg(): Container {
@@ -85,57 +76,61 @@ export class GameManager extends SingletonBase {
     return this.uiLayer;
   }
 
-  public get width(): number {
-    return this.designWidth;
+  public get gameSize(): Size {
+    return LayoutsSize;
   }
 
-  public get height(): number {
-    return this.designHeight;
+  public get currentLayoutType(): LayoutType{
+    return this.layoutType;
   }
 
-  // 🔥 AQUEST ÉS EL COR DEL SISTEMA
+  private checkDisplay(){
+    const rawW = window.innerWidth;
+    const rawH = window.innerHeight;
+
+    // 🔹 flags separats
+    this.layoutType = rawW < 768 ? "mobile" : "desktop";
+    const aspect = rawH / rawW;
+    const shouldRotate = aspect > 1.3;
+
+    // dimensions virtuals per calcular escala
+    const screenW = shouldRotate ? rawH : rawW;
+    const screenH = shouldRotate ? rawW : rawH;
+
+    // 🔥 CONTAIN GLOBAL
+    const scale = Math.min(
+      screenW / this.gameSize.width,
+      screenH / this.gameSize.height
+    );
+
+    // 🔹 aplicar escala
+    this.rootLayer.scale.set(scale);
+
+    // reset
+    this.rootLayer.rotation = 0;
+
+    // 🔹 centrat base
+    let posX = (rawW - this.gameSize.width * scale) * 0.5;
+    let posY = (rawH - this.gameSize.height * scale) * 0.5;
+
+    // 🔹 rotació només si cal
+    if (shouldRotate) {
+      this.rootLayer.rotation = Math.PI / 2;
+      const rotatedW = this.gameSize.height * scale;
+      const rotatedH = this.gameSize.width * scale;
+
+      posX = rawW - (rawW - rotatedW) * 0.5;
+      posY = (rawH - rotatedH) * 0.5;
+
+    }
+
+    this.rootLayer.position.set(posX, posY);   
+  }
+
+  // 🔥 RESIZE GLOBAL (CLAU)
   private onResize = () => {
-    this.layoutType = window.screen.width < 768 ? 'mobile' : 'desktop';
+    this.checkDisplay();
+  };
 
-    const screenW = window.innerWidth;
-    const screenH = window.innerHeight;
-
-    // =========================
-    // 🟦 UI → CONTAIN (igual que abans)
-    // =========================
-    const uiScale = Math.min(
-      screenW / this.designWidth,
-      screenH / this.designHeight
-    );
-
-    this.uiLayer.scale.set(uiScale);
-    this.uiLayer.position.set(
-      (screenW - this.designWidth * uiScale) * 0.5,
-      (screenH - this.designHeight * uiScale) * 0.5
-    );
-
-    // =========================
-    // 🟥 BACKGROUND → regla teva
-    // =========================
-
-    let bgScale: Size = {width: 0, height: 0};
-
-    if (this.layoutType === 'desktop') {
-      // Desktop → encaixar en horitzontal
-      bgScale.width = screenW / 2500;
-      bgScale.height = bgScale.width;
-    } else {
-      // Mobile → encaixar en vertical
-      bgScale.height = screenH / 1583;
-      bgScale.width = bgScale.height;
-    }   
-
-    this.backgroundLayer.scale.set(bgScale.width, bgScale.height);
-
-    this.backgroundLayer.position.set(
-      (screenW - this.designWidth * bgScale.width) * 0.5,
-      (screenH - this.designHeight * bgScale.height) * 0.5
-    );
-  }; 
 
 }
