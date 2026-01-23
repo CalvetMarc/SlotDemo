@@ -1,0 +1,1 @@
+export type ScreenTypes = "SPLASH" | "BASE" | "BONUS";

@@ -1,5 +1,5 @@
 import { Application, Assets } from 'pixi.js';
-import { GameManager } from './Core/Game/GameManager';
+import { ScreenManager } from './Core/Game/ScreenManager';
 
 async function main() {
 
@@ -16,9 +16,9 @@ async function main() {
   await Assets.init({
     manifest: 'assets_manifest.json'
   });  
-
+/* 
   GameManager.I.init(app);
-  await GameManager.I.start();
+  await GameManager.I.start(); */
 }
 
 main();
