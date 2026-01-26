@@ -1,0 +1,45 @@
+{
+  "scene": "SplashScene",
+  "views": [
+    {
+      "id": "bg_base",
+      "type": "BaseBackgroundView",      
+      "layer": "background",
+      "transform": {
+        "position": { "x": 0, "y": 0 },
+        "scale": { "x": 1, "y": 1 },
+        "rotation": 0
+      }
+    },
+    {
+      "id": "bg_fog",
+      "type": "FogOverlayView",      
+      "layer": "background",
+      "transform": {
+        "position": { "x": 0, "y": 0 },
+        "scale": { "x": 1, "y": 1 },
+        "rotation": 0
+      }
+    },
+    {
+      "id": "logo",
+      "type": "GameLogoView",      
+      "layer": "game",
+      "transform": {
+        "position": { "x": 960, "y": 540 },
+        "scale": { "x": 0.75, "y": 0.75 },
+        "rotation": 0
+      }
+    },
+    {
+      "id": "loading",
+      "type": "LoadingGameView",      
+      "layer": "game",
+      "transform": {
+        "position": { "x": 960, "y": 540 },
+        "scale": { "x": 1, "y": 1 },
+        "rotation": 0
+      }
+    }
+  ]
+}

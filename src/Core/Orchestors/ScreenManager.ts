@@ -3,11 +3,11 @@ import { Ticker } from 'pixi.js';
 
 import { SingletonBase } from '../Abstractions/SingletonBase';
 import { GameScreen } from '../Abstractions/GameScreen';
-import { SplashScreen } from './Screens/SplashScreen';
+import { SplashScreen } from '../Game/Screens/SplashScreen/SplashScreen';
 
 import { ScreenTypes } from '../Utils/utils';
-import { BaseScreen } from './Screens/BaseScreen';
-import { BonusScreen } from './Screens/BonusScreen';
+import { BaseScreen } from '../Game/Screens/BaseScreen/BaseScreen';
+import { BonusScreen } from '../Game/Screens/BonusScreen';
 
 export class ScreenManager extends SingletonBase {
   private app!: Application;
@@ -18,11 +18,11 @@ export class ScreenManager extends SingletonBase {
     "BONUS": null
   }
 
-  public transitionMap: Record<ScreenTypes, Promise<void>> = {
-    SPLASH: this.changeScene("SPLASH", "BASE", true),
-    BASE: this.changeScene("BASE", "BONUS", false),
-    BONUS: this.changeScene("BONUS", "BASE", true)
-  }
+  public transitionMap: Record<ScreenTypes, () => Promise<void>> = {
+    SPLASH: () => this.changeScene("SPLASH", "BASE", true),
+    BASE: () => this.changeScene("BASE", "BONUS", false),
+    BONUS: () => this.changeScene("BONUS", "BASE", true)
+  };
 
   protected constructor() {
     super();
@@ -38,7 +38,10 @@ export class ScreenManager extends SingletonBase {
   }
 
   public async start(): Promise<void> {
-    const splash = new SplashScreen();
+    this.currentScreen = this.screenFactory("SPLASH");
+    await this.currentScreen.load();
+    this.app.stage.addChild(this.currentScreen);
+    await this.currentScreen.onEnter();
   }
 
   private update(ticker: Ticker): void {
@@ -48,27 +51,37 @@ export class ScreenManager extends SingletonBase {
 
   private async changeScene(transitionFrom: ScreenTypes, transitionTo: ScreenTypes, destroyCurrent: boolean): Promise<void>{
     if(this.currentScreen){
-        await this.currentScreen.onExit();            
-        destroyCurrent ? this.currentScreen.destroy({children: true}) : this.sceneMap[transitionFrom] = this.currentScreen;            
+      await this.currentScreen.onExit();            
+      destroyCurrent ? this.currentScreen.unload() : this.sceneMap[transitionFrom] = this.currentScreen;            
     }
 
     this.currentScreen = this.sceneMap[transitionTo] ?? this.screenFactory(transitionTo);
+    if(!this.currentScreen.loaded){
+      await this.currentScreen.load();
+    }
+    
+    this.app.stage.addChild(this.currentScreen);
     await this.currentScreen.onEnter();   
   }
 
   private screenFactory(screenKey: ScreenTypes): GameScreen{
     switch(screenKey){
         case "SPLASH":
-            return new SplashScreen();
-            break;
+          return new SplashScreen();
+          break;
         case "BASE":
-            return new BaseScreen();
-            break;
+          return new BaseScreen();
+          break;
         case "BONUS":
-            return new BonusScreen();
-            break;
+          return new BonusScreen();
+          break;
+        default:
+          throw new Error(`Scene ${screenKey} does not exist`);
+          break;
     }
   }
+}
+
 
 /* 
   private checkDisplay(){
@@ -119,5 +132,3 @@ export class ScreenManager extends SingletonBase {
     this.checkDisplay();
   }; */
 
-
-}
