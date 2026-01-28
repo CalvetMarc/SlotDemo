@@ -9,9 +9,13 @@ import { ScreenTypes } from '../Utils/utils';
 import { BaseScreen } from '../Game/Screens/BaseScreen/BaseScreen';
 import { BonusScreen } from '../Game/Screens/BonusScreen';
 
+import { DesignCanvas } from '../Layout/DesignCanvas';
+
 export class ScreenManager extends SingletonBase {
   private app!: Application;
   private currentScreen?: GameScreen;
+  private root!: Container;
+
   private sceneMap: Record<ScreenTypes, GameScreen | null> = {
     "SPLASH": null,
     "BASE": null,
@@ -32,21 +36,25 @@ export class ScreenManager extends SingletonBase {
     return super.getInstance<ScreenManager>();
   }
 
-  public init(app: Application): void {
+  public init(app: Application, root: Container): void {
     this.app = app;   
+    this.root = root;
     this.app.ticker.add(this.update, this);
   }
 
   public async start(): Promise<void> {
     this.currentScreen = this.screenFactory("SPLASH");
     await this.currentScreen.load();
-    this.app.stage.addChild(this.currentScreen);
+    this.root.addChild(this.currentScreen);
     await this.currentScreen.onEnter();
   }
 
+  public onLayoutChanged(canvas: DesignCanvas): void {
+    this.currentScreen?.onLayoutChanged(canvas);
+  }
+  
   private update(ticker: Ticker): void {
-    const dtMs = ticker.deltaMS;
-    this.currentScreen?.onUpdate(dtMs);
+    this.currentScreen?.onUpdate(ticker.deltaMS);
   }
 
   private async changeScene(transitionFrom: ScreenTypes, transitionTo: ScreenTypes, destroyCurrent: boolean): Promise<void>{
@@ -60,7 +68,7 @@ export class ScreenManager extends SingletonBase {
       await this.currentScreen.load();
     }
     
-    this.app.stage.addChild(this.currentScreen);
+    this.root.addChild(this.currentScreen);
     await this.currentScreen.onEnter();   
   }
 
@@ -81,54 +89,4 @@ export class ScreenManager extends SingletonBase {
     }
   }
 }
-
-
-/* 
-  private checkDisplay(){
-    const rawW = window.innerWidth;
-    const rawH = window.innerHeight;
-
-    // 🔹 flags separats
-    this.layoutType = rawW < 768 ? "mobile" : "desktop";
-    const aspect = rawH / rawW;
-    const shouldRotate = aspect > 1.3;
-
-    // dimensions virtuals per calcular escala
-    const screenW = shouldRotate ? rawH : rawW;
-    const screenH = shouldRotate ? rawW : rawH;
-
-    // 🔥 CONTAIN GLOBAL
-    const scale = Math.min(
-      screenW / this.gameSize.width,
-      screenH / this.gameSize.height
-    );
-
-    // 🔹 aplicar escala
-    this.rootLayer.scale.set(scale);
-
-    // reset
-    this.rootLayer.rotation = 0;
-
-    // 🔹 centrat base
-    let posX = (rawW - this.gameSize.width * scale) * 0.5;
-    let posY = (rawH - this.gameSize.height * scale) * 0.5;
-
-    // 🔹 rotació només si cal
-    if (shouldRotate) {
-      this.rootLayer.rotation = Math.PI / 2;
-      const rotatedW = this.gameSize.height * scale;
-      const rotatedH = this.gameSize.width * scale;
-
-      posX = rawW - (rawW - rotatedW) * 0.5;
-      posY = (rawH - rotatedH) * 0.5;
-
-    }
-
-    this.rootLayer.position.set(posX, posY);   
-  } */
-
-  /* // 🔥 RESIZE GLOBAL (CLAU)
-  private onResize = () => {
-    this.checkDisplay();
-  }; */
 

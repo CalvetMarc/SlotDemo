@@ -2,10 +2,10 @@ import { Layer } from "../../Abstractions/Layer";
 import { View } from "../../Abstractions/View";
 import { DesignCanvas } from "../../Layout/DesignCanvas";
 
-/** Background layer for static backgrounds. */
-export  class BackgroundLayer extends Layer {
-    constructor(zIndex: number = 0, layerViews?: Partial<Record<string, View>>){
-        super('background', zIndex, layerViews);
+/** Modal layer for modals, popups, dialogs. */
+export class ModalLayer extends Layer {
+    constructor(zIndex: number = 6, layerViews?: Partial<Record<string, View>>){
+        super('modal', zIndex, layerViews);
     }
 
     onLayoutChanged(canvas: DesignCanvas): void {

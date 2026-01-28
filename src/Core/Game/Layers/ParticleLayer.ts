@@ -2,10 +2,10 @@ import { Layer } from "../../Abstractions/Layer";
 import { View } from "../../Abstractions/View";
 import { DesignCanvas } from "../../Layout/DesignCanvas";
 
-/** Background layer for static backgrounds. */
-export  class BackgroundLayer extends Layer {
-    constructor(zIndex: number = 0, layerViews?: Partial<Record<string, View>>){
-        super('background', zIndex, layerViews);
+/** Particle layer for effects, animations, explosions. */
+export class ParticleLayer extends Layer {
+    constructor(zIndex: number = 4, layerViews?: Partial<Record<string, View>>){
+        super('particles', zIndex, layerViews);
     }
 
     onLayoutChanged(canvas: DesignCanvas): void {

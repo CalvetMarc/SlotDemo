@@ -1,14 +1,13 @@
 import { GameScreen } from "../../../Abstractions/GameScreen"
-import { LayerId } from "../../../Abstractions/GameScreen";
-import { Layer } from "../../../Abstractions/Layer";
+import { LayerConfig } from "../../../Orchestors/LayerFactory";
 
-export class BaseScreen extends GameScreen{   
+export class BaseScreen extends GameScreen{
 
-    constructor(layers?: Partial<Record<LayerId, Layer>>){
-        super(layers);
+    constructor(layerConfigs?: LayerConfig[]){
+        super(layerConfigs);
     }
 
-    load(): void {
+    async load(): Promise<void> {
         throw new Error("Method not implemented.");
     }
 

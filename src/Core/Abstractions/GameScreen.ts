@@ -1,82 +1,128 @@
-import { Assets, Container } from "pixi.js";
+import { Container } from "pixi.js";
 import { Layer } from "./Layer";
-import { BackgroundLayer } from "../Game/Layers/BackgroundLayer";
-import { UiLayer } from "../Game/Layers/UiLayer";
-import { GameLayer } from "../Game/Layers/GameLayer";
 import { ViewRegistry } from "../Orchestors/ViewFactory";
 import { ViewFactory } from "../Orchestors/ViewFactory";
 import { ViewConfig } from "./View";
-import { Transform } from "../Utils/Transform";
+import { DesignCanvas } from "../Layout/DesignCanvas";
+import { LayerFactory, LayerConfig } from "../Orchestors/LayerFactory";
+import { AssetLoader } from "../Orchestors/AssetLoader";
+import { ViewInitializer } from "../Orchestors/ViewInitializer";
 
 export interface IGameScreen {
-    load(): void;
+    load(): Promise<void>;
     onEnter(): Promise<void>;
     onUpdate(deltaMS: number): void;
     onExit(): Promise<void>;
     unload(): void;
 }
 
-export type LayerId = "background" | "game" | "ui";
-
 export interface ScreenConfig {
     scene: string;
     views: ViewConfig[];
 }
 
+/** Base class for all game screens with configurable layer system. */
 export abstract class GameScreen extends Container implements IGameScreen {
-    protected layers: Record<LayerId, Layer>;
+    protected layers: Map<string, Layer>;
     private _loaded: boolean;
 
-    abstract load(): void;
+    private readonly assetLoader: AssetLoader;
+    private readonly viewInitializer: ViewInitializer;
+
+    abstract load(): Promise<void>;
     abstract onEnter(): Promise<void>;
     abstract onUpdate(deltaMS: number): void;
     abstract onExit(): Promise<void>;
 
-    constructor(layers?: Partial<Record<LayerId, Layer>>){
+    constructor(layerConfigs?: LayerConfig[]){
         super();
 
-        this.layers = {
-            background: layers?.background ?? new BackgroundLayer(),
-            game: layers?.game ?? new GameLayer(),
-            ui: layers?.ui ?? new UiLayer()
-        };
+        this.assetLoader = new AssetLoader();
+        this.viewInitializer = new ViewInitializer();
 
-        this.addChild(this.layers.background);
-        this.addChild(this.layers.game);
-        this.addChild(this.layers.ui);
+        const configs = layerConfigs ?? this.getDefaultLayers();
+
+        this.layers = new Map();
+
+        configs
+            .sort((a, b) => a.zIndex - b.zIndex)
+            .forEach(({ id, layer }) => {
+                this.layers.set(id, layer);
+                this.addChild(layer);
+            });
 
         this._loaded = false;
-    }    
+    }
+
+    /** Returns default layer configuration. Override to customize. */
+    protected getDefaultLayers(): LayerConfig[] {
+        return LayerFactory.createDefaultLayers();
+    }
+
+    /** Gets a layer by ID. Throws if not found. */
+    protected getLayer(id: string): Layer {
+        const layer = this.layers.get(id);
+        if (!layer) {
+            throw new Error(`Layer "${id}" not found in screen. Available layers: ${Array.from(this.layers.keys()).join(', ')}`);
+        }
+        return layer;
+    }
+
+    /** Checks if a layer exists. */
+    protected hasLayer(id: string): boolean {
+        return this.layers.has(id);
+    }
 
     public get loaded(): boolean { return this._loaded; }
 
-
+    /** Hides all layers. */
     public hibernate(){
-        //TODO: HIDE VIEWS
-    }
-
-    public unload(){
-        //TODO: FREE RESOURCES
-
-
-        this.destroy( { children: true } );
-    }
-
-    protected async loadConfig(config: ScreenConfig, registry: ViewRegistry){
-        for (const viewCfg of config.views) {
-            const view = ViewFactory.create(viewCfg.type, registry);
-            if(!Assets.cache.has(view.bundleNeeded())){
-                await Assets.loadBundle(view.bundleNeeded())
-            }
-            view.appear();
-            
-            view.id = viewCfg.id;
-
-            this.layers[viewCfg.layer as LayerId].addView(view.id, view);
-
-            const transform = new Transform(viewCfg.transform);
-            transform.applyTo(view);            
+        for (const layer of this.layers.values()) {
+            layer.visible = false;
         }
+    }
+
+    /** Destroys all layers and cleans up. */
+    public unload(){
+        for (const layer of this.layers.values()) {
+            layer.destroy({ children: true });
+        }
+        this.layers.clear();
+
+        this.destroy({ children: true });
+    }
+
+    /** Called when canvas changes. Updates layout for all layers and their views. */
+    public onLayoutChanged(canvas: DesignCanvas) {
+        for (const layer of this.layers.values()) {
+            layer.onLayoutChanged(canvas);
+            layer.updateViewLayouts(canvas);
+        }
+    }
+
+    /** Loads screen configuration by creating, initializing, and adding views to layers. */
+    protected async loadConfig(config: ScreenConfig, registry: ViewRegistry){
+        const views = config.views.map(viewCfg =>
+            ViewFactory.create(viewCfg.type, registry)
+        );
+
+        await this.assetLoader.loadForViews(views);
+
+        this.viewInitializer.initializeAll(views, config.views);
+
+        views.forEach((view, index) => {
+            const viewCfg = config.views[index];
+
+            const targetLayer = this.layers.get(viewCfg.layer);
+            if (!targetLayer) {
+                throw new Error(
+                    `Layer "${viewCfg.layer}" not found for view "${viewCfg.id}". ` +
+                    `Available layers: ${Array.from(this.layers.keys()).join(', ')}`
+                );
+            }
+
+            targetLayer.addView(view.id, view, viewCfg);
+        });
 
         this._loaded = true;
     }
