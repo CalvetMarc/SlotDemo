@@ -1,12 +1,11 @@
 import { GameScreen, ScreenConfig } from "../../../Abstractions/GameScreen"
-import { LayerConfig } from "../../../Orchestors/LayerFactory";
 
 import { SPLASH_VIEW_REGISTRY } from "./config/SplashScene_loader";
 import splashConfig from "./config/SplashScene_config.json"
 
 export class SplashScreen extends GameScreen{
-    constructor(layerConfigs?: LayerConfig[]){
-        super(layerConfigs);
+    constructor(){
+        super();
     }
 
     async load(): Promise<void> {        

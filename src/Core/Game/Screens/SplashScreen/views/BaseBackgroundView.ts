@@ -1,5 +1,5 @@
 import { bundle, View } from "../../../../Abstractions/View";
-import { Assets, Sprite } from "pixi.js";
+import { Sprite } from "pixi.js";
 
 export class BaseBackgroundView extends View{      
     private sprite!: Sprite;   
@@ -10,7 +10,7 @@ export class BaseBackgroundView extends View{
 
     appear(): void {
         this.sprite = Sprite.from("background");
-        this.sprite.anchor.set(0, 0);
+        // Don't set anchor here - let the layout system handle it
         this.addChild(this.sprite);
     }  
 }

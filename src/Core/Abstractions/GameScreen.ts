@@ -1,12 +1,11 @@
 import { Container } from "pixi.js";
-import { Layer } from "./Layer";
 import { ViewRegistry } from "../Orchestors/ViewFactory";
 import { ViewFactory } from "../Orchestors/ViewFactory";
 import { ViewConfig } from "./View";
 import { DesignCanvas } from "../Layout/DesignCanvas";
-import { LayerFactory, LayerConfig } from "../Orchestors/LayerFactory";
 import { AssetLoader } from "../Orchestors/AssetLoader";
 import { ViewInitializer } from "../Orchestors/ViewInitializer";
+import { CentralLayerManager } from "../Orchestors/CentralLayerManager";
 
 export interface IGameScreen {
     load(): Promise<void>;
@@ -21,86 +20,54 @@ export interface ScreenConfig {
     views: ViewConfig[];
 }
 
-/** Base class for all game screens with configurable layer system. */
+/** Base class for all game screens using centralized layer system. */
 export abstract class GameScreen extends Container implements IGameScreen {
-    protected layers: Map<string, Layer>;
     private _loaded: boolean;
+    private viewIds: string[] = [];
 
     private readonly assetLoader: AssetLoader;
     private readonly viewInitializer: ViewInitializer;
+    protected readonly layerManager = CentralLayerManager.I;
 
     abstract load(): Promise<void>;
     abstract onEnter(): Promise<void>;
     abstract onUpdate(deltaMS: number): void;
     abstract onExit(): Promise<void>;
 
-    constructor(layerConfigs?: LayerConfig[]){
+    constructor(){
         super();
 
         this.assetLoader = new AssetLoader();
         this.viewInitializer = new ViewInitializer();
-
-        const configs = layerConfigs ?? this.getDefaultLayers();
-
-        this.layers = new Map();
-
-        configs
-            .sort((a, b) => a.zIndex - b.zIndex)
-            .forEach(({ id, layer }) => {
-                this.layers.set(id, layer);
-                this.addChild(layer);
-            });
-
         this._loaded = false;
-    }
-
-    /** Returns default layer configuration. Override to customize. */
-    protected getDefaultLayers(): LayerConfig[] {
-        return LayerFactory.createDefaultLayers();
-    }
-
-    /** Gets a layer by ID. Throws if not found. */
-    protected getLayer(id: string): Layer {
-        const layer = this.layers.get(id);
-        if (!layer) {
-            throw new Error(`Layer "${id}" not found in screen. Available layers: ${Array.from(this.layers.keys()).join(', ')}`);
-        }
-        return layer;
-    }
-
-    /** Checks if a layer exists. */
-    protected hasLayer(id: string): boolean {
-        return this.layers.has(id);
     }
 
     public get loaded(): boolean { return this._loaded; }
 
-    /** Hides all layers. */
-    public hibernate(){
-        for (const layer of this.layers.values()) {
-            layer.visible = false;
-        }
-    }
-
-    /** Destroys all layers and cleans up. */
+    /** Removes all views added by this screen from centralized layers. */
     public unload(){
-        for (const layer of this.layers.values()) {
-            layer.destroy({ children: true });
+        // Remove all views this screen added to layers
+        for (const viewId of this.viewIds) {
+            for (const layerId of this.layerManager.getLayerIds()) {
+                try {
+                    this.layerManager.getLayer(layerId).removeView(viewId);
+                } catch {
+                    // View might not be in this layer
+                }
+            }
         }
-        this.layers.clear();
+        this.viewIds = [];
 
         this.destroy({ children: true });
     }
 
-    /** Called when canvas changes. Updates layout for all layers and their views. */
+    /** Called when canvas changes. Centralized layers handle their own layout updates. */
     public onLayoutChanged(canvas: DesignCanvas) {
-        for (const layer of this.layers.values()) {
-            layer.onLayoutChanged(canvas);
-            layer.updateViewLayouts(canvas);
-        }
+        // Layers are managed centrally, they handle their own layout updates
+        // Screen-specific layout logic can be added here if needed
     }
 
-    /** Loads screen configuration by creating, initializing, and adding views to layers. */
+    /** Loads screen configuration by creating, initializing, and adding views to centralized layers. */
     protected async loadConfig(config: ScreenConfig, registry: ViewRegistry){
         const views = config.views.map(viewCfg =>
             ViewFactory.create(viewCfg.type, registry)
@@ -113,15 +80,11 @@ export abstract class GameScreen extends Container implements IGameScreen {
         views.forEach((view, index) => {
             const viewCfg = config.views[index];
 
-            const targetLayer = this.layers.get(viewCfg.layer);
-            if (!targetLayer) {
-                throw new Error(
-                    `Layer "${viewCfg.layer}" not found for view "${viewCfg.id}". ` +
-                    `Available layers: ${Array.from(this.layers.keys()).join(', ')}`
-                );
-            }
-
+            const targetLayer = this.layerManager.getLayer(viewCfg.layer);
             targetLayer.addView(view.id, view, viewCfg);
+
+            // Track view IDs for cleanup
+            this.viewIds.push(view.id);
         });
 
         this._loaded = true;

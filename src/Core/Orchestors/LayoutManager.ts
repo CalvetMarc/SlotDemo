@@ -16,22 +16,14 @@ export class LayoutManager {
 
   resize(viewportW: number, viewportH: number) {
     const canvas = this.pickCanvas(viewportW, viewportH);
+
     if (canvas !== this.activeCanvas) {
       this.activeCanvas = canvas;
-      this.onCanvasChanged?.(canvas); 
+      this.onCanvasChanged?.(canvas);
     }
 
-    const scale = Math.min(
-      viewportW / canvas.width,
-      viewportH / canvas.height
-    );
-
-    this.root.scale.set(scale);
-
-    const scaledW = canvas.width * scale;
-    const scaledH = canvas.height * scale;
-
-    this.root.position.set((viewportW - scaledW) * 0.5, (viewportH - scaledH) * 0.5);
+    // No scaling here - layers will handle their own scaling
+    // This container just holds the canvas selection logic
   }
 
   private pickCanvas(viewportW: number, viewportH: number): DesignCanvas {

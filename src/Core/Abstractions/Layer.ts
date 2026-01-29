@@ -4,7 +4,7 @@ import { DesignCanvas } from "../Layout/DesignCanvas";
 import { ViewLayoutManager } from "../Orchestors/ViewLayoutManager";
 
 /** Base layer class for organizing views in a game screen. */
-export abstract class Layer extends Container {
+export class Layer extends Container {
     protected layerViews: Partial<Record<string, View>>;
     private viewConfigs: Map<string, ViewConfig> = new Map();
     private layoutManager: ViewLayoutManager = new ViewLayoutManager();

@@ -1,10 +1,9 @@
 import { GameScreen } from "../../Abstractions/GameScreen"
-import { LayerConfig } from "../../Orchestors/LayerFactory";
 
 export class BonusScreen extends GameScreen{
 
-    constructor(layerConfigs?: LayerConfig[]){
-        super(layerConfigs);
+    constructor(){
+        super();
     }
 
     async load(): Promise<void> {

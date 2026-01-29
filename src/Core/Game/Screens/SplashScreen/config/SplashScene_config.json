@@ -9,8 +9,8 @@
         "default": {
           "anchor": "center",
           "origin": { "x": 0.5, "y": 0.5 },
-          "offset": { "x": 0, "y": 0 },
-          "scale": { "x": 1, "y": 1 }
+          "scaleMode": "cover",
+          "maxScale": 1.5
         }
       }
     },
@@ -22,8 +22,8 @@
         "default": {
           "anchor": "center",
           "origin": { "x": 0.5, "y": 0.5 },
-          "offset": { "x": 0, "y": 0 },
-          "scale": { "x": 1, "y": 1 }
+          "scaleMode": "cover",
+          "maxScale": 1.5
         }
       }
     },
@@ -42,8 +42,8 @@
           "9:16": {
             "anchor": "center",
             "origin": { "x": 0.5, "y": 0.5 },
-            "offset": { "x": 0, "y": "-15%" },
-            "scale": { "x": 0.6, "y": 0.6 }
+            "offset": { "x": 0, "y": "-25%" },
+            "scale": { "x": 0.5, "y": 0.5 }
           }
         }
       }
@@ -58,6 +58,14 @@
           "origin": { "x": 0.5, "y": 0.5 },
           "offset": { "x": 0, "y": "30%" },
           "scale": { "x": 1, "y": 1 }
+        },
+         "overrides": {
+          "9:16": {
+            "anchor": "center",
+            "origin": { "x": 0.5, "y": 0.5 },
+            "offset": { "x": 0, "y": "25%" },
+            "scale": { "x": 0.7, "y": 0.7 }
+          }
         }
       }
     }
