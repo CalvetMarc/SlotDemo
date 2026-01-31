@@ -1,4 +1,6 @@
-import { GameScreen } from "../../../Abstractions/GameScreen"
+import { GameScreen, ScreenConfig } from "../../../Abstractions/GameScreen"
+import { BASE_VIEW_REGISTRY } from "./config/BaseScene_loader";
+import baseConfig from "./config/BaseScene_config.json"
 
 export class BaseScreen extends GameScreen{
 
@@ -7,19 +9,17 @@ export class BaseScreen extends GameScreen{
     }
 
     async load(): Promise<void> {
-        throw new Error("Method not implemented.");
+        await this.loadConfig(baseConfig as ScreenConfig, BASE_VIEW_REGISTRY);
     }
 
     async onEnter(): Promise<void> {
-        throw new Error("Method not implemented.");
+        this.addViewsToLayers();
     }
 
     onUpdate(deltaMS: number): void {
-        throw new Error("Method not implemented.");
     }
-    
+
     async onExit(): Promise<void> {
-        throw new Error("Method not implemented.");
     }
 
 }

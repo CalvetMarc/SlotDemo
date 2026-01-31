@@ -1,9 +1,9 @@
-import { Container } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { Layer } from '../Abstractions/Layer';
 import { DesignCanvas } from '../Layout/DesignCanvas';
 import { SingletonBase } from '../Abstractions/SingletonBase';
 
-export type LayerScaleMode = 'cover' | 'contain';
+export type LayerScaleMode = 'cover' | 'contain' | 'fill';
 
 export interface LayerConfig {
   id: string;
@@ -21,6 +21,17 @@ export class CentralLayerManager extends SingletonBase {
   public readonly root = new Container();
   private layers: Map<string, Layer> = new Map();
   private layerConfigs: Map<string, LayerConfig> = new Map();
+  private debugBorders: Map<string, Graphics> = new Map();
+  private debugEnabled: boolean = false;
+
+  // Colors for each layer border
+  private readonly layerColors: Record<string, number> = {
+    'background': 0xff00ff,  // Magenta
+    'decoration': 0xff0000,  // Red
+    'game': 0x00ff00,        // Green
+    'ui': 0x0000ff,          // Blue
+    'particles': 0xffff00    // Yellow
+  };
 
   protected constructor() {
     super();
@@ -80,29 +91,44 @@ export class CentralLayerManager extends SingletonBase {
       const config = this.layerConfigs.get(layerId);
       if (!config) continue;
 
-      // Calculate scale based on layer's scale mode
-      const scale = this.calculateLayerScale(
-        config.scaleMode,
-        viewportW,
-        viewportH,
-        canvas
-      );
+      if (config.scaleMode === 'fill') {
+        // Fill mode: layer matches viewport exactly
+        layer.scale.set(1, 1);
+        layer.position.set(0, 0);
 
-      // Apply scale to layer
-      layer.scale.set(scale, scale);
+        // Create viewport-sized canvas for fill layers
+        const viewportCanvas: DesignCanvas = {
+          width: viewportW,
+          height: viewportH,
+          aspect: viewportW / viewportH
+        };
+        layer.onLayoutChanged(viewportCanvas);
+        layer.updateViewLayouts(viewportCanvas);
+      } else {
+        // Cover/Contain mode
+        const scale = this.calculateLayerScale(
+          config.scaleMode,
+          viewportW,
+          viewportH,
+          canvas
+        );
 
-      // Center layer in viewport
-      const scaledW = canvas.width * scale;
-      const scaledH = canvas.height * scale;
-      layer.position.set(
-        (viewportW - scaledW) * 0.5,
-        (viewportH - scaledH) * 0.5
-      );
+        layer.scale.set(scale, scale);
 
-      // Notify layer of canvas change and update view layouts
-      layer.onLayoutChanged(canvas);
-      layer.updateViewLayouts(canvas);
+        const scaledW = canvas.width * scale;
+        const scaledH = canvas.height * scale;
+        layer.position.set(
+          (viewportW - scaledW) * 0.5,
+          (viewportH - scaledH) * 0.5
+        );
+
+        layer.onLayoutChanged(canvas);
+        layer.updateViewLayouts(canvas);
+      }
     }
+
+    // Update debug borders if enabled
+    this.updateDebugBorders(canvas);
   }
 
   /**
@@ -138,6 +164,79 @@ export class CentralLayerManager extends SingletonBase {
       const viewIds = Object.keys(layer['layerViews']);
       for (const viewId of viewIds) {
         layer.removeView(viewId);
+      }
+    }
+  }
+
+  /**
+   * Toggle debug borders visibility
+   */
+  toggleDebugBorders(): void {
+    this.debugEnabled = !this.debugEnabled;
+    if (this.debugEnabled) {
+      this.showDebugBorders();
+    } else {
+      this.hideDebugBorders();
+    }
+  }
+
+  /**
+   * Show debug borders around each layer
+   */
+  private showDebugBorders(): void {
+    for (const [layerId, layer] of this.layers) {
+      const config = this.layerConfigs.get(layerId);
+      if (!config) continue;
+
+      // Create border graphics if not exists
+      let border = this.debugBorders.get(layerId);
+      if (!border) {
+        border = new Graphics();
+        this.debugBorders.set(layerId, border);
+        layer.addChild(border);
+      }
+
+      // Get current canvas dimensions from layer
+      const canvas = layer['currentCanvas'];
+      if (canvas) {
+        this.drawLayerBorder(border, layerId, canvas.width, canvas.height);
+      }
+    }
+    console.log('🔲 Debug borders: ON');
+  }
+
+  /**
+   * Hide debug borders
+   */
+  private hideDebugBorders(): void {
+    for (const [layerId, border] of this.debugBorders) {
+      border.clear();
+    }
+    console.log('🔲 Debug borders: OFF');
+  }
+
+  /**
+   * Draw border for a specific layer
+   */
+  private drawLayerBorder(graphics: Graphics, layerId: string, width: number, height: number): void {
+    const color = this.layerColors[layerId] || 0xffffff;
+
+    graphics.clear();
+    graphics.rect(0, 0, width, height);
+    graphics.stroke({ width: 4, color: color });
+  }
+
+  /**
+   * Update debug borders (call after resize)
+   */
+  updateDebugBorders(canvas: DesignCanvas): void {
+    if (!this.debugEnabled) return;
+
+    for (const [layerId, border] of this.debugBorders) {
+      const layer = this.layers.get(layerId);
+      const layerCanvas = layer?.['currentCanvas'];
+      if (layerCanvas) {
+        this.drawLayerBorder(border, layerId, layerCanvas.width, layerCanvas.height);
       }
     }
   }

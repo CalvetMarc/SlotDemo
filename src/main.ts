@@ -31,6 +31,7 @@ async function main() {
   const layerManager = CentralLayerManager.I;
   layerManager.initializeLayers([
     { id: 'background', scaleMode: 'cover', zIndex: 0 },
+    { id: 'decoration', scaleMode: 'fill', zIndex: 5 },
     { id: 'game', scaleMode: 'contain', zIndex: 10 },
     { id: 'ui', scaleMode: 'contain', zIndex: 20 },
     { id: 'particles', scaleMode: 'cover', zIndex: 30 }
@@ -58,6 +59,16 @@ async function main() {
   window.addEventListener('resize', onResize);
   onResize();
   ScreenManager.I.onLayoutChanged(layoutManager.getCanvas());
+
+  // Debug: Toggle layer borders with 'D' key
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'd' || e.key === 'D') {
+      layerManager.toggleDebugBorders();
+    }
+  });
+
+  // Enable debug borders by default
+  layerManager.toggleDebugBorders();
 }
 
 main();

@@ -47,6 +47,37 @@ export class ScreenManager extends SingletonBase {
     await this.currentScreen.load();
     this.root.addChild(this.currentScreen);
     await this.currentScreen.onEnter();
+
+    this.scheduleTransitionToBase();
+  }
+
+  private scheduleTransitionToBase(): void {
+    const preloadPromise = this.preloadScene("BASE");
+    const minTimePromise = this.delay(2000);
+
+    Promise.all([preloadPromise, minTimePromise]).then(() => {
+      this.transitionMap.SPLASH();
+    });
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /** Preloads a scene during idle frames to avoid blocking the render loop. */
+  private preloadScene(screenType: ScreenTypes): Promise<void> {
+    const scene = this.screenFactory(screenType);
+    this.sceneMap[screenType] = scene;
+
+    return new Promise(resolve => {
+      const load = () => scene.load().then(resolve);
+
+      if (window.requestIdleCallback) {
+        window.requestIdleCallback(load);
+      } else {
+        setTimeout(load, 0);
+      }
+    });
   }
 
   public onLayoutChanged(canvas: DesignCanvas): void {

@@ -21,3 +21,6 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Claude Communication (do not commit)
+.claude-memory.md

@@ -7,13 +7,14 @@ export type LayoutAnchor =
   | "bottom-left" | "bottom-center" | "bottom-right";
 
 export type OffsetValue = number | string;
+export type ScaleValue = number | string;
 
 export type ScaleMode = "contain" | "cover" | "fill";
 
 export interface LayoutConstraint {
   anchor: LayoutAnchor;
   offset?: { x?: OffsetValue; y?: OffsetValue };
-  scale?: { x?: number; y?: number };
+  scale?: { x?: ScaleValue; y?: ScaleValue };
   scaleMode?: ScaleMode;
   maxScale?: number;
   minScale?: number;
@@ -70,22 +71,78 @@ export class LayoutResolver {
     return layout.default;
   }
 
-  private static parseOffsetValue(value: OffsetValue | undefined, dimension: number): number {
+  /**
+   * Parse offset value with w% and h% units.
+   * - Number: direct pixel value
+   * - "50w%": 50% of layer width
+   * - "50h%": 50% of layer height
+   */
+  private static parseOffsetValue(
+    value: OffsetValue | undefined,
+    canvasWidth: number,
+    canvasHeight: number
+  ): number {
     if (value === undefined) return 0;
 
-    if (typeof value === 'string') {
-      // Parse percentage (e.g., "50%", "-25%")
-      const percentMatch = value.match(/^(-?\d+(?:\.\d+)?)%$/);
-      if (percentMatch) {
-        const percentage = parseFloat(percentMatch[1]);
-        return (percentage / 100) * dimension;
-      }
-
-      // If not a valid format, try to parse as number
-      return parseFloat(value) || 0;
+    if (typeof value === 'number') {
+      return value;
     }
 
-    return value;
+    // Parse w% (width percentage)
+    const widthMatch = value.match(/^(-?\d+(?:\.\d+)?)w%$/);
+    if (widthMatch) {
+      const percentage = parseFloat(widthMatch[1]);
+      return (percentage / 100) * canvasWidth;
+    }
+
+    // Parse h% (height percentage)
+    const heightMatch = value.match(/^(-?\d+(?:\.\d+)?)h%$/);
+    if (heightMatch) {
+      const percentage = parseFloat(heightMatch[1]);
+      return (percentage / 100) * canvasHeight;
+    }
+
+    // Try to parse as plain number
+    return parseFloat(value) || 0;
+  }
+
+  /**
+   * Parse scale value with support for w% and h% units.
+   * - Number: direct scale multiplier (e.g., 0.5 = half size)
+   * - "50w%": scale so view width = 50% of canvas width
+   * - "50h%": scale so view height = 50% of canvas height
+   */
+  private static parseScaleValue(
+    value: ScaleValue | undefined,
+    viewDimension: number,
+    canvasWidth: number,
+    canvasHeight: number
+  ): number | null {
+    if (value === undefined) return null;
+
+    if (typeof value === 'number') {
+      return value;
+    }
+
+    // Parse w% (width percentage)
+    const widthMatch = value.match(/^(-?\d+(?:\.\d+)?)w%$/);
+    if (widthMatch) {
+      const percentage = parseFloat(widthMatch[1]);
+      const targetSize = (percentage / 100) * canvasWidth;
+      return viewDimension > 0 ? targetSize / viewDimension : 1;
+    }
+
+    // Parse h% (height percentage)
+    const heightMatch = value.match(/^(-?\d+(?:\.\d+)?)h%$/);
+    if (heightMatch) {
+      const percentage = parseFloat(heightMatch[1]);
+      const targetSize = (percentage / 100) * canvasHeight;
+      return viewDimension > 0 ? targetSize / viewDimension : 1;
+    }
+
+    // Try to parse as plain number
+    const num = parseFloat(value);
+    return isNaN(num) ? null : num;
   }
 
   static calculateAutoScale(
@@ -164,8 +221,8 @@ export class LayoutResolver {
 
   static calculatePosition(anchor: LayoutAnchor, canvas: DesignCanvas, offset: { x?: OffsetValue; y?: OffsetValue } = {}): { x: number; y: number } {
     const { width, height } = canvas;
-    const offsetX = this.parseOffsetValue(offset.x, width);
-    const offsetY = this.parseOffsetValue(offset.y, height);
+    const offsetX = this.parseOffsetValue(offset.x, width, height);
+    const offsetY = this.parseOffsetValue(offset.y, width, height);
 
     switch (anchor) {
       case "center":
@@ -258,35 +315,22 @@ export class LayoutResolver {
 
     // Step 2: Apply origin
     if (constraint.origin) {
-      const originX = constraint.origin.x ?? 0;
-      const originY = constraint.origin.y ?? 0;
+      const originX = constraint.origin.x ?? 0.5;
+      const originY = constraint.origin.y ?? 0.5;
 
       // Check if target is a Sprite (has anchor property directly)
       if ((target as any).anchor && typeof (target as any).anchor.set === 'function') {
         // Direct sprite: use anchor (0-1 range)
         (target as any).anchor.set(originX, originY);
-        console.log(`Origin applied to sprite: (${originX}, ${originY})`);
+        console.log(`Origin applied to sprite anchor: (${originX}, ${originY})`);
       }
-      // Container with sprite children
-      else {
-        // Apply anchor to sprite children
-        if (target.children) {
-          let childCount = 0;
-          for (const child of target.children) {
-            if (child.anchor && typeof child.anchor.set === 'function') {
-              // Check sprite's position in container
-              const childPos = (child as any).position;
-              console.log(`Sprite child position in container: (${childPos.x}, ${childPos.y})`);
-
-              child.anchor.set(originX, originY);
-              childCount++;
-            }
-          }
-          console.log(`Origin applied to ${childCount} sprite children: (${originX}, ${originY})`);
-        }
-
-        // DON'T apply pivot to container if children have anchor
-        // The anchor on children already handles the origin
+      // Container: use pivot based on local bounds
+      else if (target.pivot && target.getLocalBounds) {
+        const bounds = (target as any).getLocalBounds();
+        const pivotX = bounds.x + originX * bounds.width;
+        const pivotY = bounds.y + originY * bounds.height;
+        target.pivot.set(pivotX, pivotY);
+        console.log(`Origin applied to container pivot: (${pivotX.toFixed(1)}, ${pivotY.toFixed(1)}) from bounds (${bounds.x}, ${bounds.y}, ${bounds.width}, ${bounds.height})`);
       }
     }
 
@@ -309,16 +353,30 @@ export class LayoutResolver {
       console.log(`Layout: pos(${position.x}, ${position.y}) scale(${finalScale.x.toFixed(3)}, ${finalScale.y.toFixed(3)}) view(${viewWidth}x${viewHeight}) canvas(${canvas.width}x${canvas.height})`);
     } else if (constraint.scale) {
       // Manual scale with optional minMargin adjustment
-      let scaleX = constraint.scale.x ?? 1;
-      let scaleY = constraint.scale.y ?? 1;
+      // Parse scale values (supports w% and h% units)
+      const parsedScaleX = this.parseScaleValue(
+        constraint.scale.x,
+        viewWidth,
+        canvas.width,
+        canvas.height
+      );
+      const parsedScaleY = this.parseScaleValue(
+        constraint.scale.y,
+        viewHeight,
+        canvas.width,
+        canvas.height
+      );
+
+      let scaleX = parsedScaleX ?? 1;
+      let scaleY = parsedScaleY ?? 1;
 
       // Assume uniform scale initially (preserve aspect ratio)
       let uniformScale = Math.min(scaleX, scaleY);
 
       // Apply minMargin constraints with push-before-scale strategy
       if (constraint.minMargin && viewWidth > 0 && viewHeight > 0) {
-        const marginX = this.parseOffsetValue(constraint.minMargin.x, canvas.width);
-        const marginY = this.parseOffsetValue(constraint.minMargin.y, canvas.height);
+        const marginX = this.parseOffsetValue(constraint.minMargin.x, canvas.width, canvas.height);
+        const marginY = this.parseOffsetValue(constraint.minMargin.y, canvas.width, canvas.height);
         console.log(`[MinMargin] Raw config: x="${constraint.minMargin.x}", y="${constraint.minMargin.y}"`);
         console.log(`[MinMargin] Parsed margins: X=${marginX.toFixed(2)}px, Y=${marginY.toFixed(2)}px`);
 

@@ -1,0 +1,281 @@
+{
+  "scene": "BaseScene",
+  "views": [
+    {
+      "id": "bg_base",
+      "type": "BaseBackgroundView",
+      "layer": "background",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "scaleMode": "cover",
+          "maxScale": 1.5
+        }
+      }
+    },
+    {
+      "id": "bg_fog",
+      "type": "FogOverlayView",
+      "layer": "background",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "scaleMode": "cover",
+          "maxScale": 1.5
+        }
+      }
+    },
+    {
+      "id": "particles_flies",
+      "type": "FliesView",
+      "layer": "particles",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "scaleMode": "cover",
+          "maxScale": 1.5
+        }
+      }
+    },
+    {
+      "id": "slot_frame_bg",
+      "type": "FrameBackgroundView",
+      "layer": "game",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "scale": { "x": 0.65, "y": 0.65 },
+          "offset": { "x": 0, "y": "-5h%" }
+        },
+        "overrides": {
+          "9:16": {
+            "anchor": "center",
+            "origin": { "x": 0.5, "y": 0.5 },
+            "scale": { "x": 0.59, "y": 0.59 },
+            "offset": { "x": 0, "y": "-5h%" }
+          }          
+        }
+      }
+    },
+    {
+      "id": "slot_frame",
+      "type": "FrameView",
+      "layer": "game",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "scale": { "x": 0.65, "y": 0.65 },
+          "offset": { "x": 0, "y": "-5h%" }
+        },
+        "overrides": {
+          "9:16": {
+            "anchor": "center",
+            "origin": { "x": 0.5, "y": 0.5 },
+            "scale": { "x": 0.59, "y": 0.59 },
+            "offset": { "x": 0, "y": "-5h%" }
+          }          
+        }
+      }
+    },
+    {
+      "id": "slot_logo",
+      "type": "SlotLogoView",
+      "layer": "game",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "offset": { "x": 0, "y": "-40h%" },
+          "scale": { "x": 0.8, "y": 0.8 }
+        },
+        "overrides": {          
+           "9:16": {
+            "anchor": "center",
+            "origin": { "x": 0.5, "y": 0.5 },
+            "offset": { "x": 0, "y": "-28h%" },
+            "scale": { "x": 1.2, "y": 1.2 }
+          }
+        }
+      }
+    },
+    {
+      "id": "character_bats",
+      "type": "BatsView",
+      "layer": "decoration",
+      "layout": {
+        "default": {
+          "anchor": "top-right",
+          "origin": { "x": 0.5, "y": 0 },
+          "offset": { "x": "-10w%", "y": "-6w%" },
+          "scale": { "x": "25w%", "y": "25w%" }
+        },
+        "overrides": {
+          "4:3": {
+            "anchor": "top-right",
+            "origin": { "x": 0.5, "y": 0 },
+            "offset": { "x": "-7w%", "y": "-6w%" },
+            "scale": { "x": "25w%", "y": "25w%" }
+          },
+           "9:16": {
+            "anchor": "top-right",
+            "origin": { "x": 0.5, "y": 0 },
+            "offset": { "x": "-25w%", "y": "-5h%" },
+            "scale": { "x": "20h%", "y": "20h%" }
+          }
+        }
+      }
+    },
+    {
+      "id": "ui_buy_bonus",
+      "type": "BuyBonusButtonView",
+      "layer": "ui",
+      "layout": {
+        "default": {
+          "anchor": "bottom-left",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "offset": { "x": 80, "y": -60 },
+          "scale": { "x": 1, "y": 1 }
+        },
+        "overrides": {
+          "9:16": {
+            "anchor": "bottom-left",
+            "origin": { "x": 0.5, "y": 0.5 },
+            "offset": { "x": 60, "y": -80 },
+            "scale": { "x": 0.9, "y": 0.9 }
+          }
+        }
+      }
+    },
+    {
+      "id": "ui_menu",
+      "type": "MenuButtonView",
+      "layer": "ui",
+      "layout": {
+        "default": {
+          "anchor": "bottom-left",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "offset": { "x": 180, "y": -60 },
+          "scale": { "x": 1, "y": 1 }
+        },
+        "overrides": {
+          "9:16": {
+            "anchor": "bottom-left",
+            "origin": { "x": 0.5, "y": 0.5 },
+            "offset": { "x": 140, "y": -80 },
+            "scale": { "x": 0.9, "y": 0.9 }
+          }
+        }
+      }
+    },
+    {
+      "id": "ui_balance",
+      "type": "BalanceDisplayView",
+      "layer": "ui",
+      "layout": {
+        "default": {
+          "anchor": "bottom-left",
+          "origin": { "x": 0, "y": 0.5 },
+          "offset": { "x": 250, "y": -60 },
+          "scale": { "x": 1, "y": 1 }
+        },
+        "overrides": {
+          "9:16": {
+            "anchor": "bottom-center",
+            "origin": { "x": 0.5, "y": 0.5 },
+            "offset": { "x": 0, "y": -180 },
+            "scale": { "x": 0.85, "y": 0.85 }
+          }
+        }
+      }
+    },
+    {
+      "id": "ui_bet",
+      "type": "BetDisplayView",
+      "layer": "ui",
+      "layout": {
+        "default": {
+          "anchor": "bottom-right",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "offset": { "x": 0, "y": -60 },
+          "scale": { "x": 1, "y": 1 }
+        },
+        "overrides": {
+          "9:16": {
+            "anchor": "bottom-center",
+            "origin": { "x": 0.5, "y": 0.5 },
+            "offset": { "x": 0, "y": -120 },
+            "scale": { "x": 0.9, "y": 0.9 }
+          }
+        }
+      }
+    },
+    {
+      "id": "ui_auto_spin",
+      "type": "AutoSpinButtonView",
+      "layer": "ui",
+      "layout": {
+        "default": {
+          "anchor": "bottom-center",
+          "origin": { "x": 0.5, "y": 0 },
+          "offset": { "x": -120, "y": -167 },
+          "scale": { "x": 1.5, "y": 1.5 }
+        },
+        "overrides": {
+          "9:16": {
+            "anchor": "bottom-center",
+            "origin": { "x": 0.5, "y": 0 },
+            "offset": { "x": -70, "y": -117 },
+            "scale": { "x": 1, "y": 1 }
+          }
+        }
+      }
+    },
+    {
+      "id": "ui_turbo",
+      "type": "TurboButtonView",
+      "layer": "ui",
+      "layout": {
+        "default": {
+          "anchor": "bottom-center",
+          "origin": { "x": 0.5, "y": 0 },
+          "offset": { "x": 120, "y": -167 },
+          "scale": { "x": 1.5, "y": 1.5 }
+        },
+        "overrides": {
+          "9:16": {
+            "anchor": "bottom-center",
+            "origin": { "x": 0.5, "y": 0 },
+            "offset": { "x": 70, "y": -117 },
+            "scale": { "x": 1, "y": 1 }
+          }
+        }
+      }
+    },
+    {
+      "id": "ui_spin",
+      "type": "SpinButtonView",
+      "layer": "ui",
+      "layout": {
+        "default": {
+          "anchor": "bottom-center",
+          "origin": { "x": 0.5, "y": 1 },
+          "offset": { "x": 0, "y": "-2.5h%" },
+          "scale": { "x": 2, "y": 2 }
+        },
+        "overrides": {
+          "9:16": {
+            "anchor": "bottom-center",
+            "origin": { "x": 0.5, "y": 0.5 },
+            "offset": { "x": 0, "y": -50 },
+            "scale": { "x": 1.1, "y": 1.1 }
+          }
+        }
+      }
+    }
+  ]
+}

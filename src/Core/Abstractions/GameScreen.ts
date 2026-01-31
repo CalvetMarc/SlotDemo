@@ -24,6 +24,7 @@ export interface ScreenConfig {
 export abstract class GameScreen extends Container implements IGameScreen {
     private _loaded: boolean;
     private viewIds: string[] = [];
+    private preparedViews: { view: any; config: ViewConfig }[] = [];
 
     private readonly assetLoader: AssetLoader;
     private readonly viewInitializer: ViewInitializer;
@@ -57,6 +58,7 @@ export abstract class GameScreen extends Container implements IGameScreen {
             }
         }
         this.viewIds = [];
+        this.preparedViews = [];
 
         this.destroy({ children: true });
     }
@@ -67,7 +69,10 @@ export abstract class GameScreen extends Container implements IGameScreen {
         // Screen-specific layout logic can be added here if needed
     }
 
-    /** Loads screen configuration by creating, initializing, and adding views to centralized layers. */
+    /**
+     * Loads assets for views. Does NOT add anything to screen.
+     * Call addViewsToLayers() in onEnter() to actually show the views.
+     */
     protected async loadConfig(config: ScreenConfig, registry: ViewRegistry){
         const views = config.views.map(viewCfg =>
             ViewFactory.create(viewCfg.type, registry)
@@ -75,19 +80,31 @@ export abstract class GameScreen extends Container implements IGameScreen {
 
         await this.assetLoader.loadForViews(views);
 
-        this.viewInitializer.initializeAll(views, config.views);
-
-        views.forEach((view, index) => {
-            const viewCfg = config.views[index];
-
-            const targetLayer = this.layerManager.getLayer(viewCfg.layer);
-            targetLayer.addView(view.id, view, viewCfg);
-
-            // Track view IDs for cleanup
-            this.viewIds.push(view.id);
-        });
+        // Store views for later - don't initialize or add to layers yet
+        this.preparedViews = views.map((view, index) => ({
+            view,
+            config: config.views[index]
+        }));
 
         this._loaded = true;
+    }
+
+    /**
+     * Initializes prepared views and adds them to layers.
+     * Call this from onEnter() after load() has completed.
+     */
+    protected addViewsToLayers(): void {
+        for (const { view, config } of this.preparedViews) {
+            // Initialize view (sets ID and calls appear())
+            this.viewInitializer.initialize(view, config);
+
+            // Add to target layer
+            const targetLayer = this.layerManager.getLayer(config.layer);
+            targetLayer.addView(view.id, view, config);
+
+            // Track for cleanup
+            this.viewIds.push(view.id);
+        }
     }
 
 }

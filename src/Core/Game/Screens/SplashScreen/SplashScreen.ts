@@ -12,7 +12,8 @@ export class SplashScreen extends GameScreen{
         await this.loadConfig(splashConfig as ScreenConfig, SPLASH_VIEW_REGISTRY);
     }
 
-    async onEnter(): Promise<void> {        
+    async onEnter(): Promise<void> {
+        this.addViewsToLayers();
     }
 
     onUpdate(deltaMS: number): void {
