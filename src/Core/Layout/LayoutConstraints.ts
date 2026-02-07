@@ -21,6 +21,11 @@ export interface LayoutConstraint {
   minMargin?: { x?: OffsetValue; y?: OffsetValue }; // Margin in pixels or percentage
   rotation?: number;
   origin?: { x?: number; y?: number };
+  // Relative positioning: position relative to another view instead of canvas
+  relativeTo?: string;  // ID of the target view to position relative to
+  relativeAnchor?: LayoutAnchor;  // Which point of the target view to anchor to (default: same as anchor)
+  relativeOffset?: { x?: OffsetValue; y?: OffsetValue };  // Offset calculated from target's dimensions (w%/h% = target width/height)
+  relativeAxis?: 'x' | 'y' | 'xy';  // Which axis to position relative to target (default: 'xy' = both)
 }
 
 export type LayoutAspectKey = "16:9" | "9:16" | "4:3";
@@ -64,7 +69,11 @@ export class LayoutResolver {
         minScale: override.minScale ?? layout.default.minScale,
         minMargin: override.minMargin ?? layout.default.minMargin,
         rotation: override.rotation ?? layout.default.rotation,
-        origin: override.origin ?? layout.default.origin
+        origin: override.origin ?? layout.default.origin,
+        relativeTo: override.relativeTo ?? layout.default.relativeTo,
+        relativeAnchor: override.relativeAnchor ?? layout.default.relativeAnchor,
+        relativeOffset: override.relativeOffset ?? layout.default.relativeOffset,
+        relativeAxis: override.relativeAxis ?? layout.default.relativeAxis
       };
     }
 
@@ -72,10 +81,19 @@ export class LayoutResolver {
   }
 
   /**
+   * Check if a layout configuration uses relativeTo positioning.
+   * Used to determine if layout needs to be applied in second pass.
+   */
+  static usesRelativeTo(layout: LayoutConfig, canvas: DesignCanvas): boolean {
+    const constraint = this.resolveConstraint(layout, canvas);
+    return constraint.relativeTo !== undefined;
+  }
+
+  /**
    * Parse offset value with w% and h% units.
    * - Number: direct pixel value
-   * - "50w%": 50% of layer width
-   * - "50h%": 50% of layer height
+   * - "50w%": 50% of canvas width
+   * - "50h%": 50% of canvas height
    */
   private static parseOffsetValue(
     value: OffsetValue | undefined,
@@ -102,8 +120,9 @@ export class LayoutResolver {
       return (percentage / 100) * canvasHeight;
     }
 
-    // Try to parse as plain number
-    return parseFloat(value) || 0;
+    // Plain number (pixels)
+    const num = parseFloat(value);
+    return isNaN(num) ? 0 : num;
   }
 
   /**
@@ -161,8 +180,6 @@ export class LayoutResolver {
     const scaleX = canvasWidth / viewWidth;
     const scaleY = canvasHeight / viewHeight;
 
-    console.log(`[AutoScale] scaleX=${scaleX.toFixed(3)} (${canvasWidth}/${viewWidth}), scaleY=${scaleY.toFixed(3)} (${canvasHeight}/${viewHeight})`);
-
     let finalScaleX: number;
     let finalScaleY: number;
 
@@ -171,21 +188,18 @@ export class LayoutResolver {
         // Scale to fit inside canvas (letterbox/pillarbox)
         const containScale = Math.min(scaleX, scaleY);
         finalScaleX = finalScaleY = containScale;
-        console.log(`[AutoScale] contain → ${containScale.toFixed(3)}`);
         break;
 
       case "cover":
         // Scale to cover entire canvas (may crop)
         const coverScale = Math.max(scaleX, scaleY);
         finalScaleX = finalScaleY = coverScale;
-        console.log(`[AutoScale] cover → ${coverScale.toFixed(3)} BEFORE maxScale`);
         break;
 
       case "fill":
         // Stretch to fill canvas (may distort)
         finalScaleX = scaleX;
         finalScaleY = scaleY;
-        console.log(`[AutoScale] fill → (${scaleX.toFixed(3)}, ${scaleY.toFixed(3)})`);
         break;
 
       default:
@@ -194,27 +208,14 @@ export class LayoutResolver {
 
     // Apply scale limits
     if (maxScale !== undefined) {
-      const beforeX = finalScaleX;
-      const beforeY = finalScaleY;
       finalScaleX = Math.min(finalScaleX, maxScale);
       finalScaleY = Math.min(finalScaleY, maxScale);
-      if (beforeX !== finalScaleX || beforeY !== finalScaleY) {
-        console.log(`[AutoScale] maxScale=${maxScale} CLAMPED: (${beforeX.toFixed(3)}, ${beforeY.toFixed(3)}) → (${finalScaleX.toFixed(3)}, ${finalScaleY.toFixed(3)})`);
-      } else {
-        console.log(`[AutoScale] maxScale=${maxScale} NOT applied (scale below limit)`);
-      }
     }
 
     if (minScale !== undefined) {
       finalScaleX = Math.max(finalScaleX, minScale);
       finalScaleY = Math.max(finalScaleY, minScale);
-      console.log(`[AutoScale] minScale=${minScale} checked`);
     }
-
-    console.log(`[AutoScale] FINAL: (${finalScaleX.toFixed(3)}, ${finalScaleY.toFixed(3)})`);
-    const scaledWidth = viewWidth * finalScaleX;
-    const scaledHeight = viewHeight * finalScaleY;
-    console.log(`[AutoScale] Scaled dimensions: ${scaledWidth.toFixed(0)}x${scaledHeight.toFixed(0)} (should cover ${canvasWidth}x${canvasHeight})`);
 
     return { x: finalScaleX, y: finalScaleY };
   }
@@ -257,22 +258,129 @@ export class LayoutResolver {
     }
   }
 
+  /**
+   * Calculate position relative to another view's bounds.
+   * @param anchor - Which point of the target view to position at
+   * @param targetBounds - The bounds of the target view in canvas space
+   * @param offset - Additional offset from the anchor point (percentages based on canvas)
+   * @param relativeOffset - Offset based on target's dimensions (w% = target width, h% = target height)
+   * @param canvasWidth - Canvas width for percentage calculations
+   * @param canvasHeight - Canvas height for percentage calculations
+   */
+  static calculatePositionRelativeTo(
+    anchor: LayoutAnchor,
+    targetBounds: { x: number; y: number; width: number; height: number },
+    offset: { x?: OffsetValue; y?: OffsetValue } = {},
+    relativeOffset: { x?: OffsetValue; y?: OffsetValue } | undefined,
+    canvasWidth: number,
+    canvasHeight: number
+  ): { x: number; y: number } {
+    // Regular offset uses canvas dimensions
+    const offsetX = this.parseOffsetValue(offset.x, canvasWidth, canvasHeight);
+    const offsetY = this.parseOffsetValue(offset.y, canvasWidth, canvasHeight);
+
+    // Relative offset uses target's dimensions (w% = target width, h% = target height)
+    const relOffsetX = relativeOffset ? this.parseOffsetValue(relativeOffset.x, targetBounds.width, targetBounds.height) : 0;
+    const relOffsetY = relativeOffset ? this.parseOffsetValue(relativeOffset.y, targetBounds.width, targetBounds.height) : 0;
+
+    // Combine both offsets
+    const totalOffsetX = offsetX + relOffsetX;
+    const totalOffsetY = offsetY + relOffsetY;
+
+    const { x, y, width, height } = targetBounds;
+
+    switch (anchor) {
+      case "center":
+        return { x: x + width / 2 + totalOffsetX, y: y + height / 2 + totalOffsetY };
+
+      case "top-left":
+        return { x: x + totalOffsetX, y: y + totalOffsetY };
+
+      case "top-center":
+        return { x: x + width / 2 + totalOffsetX, y: y + totalOffsetY };
+
+      case "top-right":
+        return { x: x + width + totalOffsetX, y: y + totalOffsetY };
+
+      case "middle-left":
+        return { x: x + totalOffsetX, y: y + height / 2 + totalOffsetY };
+
+      case "middle-right":
+        return { x: x + width + totalOffsetX, y: y + height / 2 + totalOffsetY };
+
+      case "bottom-left":
+        return { x: x + totalOffsetX, y: y + height + totalOffsetY };
+
+      case "bottom-center":
+        return { x: x + width / 2 + totalOffsetX, y: y + height + totalOffsetY };
+
+      case "bottom-right":
+        return { x: x + width + totalOffsetX, y: y + height + totalOffsetY };
+
+      default:
+        return { x: x + width / 2 + totalOffsetX, y: y + height / 2 + totalOffsetY };
+    }
+  }
+
+  /**
+   * Type for view lookup function used with relativeTo positioning.
+   * Returns the global bounds of a view by its ID.
+   */
   static applyLayout(
     target: {
-      position: { set(x: number, y: number): void };
+      position: { set(x: number, y: number): void; x: number; y: number };
       scale: { x: number; y: number; set(x: number, y: number): void };
       rotation: number;
       pivot?: { set(x: number, y: number): void };
       children?: any[];
       width?: number;
       height?: number;
-      getLocalBounds?: () => { width: number; height: number };
+      getLocalBounds?: () => { x: number; y: number; width: number; height: number };
     },
     layout: LayoutConfig,
-    canvas: DesignCanvas
+    canvas: DesignCanvas,
+    viewLookup?: (viewId: string) => { x: number; y: number; width: number; height: number } | null
   ): void {
     const constraint = this.resolveConstraint(layout, canvas);
-    const position = this.calculatePosition(constraint.anchor, canvas, constraint.offset);
+
+    // Calculate position - either relative to another view or to canvas
+    let position: { x: number; y: number };
+
+    if (constraint.relativeTo && viewLookup) {
+      const targetBounds = viewLookup(constraint.relativeTo);
+      if (targetBounds) {
+        // Use relativeAnchor if specified, otherwise use the same anchor
+        const relativeAnchor = constraint.relativeAnchor ?? constraint.anchor;
+        const relativeAxis = constraint.relativeAxis ?? 'xy';
+
+        const relativePos = this.calculatePositionRelativeTo(
+          relativeAnchor,
+          targetBounds,
+          constraint.offset,
+          constraint.relativeOffset,
+          canvas.width,
+          canvas.height
+        );
+
+        if (relativeAxis === 'xy') {
+          // Both axes relative to target
+          position = relativePos;
+        } else {
+          // Only one axis relative - get canvas position for the other axis
+          const canvasPos = this.calculatePosition(constraint.anchor, canvas, constraint.offset);
+          position = {
+            x: relativeAxis === 'x' ? relativePos.x : canvasPos.x,
+            y: relativeAxis === 'y' ? relativePos.y : canvasPos.y
+          };
+        }
+
+      } else {
+        console.warn(`LayoutResolver: relativeTo target "${constraint.relativeTo}" not found, falling back to canvas positioning`);
+        position = this.calculatePosition(constraint.anchor, canvas, constraint.offset);
+      }
+    } else {
+      position = this.calculatePosition(constraint.anchor, canvas, constraint.offset);
+    }
 
     // Step 1: Get actual content dimensions (needed for both pivot and scaleMode)
     let viewWidth = 0;
@@ -293,8 +401,9 @@ export class LayoutResolver {
         }
       }
     }
-    // Fallback to bounds
-    else if (target.getLocalBounds) {
+
+    // If still no dimensions found, try getLocalBounds
+    if (viewWidth === 0 && viewHeight === 0 && target.getLocalBounds) {
       const currentScaleX = target.scale.x ?? 1;
       const currentScaleY = target.scale.y ?? 1;
       target.scale.set(1, 1);
@@ -305,13 +414,12 @@ export class LayoutResolver {
 
       target.scale.set(currentScaleX, currentScaleY);
     }
+
     // Last resort: use width/height properties
-    else if (target.width && target.height) {
+    if (viewWidth === 0 && viewHeight === 0 && target.width && target.height) {
       viewWidth = target.width / (target.scale.x || 1);
       viewHeight = target.height / (target.scale.y || 1);
     }
-
-    console.log(`[DimensionDetect] View dimensions: ${viewWidth}x${viewHeight}`);
 
     // Step 2: Apply origin
     if (constraint.origin) {
@@ -322,7 +430,6 @@ export class LayoutResolver {
       if ((target as any).anchor && typeof (target as any).anchor.set === 'function') {
         // Direct sprite: use anchor (0-1 range)
         (target as any).anchor.set(originX, originY);
-        console.log(`Origin applied to sprite anchor: (${originX}, ${originY})`);
       }
       // Container: use pivot based on local bounds
       else if (target.pivot && target.getLocalBounds) {
@@ -330,7 +437,6 @@ export class LayoutResolver {
         const pivotX = bounds.x + originX * bounds.width;
         const pivotY = bounds.y + originY * bounds.height;
         target.pivot.set(pivotX, pivotY);
-        console.log(`Origin applied to container pivot: (${pivotX.toFixed(1)}, ${pivotY.toFixed(1)}) from bounds (${bounds.x}, ${bounds.y}, ${bounds.width}, ${bounds.height})`);
       }
     }
 
@@ -348,9 +454,6 @@ export class LayoutResolver {
         constraint.maxScale,
         constraint.minScale
       );
-
-      // Debug log
-      console.log(`Layout: pos(${position.x}, ${position.y}) scale(${finalScale.x.toFixed(3)}, ${finalScale.y.toFixed(3)}) view(${viewWidth}x${viewHeight}) canvas(${canvas.width}x${canvas.height})`);
     } else if (constraint.scale) {
       // Manual scale with optional minMargin adjustment
       // Parse scale values (supports w% and h% units)
@@ -370,95 +473,141 @@ export class LayoutResolver {
       let scaleX = parsedScaleX ?? 1;
       let scaleY = parsedScaleY ?? 1;
 
-      // Assume uniform scale initially (preserve aspect ratio)
-      let uniformScale = Math.min(scaleX, scaleY);
+      // Determine uniform scale based on the type of percentage used
+      // If using height percentage (h%), prefer the height-based scale
+      // If using width percentage (w%), prefer the width-based scale
+      let uniformScale: number;
+      const scaleYStr = String(constraint.scale.y ?? '');
+      const scaleXStr = String(constraint.scale.x ?? '');
+
+      if (scaleYStr.includes('h%')) {
+        // Height-based scaling: use scaleY to ensure height matches the percentage
+        uniformScale = scaleY;
+      } else if (scaleXStr.includes('w%')) {
+        // Width-based scaling: use scaleX to ensure width matches the percentage
+        uniformScale = scaleX;
+      } else {
+        // Default: use minimum to fit within bounds (preserve aspect ratio)
+        uniformScale = Math.min(scaleX, scaleY);
+      }
+
+      // Apply maxScale limit
+      if (constraint.maxScale !== undefined && uniformScale > constraint.maxScale) {
+        uniformScale = constraint.maxScale;
+      }
 
       // Apply minMargin constraints with push-before-scale strategy
       if (constraint.minMargin && viewWidth > 0 && viewHeight > 0) {
         const marginX = this.parseOffsetValue(constraint.minMargin.x, canvas.width, canvas.height);
         const marginY = this.parseOffsetValue(constraint.minMargin.y, canvas.width, canvas.height);
-        console.log(`[MinMargin] Raw config: x="${constraint.minMargin.x}", y="${constraint.minMargin.y}"`);
-        console.log(`[MinMargin] Parsed margins: X=${marginX.toFixed(2)}px, Y=${marginY.toFixed(2)}px`);
 
         const MARGIN_EPSILON = 0.1;
         if (marginX > MARGIN_EPSILON || marginY > MARGIN_EPSILON) {
-          // Calculate object bounds with requested scale
+          // Calculate available space with margins
+          const availableWidth = canvas.width - (2 * marginX);
+          const availableHeight = canvas.height - (2 * marginY);
+
           const originX = constraint.origin?.x ?? 0.5;
           const originY = constraint.origin?.y ?? 0.5;
 
           const scaledWidth = viewWidth * uniformScale;
           const scaledHeight = viewHeight * uniformScale;
 
-          // Calculate bounds based on position and origin
-          const left = position.x - (scaledWidth * originX);
-          const right = position.x + (scaledWidth * (1 - originX));
-          const top = position.y - (scaledHeight * originY);
-          const bottom = position.y + (scaledHeight * (1 - originY));
+          // First check if element fits within available space
+          // If not, must reduce scale before attempting to push
+          let needsScaleReduction = false;
+          if (marginX > MARGIN_EPSILON && scaledWidth > availableWidth) {
+            needsScaleReduction = true;
+          }
+          if (marginY > MARGIN_EPSILON && scaledHeight > availableHeight) {
+            needsScaleReduction = true;
+          }
 
-          console.log(`[MinMargin] Object bounds: L=${left.toFixed(1)} R=${right.toFixed(1)} T=${top.toFixed(1)} B=${bottom.toFixed(1)}`);
-          console.log(`[MinMargin] Canvas: 0 to ${canvas.width} (W) × 0 to ${canvas.height} (H)`);
+          // Debug: log for character_bats to diagnose minMargin issue
+          const isDebugView = constraint.scale &&
+            String(constraint.scale.x).includes('50h%') &&
+            String(constraint.offset?.x ?? '').includes('80h%');
+          if (isDebugView) {
+            console.log(`[minMargin DEBUG] marginX=${marginX}, availableWidth=${availableWidth.toFixed(0)}, ` +
+              `scaledWidth=${scaledWidth.toFixed(0)}, needsScaleReduction=${needsScaleReduction}, ` +
+              `uniformScale before=${uniformScale.toFixed(4)}`);
+          }
 
-          // Check margin violations
+          if (needsScaleReduction) {
+            // Element too large, reduce scale to fit
+            let maxScaleFit = uniformScale;
+            if (marginX > MARGIN_EPSILON && availableWidth > 0) {
+              maxScaleFit = Math.min(maxScaleFit, availableWidth / viewWidth);
+            }
+            if (marginY > MARGIN_EPSILON && availableHeight > 0) {
+              maxScaleFit = Math.min(maxScaleFit, availableHeight / viewHeight);
+            }
+            uniformScale = Math.max(0, maxScaleFit);
+
+            if (isDebugView) {
+              console.log(`[minMargin DEBUG] scale reduced to ${uniformScale.toFixed(4)}, ` +
+                `maxScaleFit=${maxScaleFit.toFixed(4)}`);
+            }
+          }
+
+          // Recalculate bounds with (possibly reduced) scale
+          const finalScaledWidth = viewWidth * uniformScale;
+          const finalScaledHeight = viewHeight * uniformScale;
+
+          const left = position.x - (finalScaledWidth * originX);
+          const right = position.x + (finalScaledWidth * (1 - originX));
+          const top = position.y - (finalScaledHeight * originY);
+          const bottom = position.y + (finalScaledHeight * (1 - originY));
+
+          // Calculate push needed to respect margins (check both sides independently)
           let pushX = 0;
           let pushY = 0;
 
           if (marginX > MARGIN_EPSILON) {
-            if (left < marginX) {
-              pushX = marginX - left;
-              console.log(`[MinMargin] Left violation: ${left.toFixed(1)} < ${marginX.toFixed(1)}, pushX=+${pushX.toFixed(1)}`);
-            } else if (right > canvas.width - marginX) {
-              pushX = (canvas.width - marginX) - right;
-              console.log(`[MinMargin] Right violation: ${right.toFixed(1)} > ${(canvas.width - marginX).toFixed(1)}, pushX=${pushX.toFixed(1)}`);
+            const leftViolation = marginX - left;
+            const rightViolation = right - (canvas.width - marginX);
+
+            if (leftViolation > 0 && rightViolation > 0) {
+              // Both sides violated - center the element
+              pushX = (leftViolation - rightViolation) / 2;
+            } else if (leftViolation > 0) {
+              pushX = leftViolation;
+            } else if (rightViolation > 0) {
+              pushX = -rightViolation;
             }
           }
 
           if (marginY > MARGIN_EPSILON) {
-            if (top < marginY) {
-              pushY = marginY - top;
-              console.log(`[MinMargin] Top violation: ${top.toFixed(1)} < ${marginY.toFixed(1)}, pushY=+${pushY.toFixed(1)}`);
-            } else if (bottom > canvas.height - marginY) {
-              pushY = (canvas.height - marginY) - bottom;
-              console.log(`[MinMargin] Bottom violation: ${bottom.toFixed(1)} > ${(canvas.height - marginY).toFixed(1)}, pushY=${pushY.toFixed(1)}`);
+            const topViolation = marginY - top;
+            const bottomViolation = bottom - (canvas.height - marginY);
+
+            if (topViolation > 0 && bottomViolation > 0) {
+              // Both sides violated - center the element
+              pushY = (topViolation - bottomViolation) / 2;
+            } else if (topViolation > 0) {
+              pushY = topViolation;
+            } else if (bottomViolation > 0) {
+              pushY = -bottomViolation;
             }
           }
 
-          // Try to push first
+          // Apply push
           if (pushX !== 0 || pushY !== 0) {
-            const newLeft = left + pushX;
-            const newRight = right + pushX;
-            const newTop = top + pushY;
-            const newBottom = bottom + pushY;
+            position.x += pushX;
+            position.y += pushY;
+          }
 
-            // Check if pushing keeps object within canvas bounds
-            const canPush = newLeft >= 0 && newRight <= canvas.width &&
-                           newTop >= 0 && newBottom <= canvas.height;
-
-            if (canPush) {
-              // Apply push by adjusting position
-              position.x += pushX;
-              position.y += pushY;
-              console.log(`[MinMargin] ✓ Pushed object: (${pushX.toFixed(1)}, ${pushY.toFixed(1)}), new pos: (${position.x.toFixed(1)}, ${position.y.toFixed(1)})`);
-            } else {
-              // Can't push, must reduce scale
-              console.log(`[MinMargin] ✗ Cannot push (would exit canvas), reducing scale instead`);
-
-              const availableWidth = canvas.width - (2 * marginX);
-              const availableHeight = canvas.height - (2 * marginY);
-
-              let maxScaleFit = uniformScale;
-              if (marginX > MARGIN_EPSILON) maxScaleFit = Math.min(maxScaleFit, availableWidth / viewWidth);
-              if (marginY > MARGIN_EPSILON) maxScaleFit = Math.min(maxScaleFit, availableHeight / viewHeight);
-
-              uniformScale = maxScaleFit;
-              console.log(`[MinMargin] Scale reduced to: ${uniformScale.toFixed(3)}`);
-            }
-          } else {
-            console.log(`[MinMargin] No margin violations, object fits`);
+          // Debug: final position for character_bats (recalculate bounds AFTER push)
+          if (isDebugView) {
+            const finalLeft = position.x - (finalScaledWidth * originX);
+            const finalRight = position.x + (finalScaledWidth * (1 - originX));
+            console.log(`[minMargin DEBUG] final pos=(${position.x.toFixed(0)}, ${position.y.toFixed(0)}), ` +
+              `pushX=${pushX.toFixed(1)}, FINAL bounds: L=${finalLeft.toFixed(0)} R=${finalRight.toFixed(0)}, ` +
+              `canvas=${canvas.width.toFixed(0)}, gap=${(canvas.width - finalRight).toFixed(1)}px`);
           }
 
           // Apply minScale limit
           if (constraint.minScale !== undefined && uniformScale < constraint.minScale) {
-            console.log(`[MinMargin] Applying minScale limit: ${uniformScale.toFixed(3)} → ${constraint.minScale}`);
             uniformScale = constraint.minScale;
           }
         }
@@ -466,7 +615,6 @@ export class LayoutResolver {
 
       // Apply uniform scale to maintain aspect ratio
       finalScale = { x: uniformScale, y: uniformScale };
-      console.log(`Layout (manual): pos(${position.x}, ${position.y}) scale(${finalScale.x.toFixed(3)}, ${finalScale.y.toFixed(3)})`);
     } else {
       // Default scale
       finalScale = { x: 1, y: 1 };
@@ -475,7 +623,6 @@ export class LayoutResolver {
     // Apply position (after margin adjustments) and scale
     target.position.set(position.x, position.y);
     target.scale.set(finalScale.x, finalScale.y);
-    console.log(`[ApplyLayout] Final pos: (${position.x.toFixed(1)}, ${position.y.toFixed(1)}), scale: (${target.scale.x.toFixed(3)}, ${target.scale.y.toFixed(3)})`);
 
     if (constraint.rotation !== undefined) {
       target.rotation = constraint.rotation;

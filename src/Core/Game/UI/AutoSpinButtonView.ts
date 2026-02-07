@@ -1,42 +1,38 @@
-import { View, bundle } from "../../Abstractions/View";
-import { Sprite, Assets, Graphics } from "pixi.js";
+import { ButtonView } from "../../Abstractions/ButtonView";
+import { bundle } from "../../Abstractions/View";
+import { Sprite, Assets } from "pixi.js";
 
-export class AutoSpinButtonView extends View {
-    private background!: Graphics;
+export class AutoSpinButtonView extends ButtonView {
     private iconSprite!: Sprite;
     private isActive: boolean = false;
+
+    // Debug mode - set to true to see hit bounds
+    public static DEBUG_BOUNDS: boolean = false;
 
     bundleNeeded(): bundle {
         return "base";
     }
 
     appear(): void {
-        // Glassmorphism background
-        this.background = new Graphics();
-        this.background.roundRect(-22, -22, 44, 44, 10);
-        this.background.fill({ color: 0x000000, alpha: 0.6 });
-        this.addChild(this.background);
-
+        // Icon only (background is in SpinControlsView bar) - soft off-white
         const sheet = Assets.get('ui_icons');
         this.iconSprite = new Sprite(sheet.textures['auto.png']);
         this.iconSprite.anchor.set(0.5);
-        this.iconSprite.tint = 0xffffff;
-        this.iconSprite.scale.set(0.18);
+        this.iconSprite.tint = 0xc8cdd8;  // Soft off-white
+        this.iconSprite.scale.set(0.3);
         this.addChild(this.iconSprite);
 
-        this.eventMode = 'static';
-        this.cursor = 'pointer';
-
-        this.on('pointerdown', () => this.toggle());
+        this.showDebugBounds(AutoSpinButtonView.DEBUG_BOUNDS);
+        this.setupInteractivity();
     }
 
-    private toggle(): void {
+    onMouseClick(): void {
         this.setActive(!this.isActive);
     }
 
     public setActive(active: boolean): void {
         this.isActive = active;
-        this.iconSprite.tint = active ? 0xff4500 : 0xffffff;
+        this.iconSprite.tint = active ? 0x00d4aa : 0xc8cdd8;  // Magical cyan when active
     }
 
     public getActive(): boolean {

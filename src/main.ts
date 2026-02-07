@@ -3,6 +3,7 @@ import { ScreenManager } from './Core/Orchestors/ScreenManager';
 import { LayoutManager } from './Core/Orchestors/LayoutManager';
 import { CentralLayerManager } from './Core/Orchestors/CentralLayerManager';
 import { CANVAS_16_9, CANVAS_9_16, CANVAS_4_3 } from './Core/Layout/DesignCanvas';
+import { GuideManager } from './Core/Debug/GuideManager';
 
 async function main() {
 
@@ -12,6 +13,7 @@ async function main() {
     backgroundColor: 0x000000,
     resolution: window.devicePixelRatio || 1,
     autoDensity: true,
+    antialias: true,
   });
 
   document.body.appendChild(app.canvas);
@@ -33,7 +35,7 @@ async function main() {
     { id: 'background', scaleMode: 'cover', zIndex: 0 },
     { id: 'decoration', scaleMode: 'fill', zIndex: 5 },
     { id: 'game', scaleMode: 'contain', zIndex: 10 },
-    { id: 'ui', scaleMode: 'contain', zIndex: 20 },
+    { id: 'ui', scaleMode: 'fill', zIndex: 20 },
     { id: 'particles', scaleMode: 'cover', zIndex: 30 }
   ]);
 
@@ -41,34 +43,79 @@ async function main() {
   layoutManager.root.addChild(layerManager.root);
   app.stage.addChild(layoutManager.root);
 
+  // Add guide manager for debug guides (G + Arrow keys)
+  const guideManager = GuideManager.I;
+  app.stage.addChild(guideManager.root);
+
   ScreenManager.I.init(app, layoutManager.root);
   await ScreenManager.I.start();
 
   layoutManager.onCanvasChanged = (canvas) => {
     ScreenManager.I.onLayoutChanged(canvas);
-    // Resize layers when canvas changes
-    layerManager.resize(window.innerWidth, window.innerHeight, canvas);
+    // Resize layers - will use correct viewport after getViewportSize is defined
   };
 
-  const onResize = () => {
-    layoutManager.resize(window.innerWidth, window.innerHeight);
+  const doResize = (width: number, height: number) => {
+    layoutManager.resize(width, height);
     const canvas = layoutManager.getCanvas();
-    layerManager.resize(window.innerWidth, window.innerHeight, canvas);
+    layerManager.resize(width, height, canvas);
+    guideManager.setViewportSize(width, height);
   };
 
-  window.addEventListener('resize', onResize);
-  onResize();
+  // Get viewport dimensions - try visualViewport first, then fallback
+  const getViewportSize = () => {
+    // visualViewport gives CSS pixels in most cases
+    if (window.visualViewport) {
+      return { width: window.visualViewport.width, height: window.visualViewport.height };
+    }
+    // Fallback to document dimensions
+    return {
+      width: document.documentElement.clientWidth,
+      height: document.documentElement.clientHeight
+    };
+  };
+
+  // Use ResizeObserver
+  const resizeObserver = new ResizeObserver(() => {
+    const vp = getViewportSize();
+    if (vp.width > 0 && vp.height > 0) {
+      doResize(vp.width, vp.height);
+    }
+  });
+  resizeObserver.observe(app.canvas);
+
+  // Also listen to visualViewport resize if available
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => {
+      const vp = getViewportSize();
+      if (vp.width > 0 && vp.height > 0) {
+        doResize(vp.width, vp.height);
+      }
+    });
+  }
+
+  // Initial resize
+  const initialVp = getViewportSize();
+  doResize(initialVp.width, initialVp.height);
   ScreenManager.I.onLayoutChanged(layoutManager.getCanvas());
 
-  // Debug: Toggle layer borders with 'D' key
+  // Debug shortcuts:
+  // - D: Toggle layer borders
+  // - L: Toggle layout debug info
+  // - G + ArrowUp: Add horizontal guide at y=0
+  // - G + ArrowLeft: Add vertical guide at x=0
+  // - G + ArrowDown: Add horizontal guide at center
+  // - G + ArrowRight: Add vertical guide at center
+  // - G + Delete: Remove last guide
+  // - G + Escape: Remove all guides
   window.addEventListener('keydown', (e) => {
     if (e.key === 'd' || e.key === 'D') {
       layerManager.toggleDebugBorders();
     }
+    if (e.key === 'l' || e.key === 'L') {
+      layerManager.toggleLayoutDebug();
+    }
   });
-
-  // Enable debug borders by default
-  layerManager.toggleDebugBorders();
 }
 
 main();

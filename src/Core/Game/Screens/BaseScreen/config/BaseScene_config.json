@@ -57,7 +57,13 @@
             "origin": { "x": 0.5, "y": 0.5 },
             "scale": { "x": 0.59, "y": 0.59 },
             "offset": { "x": 0, "y": "-5h%" }
-          }          
+          },
+          "4:3": {
+            "anchor": "center",
+            "origin": { "x": 0.5, "y": 0.5 },
+            "scale": { "x": 0.55, "y": 0.55 },
+            "offset": { "x": 0, "y": 0 }
+          }               
         }
       }
     },
@@ -78,7 +84,13 @@
             "origin": { "x": 0.5, "y": 0.5 },
             "scale": { "x": 0.59, "y": 0.59 },
             "offset": { "x": 0, "y": "-5h%" }
-          }          
+          },
+          "4:3": {
+            "anchor": "center",
+            "origin": { "x": 0.5, "y": 0.5 },
+            "scale": { "x": 0.55, "y": 0.55 },
+            "offset": { "x": 0, "y": 0 }
+          }              
         }
       }
     },
@@ -94,11 +106,17 @@
           "scale": { "x": 0.8, "y": 0.8 }
         },
         "overrides": {          
-           "9:16": {
+          "9:16": {
             "anchor": "center",
             "origin": { "x": 0.5, "y": 0.5 },
-            "offset": { "x": 0, "y": "-28h%" },
-            "scale": { "x": 1.2, "y": 1.2 }
+            "offset": { "x": 0, "y": "-27h%" },
+            "scale": { "x": 1, "y": 1 }
+          },
+          "4:3": {
+            "anchor": "center",
+            "origin": { "x": 0.5, "y": 0.5 },
+            "offset": { "x": 0, "y": "-32h%" },
+            "scale": { "x": 1, "y": 1 }
           }
         }
       }
@@ -109,10 +127,11 @@
       "layer": "decoration",
       "layout": {
         "default": {
-          "anchor": "top-right",
+          "anchor": "top-center",
           "origin": { "x": 0.5, "y": 0 },
-          "offset": { "x": "-10w%", "y": "-6w%" },
-          "scale": { "x": "25w%", "y": "25w%" }
+          "scale": { "x": "50h%", "y": "50h%" },
+          "offset": { "x": "80h%", "y": "-12h%"},
+          "minMargin": { "x": 1, "y": 0 }
         },
         "overrides": {
           "4:3": {
@@ -124,8 +143,8 @@
            "9:16": {
             "anchor": "top-right",
             "origin": { "x": 0.5, "y": 0 },
-            "offset": { "x": "-25w%", "y": "-5h%" },
-            "scale": { "x": "20h%", "y": "20h%" }
+            "offset": { "x": "-25w%", "y": "-7h%" },
+            "scale": { "x": "25h%", "y": "25h%" }
           }
         }
       }
@@ -136,17 +155,29 @@
       "layer": "ui",
       "layout": {
         "default": {
-          "anchor": "bottom-left",
-          "origin": { "x": 0.5, "y": 0.5 },
-          "offset": { "x": 80, "y": -60 },
-          "scale": { "x": 1, "y": 1 }
+          "anchor": "center",
+          "origin": { "x": 0, "y": 0.5 },
+          "offset": { "x": "-85h%", "y": 0 },
+          "scale": { "x": "16h%", "y": "16h%" },
+          "minMargin": { "x": 15 }
         },
         "overrides": {
           "9:16": {
-            "anchor": "bottom-left",
-            "origin": { "x": 0.5, "y": 0.5 },
-            "offset": { "x": 60, "y": -80 },
-            "scale": { "x": 0.9, "y": 0.9 }
+            "relativeTo": "slot_frame",
+            "relativeAnchor": "top-left",
+            "relativeAxis": "x",
+            "relativeOffset": {"x": "4w%"},
+            "anchor": "top-left",
+            "origin": { "x": 0, "y": 0 },
+            "scale": { "x": "11h%", "y": "11h%" },
+            "offset": { "x": 0, "y": "1.5h%" }
+          },
+          "4:3": {
+            "anchor": "top-left",
+            "origin": { "x": 0, "y": 0 },
+            "offset": { "x": 0, "y": 0 },
+            "scale": { "x": "12h%", "y": "12h%" },
+            "minMargin": { "x": 15, "y": 20 }
           }
         }
       }
@@ -157,17 +188,29 @@
       "layer": "ui",
       "layout": {
         "default": {
-          "anchor": "bottom-left",
+          "anchor": "bottom-center",
           "origin": { "x": 0.5, "y": 0.5 },
-          "offset": { "x": 180, "y": -60 },
-          "scale": { "x": 1, "y": 1 }
+          "offset": { "x": "-35h%", "y": "-9h%" },
+          "scale": { "x": "25h%", "y": "25h%" }
         },
         "overrides": {
           "9:16": {
-            "anchor": "bottom-left",
-            "origin": { "x": 0.5, "y": 0.5 },
-            "offset": { "x": 140, "y": -80 },
-            "scale": { "x": 0.9, "y": 0.9 }
+            "relativeTo": "slot_frame",
+            "relativeAnchor": "bottom-left",
+            "relativeAxis": "x",
+            "relativeOffset": {"x": "4w%"},
+            "anchor": "middle-left",
+            "origin": { "x": 0, "y": 0.5 },
+            "offset": { "x": 0, "y": "22h%" },
+            "scale": { "x": "15h%", "y": "15h%" },
+            "maxScale": 1.5
+          },
+          "4:3": {
+            "anchor": "middle-left",
+            "origin": { "x": 0, "y": 0.5 },
+            "offset": { "x": 0, "y": 0 },
+            "scale": { "x": "25h%", "y": "25h%" },
+            "minMargin": {"x": 15}
           }
         }
       }
@@ -178,17 +221,30 @@
       "layer": "ui",
       "layout": {
         "default": {
-          "anchor": "bottom-left",
+          "anchor": "bottom-center",
           "origin": { "x": 0, "y": 0.5 },
-          "offset": { "x": 250, "y": -60 },
-          "scale": { "x": 1, "y": 1 }
+          "offset": { "x": "-85h%", "y": "-11.2h%" },
+          "scale": { "x": "15h%", "y": "15h%" },
+          "minMargin": { "x": 15 }
         },
         "overrides": {
+          "4:3": {
+            "anchor": "bottom-left",
+            "origin": { "x": 0, "y": 1 },
+            "offset": { "x": "0", "y": "0" },
+            "scale": { "x": "13.78h%", "y": "13.78h%" },
+            "minMargin": { "x": 15, "y": 15 }
+          },
           "9:16": {
-            "anchor": "bottom-center",
-            "origin": { "x": 0.5, "y": 0.5 },
-            "offset": { "x": 0, "y": -180 },
-            "scale": { "x": 0.85, "y": 0.85 }
+            "relativeTo": "slot_frame",
+            "relativeAnchor": "bottom-left",
+            "relativeAxis": "x",
+            "relativeOffset": {"x": "4w%"},
+            "anchor": "bottom-left",
+            "origin": { "x": 0, "y": 0 },
+            "scale": { "x": "14h%", "y": "14h%" },
+            "offset": { "x": 0, "y": "-17h%" },
+            "maxScale": 2.1
           }
         }
       }
@@ -199,80 +255,95 @@
       "layer": "ui",
       "layout": {
         "default": {
-          "anchor": "bottom-right",
+          "anchor": "bottom-center",
+          "origin": { "x": 1, "y": 0.5 },
+          "offset": { "x": "85h%", "y": "-11.2h%" },
+          "scale": { "x": "15h%", "y": "15h%" },
+          "minMargin": { "x": 15 }
+        },
+        "overrides": {
+          "4:3": {
+            "anchor": "bottom-right",
+            "origin": { "x": 1, "y": 1 },
+            "offset": { "x": "0", "y": "0" },
+            "scale": { "x": "13.78h%", "y": "13.78h%" },
+            "minMargin": { "x": 15, "y": 15 }
+          },
+          "9:16": {
+            "relativeTo": "slot_frame",
+            "relativeAnchor": "bottom-right",
+            "relativeAxis": "x",
+            "relativeOffset": {"x": "-4w%"},
+            "anchor": "bottom-left",
+            "origin": { "x": 1, "y": 0 },
+            "scale": { "x": "14h%", "y": "14h%" },
+            "offset": { "x": 0, "y": "-17h%" },
+            "maxScale": 2.1
+          }
+        }
+      }
+    },
+    {
+      "id": "ui_spin_controls",
+      "type": "SpinControlsView",
+      "layer": "ui",
+      "layout": {
+        "default": {
+          "anchor": "bottom-center",
           "origin": { "x": 0.5, "y": 0.5 },
-          "offset": { "x": 0, "y": -60 },
-          "scale": { "x": 1, "y": 1 }
+          "offset": { "x": 0, "y": "-9h%" },
+          "scale": { "x": "15h%", "y": "15h%" }
         },
         "overrides": {
           "9:16": {
-            "anchor": "bottom-center",
+            "relativeTo": "slot_frame",
+            "relativeAnchor": "bottom-center",
+            "relativeAxis": "x",
+            "anchor": "middle-center",
             "origin": { "x": 0.5, "y": 0.5 },
-            "offset": { "x": 0, "y": -120 },
-            "scale": { "x": 0.9, "y": 0.9 }
+            "offset": { "x": 0, "y": "22h%" },
+            "scale": { "x": "12h%", "y": "12h%" },
+            "minMargin": { "x": 190 }
+          },
+          "4:3": {
+            "anchor": "bottom-center",
+            "origin": { "x": 0.5, "y": 1 },
+            "offset": { "x": 0, "y": 0 },
+            "scale": { "x": "13.78h%", "y": "13.78h%" },
+            "minMargin": { "y": 12 }
           }
         }
       }
     },
     {
-      "id": "ui_auto_spin",
-      "type": "AutoSpinButtonView",
+      "id": "ui_audio",
+      "type": "AudioButtonView",
       "layer": "ui",
       "layout": {
         "default": {
           "anchor": "bottom-center",
-          "origin": { "x": 0.5, "y": 0 },
-          "offset": { "x": -120, "y": -167 },
-          "scale": { "x": 1.5, "y": 1.5 }
+          "origin": { "x": 0.5, "y": 0.5 },
+          "offset": { "x": "35h%", "y": "-9h%" },
+          "scale": { "x": "25h%", "y": "25h%" }
         },
         "overrides": {
           "9:16": {
-            "anchor": "bottom-center",
-            "origin": { "x": 0.5, "y": 0 },
-            "offset": { "x": -70, "y": -117 },
-            "scale": { "x": 1, "y": 1 }
-          }
-        }
-      }
-    },
-    {
-      "id": "ui_turbo",
-      "type": "TurboButtonView",
-      "layer": "ui",
-      "layout": {
-        "default": {
-          "anchor": "bottom-center",
-          "origin": { "x": 0.5, "y": 0 },
-          "offset": { "x": 120, "y": -167 },
-          "scale": { "x": 1.5, "y": 1.5 }
-        },
-        "overrides": {
-          "9:16": {
-            "anchor": "bottom-center",
-            "origin": { "x": 0.5, "y": 0 },
-            "offset": { "x": 70, "y": -117 },
-            "scale": { "x": 1, "y": 1 }
-          }
-        }
-      }
-    },
-    {
-      "id": "ui_spin",
-      "type": "SpinButtonView",
-      "layer": "ui",
-      "layout": {
-        "default": {
-          "anchor": "bottom-center",
-          "origin": { "x": 0.5, "y": 1 },
-          "offset": { "x": 0, "y": "-2.5h%" },
-          "scale": { "x": 2, "y": 2 }
-        },
-        "overrides": {
-          "9:16": {
-            "anchor": "bottom-center",
-            "origin": { "x": 0.5, "y": 0.5 },
-            "offset": { "x": 0, "y": -50 },
-            "scale": { "x": 1.1, "y": 1.1 }
+            "relativeTo": "slot_frame",
+            "relativeAnchor": "bottom-right",
+            "relativeAxis": "x",
+            "relativeOffset": {"x": "-4w%"},
+            "anchor": "middle-center",
+            "origin": { "x": 1, "y": 0.5 },
+            "offset": { "x": 0, "y": "22h%" },
+            "scale": { "x": "15h%", "y": "15h%" },
+            "maxScale": 1.5
+          },
+          "4:3": {
+            "anchor": "middle-right",
+            "origin": { "x": 1, "y": 0.5 },
+            "offset": { "x": 0, "y": 0 },
+            "scale": { "x": "25h%", "y": "25h%" },
+            "minMargin": { "x": 15 }
           }
         }
       }

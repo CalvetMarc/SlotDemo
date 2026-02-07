@@ -2,6 +2,7 @@ import { Container } from "pixi.js";
 import { View, ViewConfig } from "./View";
 import { DesignCanvas } from "../Layout/DesignCanvas";
 import { ViewLayoutManager } from "../Orchestors/ViewLayoutManager";
+import { CentralLayerManager } from "../Orchestors/CentralLayerManager";
 
 /** Base layer class for organizing views in a game screen. */
 export class Layer extends Container {
@@ -29,11 +30,16 @@ export class Layer extends Container {
         this.layerViews[id] = view;
         this.addChild(view);
 
+        // Register view for relativeTo lookups (include layerId for coordinate conversion)
+        CentralLayerManager.I.registerView(id, view, this.layerId);
+
         if (config) {
             this.viewConfigs.set(id, config);
 
             if (this.currentCanvas) {
-                this.layoutManager.applyLayout(view, config, this.currentCanvas);
+                // Pass layerId to convert relativeTo coordinates to this layer's local space
+                const viewLookup = CentralLayerManager.I.createViewLookup(this.layerId);
+                this.layoutManager.applyLayout(view, config, this.currentCanvas, viewLookup);
             }
         }
     }
@@ -43,19 +49,36 @@ export class Layer extends Container {
         const view = this.layerViews[id];
         if (!view) return;
 
+        // Unregister from relativeTo lookups
+        CentralLayerManager.I.unregisterView(id);
+
         view.destroy({ children: true });
         delete this.layerViews[id];
         this.viewConfigs.delete(id);
     }
 
-    /** Updates layout for all views in this layer. */
+    /** Updates layout for all views in this layer. Uses two-pass for relativeTo support. */
     updateViewLayouts(canvas: DesignCanvas): void {
+        // Pass layerId to convert relativeTo coordinates to this layer's local space
+        const viewLookup = CentralLayerManager.I.createViewLookup(this.layerId);
+
+        // Pass 1: Layout views that DON'T use relativeTo
         for (const [viewId, view] of Object.entries(this.layerViews)) {
             if (!view) continue;
 
             const viewConfig = this.viewConfigs.get(viewId);
-            if (viewConfig) {
-                this.layoutManager.updateLayout(view, viewConfig, canvas);
+            if (viewConfig && !this.layoutManager.usesRelativeTo(viewConfig, canvas)) {
+                this.layoutManager.updateLayout(view, viewConfig, canvas, viewLookup);
+            }
+        }
+
+        // Pass 2: Layout views that DO use relativeTo (now their targets are positioned)
+        for (const [viewId, view] of Object.entries(this.layerViews)) {
+            if (!view) continue;
+
+            const viewConfig = this.viewConfigs.get(viewId);
+            if (viewConfig && this.layoutManager.usesRelativeTo(viewConfig, canvas)) {
+                this.layoutManager.updateLayout(view, viewConfig, canvas, viewLookup);
             }
         }
     }

@@ -1,80 +1,129 @@
 import { View, bundle } from "../../Abstractions/View";
-import { Text, TextStyle, Container, Sprite, Assets, Graphics } from "pixi.js";
+import { Text, TextStyle, Graphics } from "pixi.js";
+import { ArrowButtonView } from "./ArrowButtonView";
 
 export class BetDisplayView extends View {
     private background!: Graphics;
     private labelText!: Text;
     private valueText!: Text;
-    private upArrow!: Container;
-    private downArrow!: Container;
+    private progressBar!: Graphics;
+    private progressFill!: Graphics;
+    private upArrow!: ArrowButtonView;
+    private downArrow!: ArrowButtonView;
+
+    // Bet steps: 0.1, 0.2, then every 0.2 until 2, then every 1 until 10, then every 5 until 50, then every 25 until 100
+    private betSteps: number[] = [
+        0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0,
+        3, 4, 5, 6, 7, 8, 9, 10,
+        15, 20, 25, 30, 35, 40, 45, 50,
+        75, 100
+    ];
+    private currentBetIndex: number = 10; // Default to 2€ (index 10)
 
     bundleNeeded(): bundle {
         return "base";
     }
 
     appear(): void {
-        // Glassmorphism background
+        // Background rectangle (190x119 to match BalanceDisplayView) - Dark magical theme
         this.background = new Graphics();
-        this.background.roundRect(-50, -25, 140, 50, 12);
-        this.background.fill({ color: 0x000000, alpha: 0.6 });
+        this.background.roundRect(0, 0, 190, 119, 12);
+        this.background.fill({ color: 0x1a1f2e });  // Deep blue-gray
+        this.background.stroke({ color: 0x2a3345, width: 3 });  // Subtle blue border
         this.addChild(this.background);
 
-        // Label
+        // Label "DEMO BET" - muted blue-gray (positioned to match BalanceDisplayView)
         const labelStyle = new TextStyle({
             fontFamily: 'Arial, sans-serif',
-            fontSize: 10,
-            fill: 0x888888,
+            fontSize: 14,
+            fill: 0x8892a8,  // Muted blue-gray
             fontWeight: '600',
             letterSpacing: 1
         });
-        this.labelText = new Text({ text: 'BET', style: labelStyle });
-        this.labelText.anchor.set(0, 0.5);
-        this.labelText.position.set(-40, -10);
+        this.labelText = new Text({ text: 'DEMO BET', style: labelStyle });
+        this.labelText.anchor.set(0, 0);
+        this.labelText.position.set(15, 18);
         this.addChild(this.labelText);
 
-        // Value
+        // Value text - soft white for readability (positioned to match BalanceDisplayView)
         const valueStyle = new TextStyle({
             fontFamily: 'Arial, sans-serif',
-            fontSize: 18,
-            fill: 0xffffff,
+            fontSize: 28,
+            fill: 0xe8eaf0,  // Soft white
             fontWeight: 'bold'
         });
-        this.valueText = new Text({ text: '€1.80', style: valueStyle });
+        this.valueText = new Text({ text: '€2.00', style: valueStyle });
         this.valueText.anchor.set(0, 0.5);
-        this.valueText.position.set(-40, 10);
+        this.valueText.position.set(15, 62);
         this.addChild(this.valueText);
 
-        // Arrows from spritesheet
-        const sheet = Assets.get('ui_icons');
+        // Progress bar background - darker magical
+        this.progressBar = new Graphics();
+        this.progressBar.roundRect(15, 93, 120, 8, 4);
+        this.progressBar.fill({ color: 0x141824 });  // Deep dark blue
+        this.addChild(this.progressBar);
 
-        // Up arrow
-        this.upArrow = new Container();
-        const upSprite = new Sprite(sheet.textures['betUp.png']);
-        upSprite.anchor.set(0.5);
-        upSprite.tint = 0xffffff;
-        upSprite.scale.set(0.12);
-        this.upArrow.addChild(upSprite);
-        this.upArrow.position.set(65, -8);
-        this.upArrow.eventMode = 'static';
-        this.upArrow.cursor = 'pointer';
+        // Progress bar fill
+        this.progressFill = new Graphics();
+        this.addChild(this.progressFill);
+        this.updateProgressBar();
+
+        // Up arrow button (hitArea extends upward, sprite at position)
+        this.upArrow = new ArrowButtonView('up', () => this.increaseBet());
+        this.upArrow.appear();
+        this.upArrow.position.set(155, 60);
         this.addChild(this.upArrow);
 
-        // Down arrow
-        this.downArrow = new Container();
-        const downSprite = new Sprite(sheet.textures['betDown.png']);
-        downSprite.anchor.set(0.5);
-        downSprite.tint = 0xffffff;
-        downSprite.scale.set(0.12);
-        this.downArrow.addChild(downSprite);
-        this.downArrow.position.set(65, 8);
-        this.downArrow.eventMode = 'static';
-        this.downArrow.cursor = 'pointer';
+        // Down arrow button (hitArea extends downward, sprite at position)
+        this.downArrow = new ArrowButtonView('down', () => this.decreaseBet());
+        this.downArrow.appear();
+        this.downArrow.position.set(155, 60);
         this.addChild(this.downArrow);
+
+        // Update display
+        this.updateDisplay();
     }
 
-    public setValue(value: string): void {
-        if (this.valueText) {
-            this.valueText.text = value;
+    private updateProgressBar(): void {
+        this.progressFill.clear();
+        const progress = this.currentBetIndex / (this.betSteps.length - 1);
+        const width = Math.max(8, progress * 120);
+        this.progressFill.roundRect(15, 93, width, 8, 4);
+        this.progressFill.fill({ color: 0x00d4aa });  // Magical cyan accent
+    }
+
+    private updateDisplay(): void {
+        const bet = this.betSteps[this.currentBetIndex];
+        this.valueText.text = `€${bet.toFixed(2)}`;
+        this.updateProgressBar();
+
+        // Update arrow states based on limits
+        this.upArrow.setDisabled(this.currentBetIndex >= this.betSteps.length - 1);
+        this.downArrow.setDisabled(this.currentBetIndex <= 0);
+    }
+
+    private increaseBet(): void {
+        if (this.currentBetIndex < this.betSteps.length - 1) {
+            this.currentBetIndex++;
+            this.updateDisplay();
+        }
+    }
+
+    private decreaseBet(): void {
+        if (this.currentBetIndex > 0) {
+            this.currentBetIndex--;
+            this.updateDisplay();
+        }
+    }
+
+    public getBet(): number {
+        return this.betSteps[this.currentBetIndex];
+    }
+
+    public setBetIndex(index: number): void {
+        if (index >= 0 && index < this.betSteps.length) {
+            this.currentBetIndex = index;
+            this.updateDisplay();
         }
     }
 }

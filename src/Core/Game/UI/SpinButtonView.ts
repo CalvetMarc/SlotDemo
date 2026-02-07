@@ -1,7 +1,8 @@
-import { View, bundle } from "../../Abstractions/View";
+import { ButtonView } from "../../Abstractions/ButtonView";
+import { bundle } from "../../Abstractions/View";
 import { Sprite, Assets, Graphics } from "pixi.js";
 
-export class SpinButtonView extends View {
+export class SpinButtonView extends ButtonView {
     private background!: Graphics;
     private iconSprite!: Sprite;
     private isAutoMode: boolean = false;
@@ -11,22 +12,26 @@ export class SpinButtonView extends View {
     }
 
     appear(): void {
-        // Background centered at (0,0)
+        // Circular background with magical cyan accent - PLAY button is the main action
         this.background = new Graphics();
-        this.background.roundRect(-35, -35, 70, 70, 35);
-        this.background.fill({ color: 0x000000, alpha: 0.6 });
+        this.background.circle(0, 0, 58);
+        this.background.fill({ color: 0x00d4aa });  // Magical cyan accent
+        this.background.stroke({ color: 0x00a88a, width: 4, join: 'round', cap: 'round' });  // Darker cyan border
         this.addChild(this.background);
 
-        // Icon centered at (0,0)
+        // Icon centered at (0,0) - dark icon on accent background
         const sheet = Assets.get('ui_icons');
         this.iconSprite = new Sprite(sheet.textures['play.png']);
         this.iconSprite.anchor.set(0.5);
-        this.iconSprite.tint = 0xffffff;
-        this.iconSprite.scale.set(0.35);
+        this.iconSprite.tint = 0x0a1520;  // Dark icon for contrast on cyan
+        this.iconSprite.scale.set(0.58);
         this.addChild(this.iconSprite);
 
-        this.eventMode = 'static';
-        this.cursor = 'pointer';
+        this.setupInteractivity();
+    }
+
+    onMouseClick(): void {
+        // TODO: Trigger spin
     }
 
     public setAutoMode(active: boolean): void {
