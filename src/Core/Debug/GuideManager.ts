@@ -1,4 +1,5 @@
 import { Container, Graphics, FederatedPointerEvent, Rectangle } from 'pixi.js';
+import { SingletonBase } from '../Abstractions/SingletonBase';
 
 interface Guide {
     type: 'horizontal' | 'vertical';
@@ -7,8 +8,7 @@ interface Guide {
     hitArea: Graphics;
 }
 
-export class GuideManager {
-    private static instance: GuideManager;
+export class GuideManager extends SingletonBase {
     private container: Container;
     private guides: Guide[] = [];
     private isGKeyDown: boolean = false;
@@ -19,18 +19,16 @@ export class GuideManager {
     private viewportWidth: number = 800;
     private viewportHeight: number = 600;
 
-    private constructor() {
+    protected constructor() {
+        super();
         this.container = new Container();
         this.container.zIndex = 9999; // Always on top
         this.container.sortableChildren = true;
         this.setupKeyboardListeners();
     }
 
-    static get I(): GuideManager {
-        if (!GuideManager.instance) {
-            GuideManager.instance = new GuideManager();
-        }
-        return GuideManager.instance;
+    public static get I(): GuideManager {
+        return super.getInstance<GuideManager>();
     }
 
     get root(): Container {

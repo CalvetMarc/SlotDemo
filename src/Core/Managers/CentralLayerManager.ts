@@ -177,7 +177,7 @@ export class CentralLayerManager extends SingletonBase {
   clearAllViews(): void {
     for (const layer of this.layers.values()) {
       // Clear views but don't destroy the layer itself
-      const viewIds = Object.keys(layer['layerViews']);
+      const viewIds = Object.keys(layer.getViews());
       for (const viewId of viewIds) {
         layer.removeView(viewId);
       }
@@ -325,7 +325,7 @@ export class CentralLayerManager extends SingletonBase {
       }
 
       // Get current canvas dimensions from layer
-      const canvas = layer['currentCanvas'];
+      const canvas = layer.getCurrentCanvas();
       if (canvas) {
         this.drawLayerBorder(border, layerId, canvas.width, canvas.height);
       }

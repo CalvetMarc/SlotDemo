@@ -1,4 +1,4 @@
-import { ViewRegistry } from "../../../../Orchestors/ViewFactory";
+import { ViewRegistry } from "../../../../Managers/ViewFactory";
 import { BaseBackgroundView } from "../../SplashScreen/views/BaseBackgroundView";
 import { FogOverlayView } from "../../SplashScreen/views/FogOverlayView";
 import { FliesView } from "../views/FliesView";
@@ -14,7 +14,6 @@ import { BalanceDisplayView } from "../../../UI/BalanceDisplayView";
 import { BuyBonusButtonView } from "../../../UI/BuyBonusButtonView";
 import { MenuButtonView } from "../../../UI/MenuButtonView";
 import { AudioButtonView } from "../../../UI/AudioButtonView";
-import { InfoButtonView } from "../../../UI/InfoButtonView";
 
 export const BASE_VIEW_REGISTRY: ViewRegistry = {
     BaseBackgroundView,
@@ -30,6 +29,5 @@ export const BASE_VIEW_REGISTRY: ViewRegistry = {
     BalanceDisplayView,
     BuyBonusButtonView,
     MenuButtonView,
-    AudioButtonView,
-    InfoButtonView
+    AudioButtonView
 };

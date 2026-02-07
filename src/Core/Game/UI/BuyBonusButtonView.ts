@@ -1,9 +1,10 @@
 import { ButtonView } from "../../Abstractions/ButtonView";
 import { bundle } from "../../Abstractions/View";
-import { Text, TextStyle, Graphics, Ticker } from "pixi.js";
+import { Text, TextStyle, Graphics, Ticker, DestroyOptions } from "pixi.js";
 
 export class BuyBonusButtonView extends ButtonView {
     private background!: Graphics;
+    private strokeGraphic!: Graphics;
     private buyText!: Text;
     private bonusText!: Text;
     private hue: number = 0;
@@ -19,12 +20,19 @@ export class BuyBonusButtonView extends ButtonView {
     }
 
     appear(): void {
-        // Background
+        // Background fill (static, never changes)
         this.background = new Graphics();
+        this.background.roundRect(-120, -80, 240, 160, 6);
+        this.background.fill({ color: 0x000000, alpha: 0.6 });
         this.addChild(this.background);
-        this.drawBackground(0xffffff);
 
-        // "BUY" text on top
+        // Stroke (drawn once with white, tinted for rainbow)
+        this.strokeGraphic = new Graphics();
+        this.strokeGraphic.roundRect(-120, -80, 240, 160, 6);
+        this.strokeGraphic.stroke({ color: 0xffffff, width: 3 });
+        this.addChild(this.strokeGraphic);
+
+        // "BUY" text on top (white, tinted for rainbow)
         const buyStyle = new TextStyle({
             fontFamily: 'Arial, sans-serif',
             fontSize: 38,
@@ -37,7 +45,7 @@ export class BuyBonusButtonView extends ButtonView {
         this.buyText.position.set(0, -28);
         this.addChild(this.buyText);
 
-        // "BONUS" text on bottom
+        // "BONUS" text on bottom (white, tinted for rainbow)
         const bonusStyle = new TextStyle({
             fontFamily: 'Arial, sans-serif',
             fontSize: 44,
@@ -61,19 +69,13 @@ export class BuyBonusButtonView extends ButtonView {
         // TODO: Open buy bonus modal
     }
 
-    private drawBackground(strokeColor: number): void {
-        this.background.clear();
-        this.background.roundRect(-120, -80, 240, 160, 6);
-        this.background.fill({ color: 0x000000, alpha: 0.6 });
-        this.background.stroke({ color: strokeColor, width: 3 });
-    }
-
     private updateRainbow(): void {
         this.hue = (this.hue + this.rainbowSpeed) % 360;
         const color = this.hslToHex(this.hue, this.rainbowSaturation, this.rainbowLightness);
-        this.buyText.style.fill = color;
-        this.bonusText.style.fill = color;
-        this.drawBackground(color);
+        // Use tint instead of geometry rebuild / text re-render
+        this.strokeGraphic.tint = color;
+        this.buyText.tint = color;
+        this.bonusText.tint = color;
     }
 
     private hslToHex(h: number, s: number, l: number): number {
@@ -88,10 +90,10 @@ export class BuyBonusButtonView extends ButtonView {
         return (f(0) << 16) + (f(8) << 8) + f(4);
     }
 
-    destroy(): void {
+    destroy(options?: DestroyOptions): void {
         if (this.tickerCallback) {
             Ticker.shared.remove(this.tickerCallback);
         }
-        super.destroy();
+        super.destroy(options);
     }
 }

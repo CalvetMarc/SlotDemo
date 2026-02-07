@@ -1,4 +1,4 @@
-import { Application, Container, Size } from 'pixi.js';
+import { Application, Container } from 'pixi.js';
 import { Ticker } from 'pixi.js';
 
 import { SingletonBase } from '../Abstractions/SingletonBase';
@@ -45,7 +45,6 @@ export class ScreenManager extends SingletonBase {
   public async start(): Promise<void> {
     this.currentScreen = this.screenFactory("SPLASH");
     await this.currentScreen.load();
-    this.root.addChild(this.currentScreen);
     await this.currentScreen.onEnter();
 
     this.scheduleTransitionToBase();
@@ -98,8 +97,7 @@ export class ScreenManager extends SingletonBase {
     if(!this.currentScreen.loaded){
       await this.currentScreen.load();
     }
-    
-    this.root.addChild(this.currentScreen);
+
     await this.currentScreen.onEnter();   
   }
 
@@ -107,16 +105,12 @@ export class ScreenManager extends SingletonBase {
     switch(screenKey){
         case "SPLASH":
           return new SplashScreen();
-          break;
         case "BASE":
           return new BaseScreen();
-          break;
         case "BONUS":
           return new BonusScreen();
-          break;
         default:
           throw new Error(`Scene ${screenKey} does not exist`);
-          break;
     }
   }
 }

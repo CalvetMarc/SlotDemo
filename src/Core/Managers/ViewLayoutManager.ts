@@ -1,30 +1,25 @@
 import { View, ViewConfig } from "../Abstractions/View";
 import { DesignCanvas } from "../Layout/DesignCanvas";
 import { LayoutResolver } from "../Layout/LayoutConstraints";
-import { Transform } from "../Utils/Transform";
 
 /** Type for view lookup function used with relativeTo positioning */
 export type ViewLookupFn = (viewId: string) => { x: number; y: number; width: number; height: number } | null;
 
-/** Applies layout or transform to views based on configuration. */
+/** Applies layout to views based on configuration. */
 export class ViewLayoutManager {
-    /** Applies layout or transform to a view. Prefers layout over transform. */
+    /** Applies layout to a view. */
     applyLayout(view: View, config: ViewConfig, canvas?: DesignCanvas, viewLookup?: ViewLookupFn): void {
-        if (config.layout) {
-            if (!canvas) {
-                console.warn(
-                    `ViewLayoutManager: Cannot apply layout to view "${config.id}" - canvas not provided. ` +
-                    `Layout will be applied when canvas becomes available.`
-                );
-                return;
-            }
+        if (!config.layout) return;
 
-            LayoutResolver.applyLayout(view, config.layout, canvas, viewLookup);
+        if (!canvas) {
+            console.warn(
+                `ViewLayoutManager: Cannot apply layout to view "${config.id}" - canvas not provided. ` +
+                `Layout will be applied when canvas becomes available.`
+            );
+            return;
         }
-        else if (config.transform) {
-            const transform = new Transform(config.transform);
-            transform.applyTo(view);
-        }
+
+        LayoutResolver.applyLayout(view, config.layout, canvas, viewLookup);
     }
 
     /** Applies layout to multiple views. */
@@ -41,21 +36,11 @@ export class ViewLayoutManager {
         });
     }
 
-    /** Re-applies layout when canvas changes. Only works for layout system, not transforms. */
+    /** Re-applies layout when canvas changes. */
     updateLayout(view: View, config: ViewConfig, canvas: DesignCanvas, viewLookup?: ViewLookupFn): void {
         if (config.layout) {
             LayoutResolver.applyLayout(view, config.layout, canvas, viewLookup);
         }
-    }
-
-    /** Checks if view uses layout system. */
-    usesLayoutSystem(config: ViewConfig): boolean {
-        return config.layout !== undefined;
-    }
-
-    /** Checks if view uses legacy transform system. */
-    usesTransformSystem(config: ViewConfig): boolean {
-        return config.transform !== undefined;
     }
 
     /** Checks if view uses relativeTo positioning. */

@@ -35,6 +35,20 @@ export interface LayoutConfig {
   overrides?: Partial<Record<LayoutAspectKey, LayoutConstraint>>;
 }
 
+/** Target with optional sprite-like properties for layout resolution */
+interface LayoutTarget {
+    position: { set(x: number, y: number): void; x: number; y: number };
+    scale: { x: number; y: number; set(x: number, y: number): void };
+    rotation: number;
+    pivot?: { set(x: number, y: number): void };
+    anchor?: { set(x: number, y: number): void };
+    texture?: { width: number; height: number };
+    children?: LayoutTarget[];
+    width?: number;
+    height?: number;
+    getLocalBounds?: () => { x: number; y: number; width: number; height: number };
+}
+
 export class LayoutResolver {
 
   static getAspectKey(canvas: DesignCanvas): LayoutAspectKey {
@@ -327,16 +341,7 @@ export class LayoutResolver {
    * Returns the global bounds of a view by its ID.
    */
   static applyLayout(
-    target: {
-      position: { set(x: number, y: number): void; x: number; y: number };
-      scale: { x: number; y: number; set(x: number, y: number): void };
-      rotation: number;
-      pivot?: { set(x: number, y: number): void };
-      children?: any[];
-      width?: number;
-      height?: number;
-      getLocalBounds?: () => { x: number; y: number; width: number; height: number };
-    },
+    target: LayoutTarget,
     layout: LayoutConfig,
     canvas: DesignCanvas,
     viewLookup?: (viewId: string) => { x: number; y: number; width: number; height: number } | null
@@ -387,16 +392,16 @@ export class LayoutResolver {
     let viewHeight = 0;
 
     // Try to get dimensions from sprite texture first (most reliable)
-    if ((target as any).texture?.width && (target as any).texture?.height) {
-      viewWidth = (target as any).texture.width;
-      viewHeight = (target as any).texture.height;
+    if (target.texture?.width && target.texture?.height) {
+      viewWidth = target.texture.width;
+      viewHeight = target.texture.height;
     }
     // Try children with textures (for containers with sprites)
     else if (target.children && target.children.length > 0) {
       for (const child of target.children) {
-        if ((child as any).texture?.width && (child as any).texture?.height) {
-          viewWidth = (child as any).texture.width;
-          viewHeight = (child as any).texture.height;
+        if (child.texture?.width && child.texture?.height) {
+          viewWidth = child.texture.width;
+          viewHeight = child.texture.height;
           break;
         }
       }
@@ -427,13 +432,13 @@ export class LayoutResolver {
       const originY = constraint.origin.y ?? 0.5;
 
       // Check if target is a Sprite (has anchor property directly)
-      if ((target as any).anchor && typeof (target as any).anchor.set === 'function') {
+      if (target.anchor && typeof target.anchor.set === 'function') {
         // Direct sprite: use anchor (0-1 range)
-        (target as any).anchor.set(originX, originY);
+        target.anchor.set(originX, originY);
       }
       // Container: use pivot based on local bounds
       else if (target.pivot && target.getLocalBounds) {
-        const bounds = (target as any).getLocalBounds();
+        const bounds = target.getLocalBounds();
         const pivotX = bounds.x + originX * bounds.width;
         const pivotY = bounds.y + originY * bounds.height;
         target.pivot.set(pivotX, pivotY);

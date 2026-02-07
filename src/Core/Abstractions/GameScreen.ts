@@ -1,11 +1,10 @@
-import { Container } from "pixi.js";
-import { ViewRegistry } from "../Orchestors/ViewFactory";
-import { ViewFactory } from "../Orchestors/ViewFactory";
-import { ViewConfig } from "./View";
+import { View, ViewConfig } from "./View";
+import { ViewRegistry } from "../Managers/ViewFactory";
+import { ViewFactory } from "../Managers/ViewFactory";
 import { DesignCanvas } from "../Layout/DesignCanvas";
-import { AssetLoader } from "../Orchestors/AssetLoader";
-import { ViewInitializer } from "../Orchestors/ViewInitializer";
-import { CentralLayerManager } from "../Orchestors/CentralLayerManager";
+import { AssetLoader } from "../Managers/AssetLoader";
+import { ViewInitializer } from "../Managers/ViewInitializer";
+import { CentralLayerManager } from "../Managers/CentralLayerManager";
 
 export interface IGameScreen {
     load(): Promise<void>;
@@ -21,10 +20,10 @@ export interface ScreenConfig {
 }
 
 /** Base class for all game screens using centralized layer system. */
-export abstract class GameScreen extends Container implements IGameScreen {
+export abstract class GameScreen implements IGameScreen {
     private _loaded: boolean;
-    private viewIds: string[] = [];
-    private preparedViews: { view: any; config: ViewConfig }[] = [];
+    private viewLayerMap: Map<string, string> = new Map();
+    private preparedViews: { view: View; config: ViewConfig }[] = [];
 
     private readonly assetLoader: AssetLoader;
     private readonly viewInitializer: ViewInitializer;
@@ -36,8 +35,6 @@ export abstract class GameScreen extends Container implements IGameScreen {
     abstract onExit(): Promise<void>;
 
     constructor(){
-        super();
-
         this.assetLoader = new AssetLoader();
         this.viewInitializer = new ViewInitializer();
         this._loaded = false;
@@ -47,24 +44,15 @@ export abstract class GameScreen extends Container implements IGameScreen {
 
     /** Removes all views added by this screen from centralized layers. */
     public unload(){
-        // Remove all views this screen added to layers
-        for (const viewId of this.viewIds) {
-            for (const layerId of this.layerManager.getLayerIds()) {
-                try {
-                    this.layerManager.getLayer(layerId).removeView(viewId);
-                } catch {
-                    // View might not be in this layer
-                }
-            }
+        for (const [viewId, layerId] of this.viewLayerMap) {
+            this.layerManager.getLayer(layerId).removeView(viewId);
         }
-        this.viewIds = [];
+        this.viewLayerMap.clear();
         this.preparedViews = [];
-
-        this.destroy({ children: true });
     }
 
     /** Called when canvas changes. Centralized layers handle their own layout updates. */
-    public onLayoutChanged(canvas: DesignCanvas) {
+    public onLayoutChanged(_canvas: DesignCanvas) {
         // Layers are managed centrally, they handle their own layout updates
         // Screen-specific layout logic can be added here if needed
     }
@@ -102,8 +90,8 @@ export abstract class GameScreen extends Container implements IGameScreen {
             const targetLayer = this.layerManager.getLayer(config.layer);
             targetLayer.addView(view.id, view, config);
 
-            // Track for cleanup
-            this.viewIds.push(view.id);
+            // Track view→layer for O(1) cleanup
+            this.viewLayerMap.set(view.id, config.layer);
         }
     }
 

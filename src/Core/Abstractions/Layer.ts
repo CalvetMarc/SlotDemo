@@ -1,8 +1,8 @@
 import { Container } from "pixi.js";
 import { View, ViewConfig } from "./View";
 import { DesignCanvas } from "../Layout/DesignCanvas";
-import { ViewLayoutManager } from "../Orchestors/ViewLayoutManager";
-import { CentralLayerManager } from "../Orchestors/CentralLayerManager";
+import { ViewLayoutManager } from "../Managers/ViewLayoutManager";
+import { CentralLayerManager } from "../Managers/CentralLayerManager";
 
 /** Base layer class for organizing views in a game screen. */
 export class Layer extends Container {
@@ -23,6 +23,11 @@ export class Layer extends Container {
     /** Called when canvas changes. Stores canvas for view positioning. */
     onLayoutChanged(canvas: DesignCanvas): void {
         this.currentCanvas = canvas;
+    }
+
+    /** Returns the current canvas for this layer. */
+    getCurrentCanvas(): DesignCanvas | undefined {
+        return this.currentCanvas;
     }
 
     /** Adds a view to this layer and applies layout if canvas is available. */
