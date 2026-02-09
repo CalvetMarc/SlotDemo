@@ -15,4 +15,8 @@ export class BatsView extends View {
         this.sprite.play();
         this.addChild(this.sprite);
     }
+
+    protected dispose(): void {
+        this.sprite.stop();
+    }
 }

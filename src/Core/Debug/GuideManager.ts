@@ -42,40 +42,49 @@ export class GuideManager extends SingletonBase {
         this.guides.forEach(guide => this.updateGuideSize(guide));
     }
 
+    private onKeyDown = (e: KeyboardEvent): void => {
+        if (e.key === 'g' || e.key === 'G') {
+            this.isGKeyDown = true;
+        }
+
+        if (this.isGKeyDown) {
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                this.addHorizontalGuide(0);
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                this.addVerticalGuide(0);
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                this.addHorizontalGuide(this.viewportHeight / 2);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                this.addVerticalGuide(this.viewportWidth / 2);
+            } else if (e.key === 'Delete' || e.key === 'Backspace') {
+                e.preventDefault();
+                this.removeLastGuide();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                this.removeAllGuides();
+            }
+        }
+    };
+
+    private onKeyUp = (e: KeyboardEvent): void => {
+        if (e.key === 'g' || e.key === 'G') {
+            this.isGKeyDown = false;
+        }
+    };
+
     private setupKeyboardListeners(): void {
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'g' || e.key === 'G') {
-                this.isGKeyDown = true;
-            }
+        window.addEventListener('keydown', this.onKeyDown);
+        window.addEventListener('keyup', this.onKeyUp);
+    }
 
-            if (this.isGKeyDown) {
-                if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    this.addHorizontalGuide(0);
-                } else if (e.key === 'ArrowLeft') {
-                    e.preventDefault();
-                    this.addVerticalGuide(0);
-                } else if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    this.addHorizontalGuide(this.viewportHeight / 2);
-                } else if (e.key === 'ArrowRight') {
-                    e.preventDefault();
-                    this.addVerticalGuide(this.viewportWidth / 2);
-                } else if (e.key === 'Delete' || e.key === 'Backspace') {
-                    e.preventDefault();
-                    this.removeLastGuide();
-                } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    this.removeAllGuides();
-                }
-            }
-        });
-
-        window.addEventListener('keyup', (e) => {
-            if (e.key === 'g' || e.key === 'G') {
-                this.isGKeyDown = false;
-            }
-        });
+    dispose(): void {
+        window.removeEventListener('keydown', this.onKeyDown);
+        window.removeEventListener('keyup', this.onKeyUp);
+        this.removeAllGuides();
     }
 
     // Public method to add guides programmatically (useful for mobile)

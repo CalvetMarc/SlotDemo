@@ -49,17 +49,27 @@ export class Layer extends Container {
         }
     }
 
-    /** Removes a view from this layer. */
+    /** Removes a view from this layer and destroys it. */
     removeView(id: string){
         const view = this.layerViews[id];
         if (!view) return;
 
-        // Unregister from relativeTo lookups
         CentralLayerManager.I.unregisterView(id);
-
         view.destroy({ children: true });
         delete this.layerViews[id];
         this.viewConfigs.delete(id);
+    }
+
+    /** Detaches a view from this layer WITHOUT destroying it. Returns the view for pooling. */
+    detachView(id: string): View | undefined {
+        const view = this.layerViews[id];
+        if (!view) return undefined;
+
+        CentralLayerManager.I.unregisterView(id);
+        this.removeChild(view);
+        delete this.layerViews[id];
+        this.viewConfigs.delete(id);
+        return view;
     }
 
     /** Updates layout for all views in this layer. Uses two-pass for relativeTo support. */

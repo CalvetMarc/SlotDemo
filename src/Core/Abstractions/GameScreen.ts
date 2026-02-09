@@ -24,6 +24,7 @@ export abstract class GameScreen implements IGameScreen {
     private _loaded: boolean;
     private viewLayerMap: Map<string, string> = new Map();
     private preparedViews: { view: View; config: ViewConfig }[] = [];
+    public viewPool: Map<string, View> = new Map();
 
     private readonly assetLoader: AssetLoader;
     private readonly viewInitializer: ViewInitializer;
@@ -49,6 +50,18 @@ export abstract class GameScreen implements IGameScreen {
         }
         this.viewLayerMap.clear();
         this.preparedViews = [];
+    }
+
+    /** Detaches all views from layers WITHOUT destroying them. Returns pool for reuse. */
+    public releaseViews(): Map<string, View> {
+        const pool = new Map<string, View>();
+        for (const [viewId, layerId] of this.viewLayerMap) {
+            const view = this.layerManager.getLayer(layerId).detachView(viewId);
+            if (view) pool.set(viewId, view);
+        }
+        this.viewLayerMap.clear();
+        this.preparedViews = [];
+        return pool;
     }
 
     /** Called when canvas changes. Centralized layers handle their own layout updates. */
@@ -79,20 +92,34 @@ export abstract class GameScreen implements IGameScreen {
 
     /**
      * Initializes prepared views and adds them to layers.
+     * Reuses pooled views when available (same id + same class).
      * Call this from onEnter() after load() has completed.
      */
     protected addViewsToLayers(): void {
         for (const { view, config } of this.preparedViews) {
-            // Initialize view (sets ID and calls appear())
-            this.viewInitializer.initialize(view, config);
+            const pooledView = this.viewPool.get(config.id);
+            const isPooled = pooledView && pooledView.constructor === view.constructor;
 
-            // Add to target layer
+            const targetView = isPooled ? pooledView! : view;
+
+            if (isPooled) {
+                this.viewPool.delete(config.id);
+                targetView.id = config.id;
+                targetView.resetLayoutCache();
+            } else {
+                this.viewInitializer.initialize(targetView, config);
+            }
+
             const targetLayer = this.layerManager.getLayer(config.layer);
-            targetLayer.addView(view.id, view, config);
-
-            // Track view→layer for O(1) cleanup
-            this.viewLayerMap.set(view.id, config.layer);
+            targetLayer.addView(targetView.id, targetView, config);
+            this.viewLayerMap.set(targetView.id, config.layer);
         }
+
+        // Destroy unclaimed pooled views
+        for (const view of this.viewPool.values()) {
+            view.destroy({ children: true });
+        }
+        this.viewPool.clear();
     }
 
 }

@@ -1,4 +1,4 @@
-import { Container } from "pixi.js";
+import { Container, DestroyOptions } from "pixi.js";
 import { LayoutConfig } from "../Layout/LayoutConstraints";
 
 export interface ViewConfig {
@@ -22,7 +22,19 @@ export abstract class View extends Container {
 
     get isInitialized(): boolean { return !!this._id; }
 
-    abstract bundleNeeded(): bundle;    
+    abstract bundleNeeded(): bundle;
 
     abstract appear(): void;
+
+    protected dispose(): void { /* override to clean up resources */ }
+
+    resetLayoutCache(): void {
+        const target = this as unknown as { _cachedIntrinsicSize?: unknown };
+        target._cachedIntrinsicSize = undefined;
+    }
+
+    destroy(options?: DestroyOptions): void {
+        this.dispose();
+        super.destroy(options);
+    }
 }

@@ -1,6 +1,6 @@
 import { ButtonView } from "../../Abstractions/ButtonView";
 import { bundle } from "../../Abstractions/View";
-import { Text, TextStyle, Graphics, Ticker, DestroyOptions } from "pixi.js";
+import { Text, TextStyle, Graphics, Ticker } from "pixi.js";
 
 export class BuyBonusButtonView extends ButtonView {
     private background!: Graphics;
@@ -90,10 +90,9 @@ export class BuyBonusButtonView extends ButtonView {
         return (f(0) << 16) + (f(8) << 8) + f(4);
     }
 
-    destroy(options?: DestroyOptions): void {
+    protected dispose(): void {
         if (this.tickerCallback) {
             Ticker.shared.remove(this.tickerCallback);
         }
-        super.destroy(options);
     }
 }

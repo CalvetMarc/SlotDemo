@@ -6,6 +6,7 @@ import { GameScreen } from '../Abstractions/GameScreen';
 import { SplashScreen } from '../Game/Screens/SplashScreen/SplashScreen';
 
 import { ScreenTypes } from '../Utils/utils';
+import { View } from '../Abstractions/View';
 import { BaseScreen } from '../Game/Screens/BaseScreen/BaseScreen';
 import { BonusScreen } from '../Game/Screens/BonusScreen';
 
@@ -88,9 +89,15 @@ export class ScreenManager extends SingletonBase {
   }
 
   private async changeScene(transitionFrom: ScreenTypes, transitionTo: ScreenTypes, destroyCurrent: boolean): Promise<void>{
+    let pool: Map<string, View> | undefined;
+
     if(this.currentScreen){
-      await this.currentScreen.onExit();            
-      destroyCurrent ? this.currentScreen.unload() : this.sceneMap[transitionFrom] = this.currentScreen;            
+      await this.currentScreen.onExit();
+      if (destroyCurrent) {
+        pool = this.currentScreen.releaseViews();
+      } else {
+        this.sceneMap[transitionFrom] = this.currentScreen;
+      }
     }
 
     this.currentScreen = this.sceneMap[transitionTo] ?? this.screenFactory(transitionTo);
@@ -98,7 +105,11 @@ export class ScreenManager extends SingletonBase {
       await this.currentScreen.load();
     }
 
-    await this.currentScreen.onEnter();   
+    if (pool) {
+      this.currentScreen.viewPool = pool;
+    }
+
+    await this.currentScreen.onEnter();
   }
 
   private screenFactory(screenKey: ScreenTypes): GameScreen{
