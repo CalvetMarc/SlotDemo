@@ -1,0 +1,33 @@
+import { ViewRegistry } from "../../../../Managers/view-factory";
+import { BaseBackgroundView } from "../../SplashScreen/views/base-background-view";
+import { FogOverlayView } from "../../SplashScreen/views/fog-overlay-view";
+import { FliesView } from "../views/flies-view";
+import { FrameBackgroundView } from "../views/frame-background-view";
+import { FrameView } from "../views/frame-view";
+import { SlotLogoView } from "../views/slot-logo-view";
+import { BatsView } from "../views/bats-view";
+
+// UI Components
+import { SpinControlsView } from "../../../UI/spin-controls-view";
+import { BetDisplayView } from "../../../UI/bet-display-view";
+import { BalanceDisplayView } from "../../../UI/balance-display-view";
+import { BuyBonusButtonView } from "../../../UI/buy-bonus-button-view";
+import { MenuButtonView } from "../../../UI/menu-button-view";
+import { AudioButtonView } from "../../../UI/audio-button-view";
+
+export const BASE_VIEW_REGISTRY: ViewRegistry = {
+    BaseBackgroundView,
+    FogOverlayView,
+    FliesView,
+    FrameBackgroundView,
+    FrameView,
+    SlotLogoView,
+    BatsView,
+    // UI Components
+    SpinControlsView,
+    BetDisplayView,
+    BalanceDisplayView,
+    BuyBonusButtonView,
+    MenuButtonView,
+    AudioButtonView
+};

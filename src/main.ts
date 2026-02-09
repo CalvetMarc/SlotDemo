@@ -1,9 +1,9 @@
 import { Application, Assets } from 'pixi.js';
-import { ScreenManager } from './Core/Managers/ScreenManager';
-import { LayoutManager } from './Core/Managers/LayoutManager';
-import { CentralLayerManager } from './Core/Managers/CentralLayerManager';
-import { CANVAS_16_9, CANVAS_9_16, CANVAS_4_3 } from './Core/Layout/DesignCanvas';
-import { GuideManager } from './Core/Debug/GuideManager';
+import { ScreenManager } from './Core/Managers/screen-manager';
+import { LayoutManager } from './Core/Managers/layout-manager';
+import { CentralLayerManager } from './Core/Managers/central-layer-manager';
+import { CANVAS_16_9, CANVAS_9_16, CANVAS_4_3 } from './Core/Layout/design-canvas';
+import { GuideManager } from './Core/Debug/guide-manager';
 
 async function main() {
 
