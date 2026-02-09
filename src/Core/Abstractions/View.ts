@@ -10,8 +10,17 @@ export interface ViewConfig {
 
 export type bundle = "boot" | "base" | "win" | "info" | "bonus"
 
-export abstract class View extends Container {  
-    public id!: string;
+export abstract class View extends Container {
+    private _id?: string;
+
+    get id(): string {
+        if (!this._id) throw new Error('View.id accessed before initialization');
+        return this._id;
+    }
+
+    set id(value: string) { this._id = value; }
+
+    get isInitialized(): boolean { return !!this._id; }
 
     abstract bundleNeeded(): bundle;    
 

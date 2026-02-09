@@ -68,13 +68,13 @@ export class ScreenManager extends SingletonBase {
     const scene = this.screenFactory(screenType);
     this.sceneMap[screenType] = scene;
 
-    return new Promise(resolve => {
-      const load = () => scene.load().then(resolve);
+    return new Promise<void>(resolve => {
+      const start = () => { scene.load().then(resolve); };
 
       if (window.requestIdleCallback) {
-        window.requestIdleCallback(load);
+        window.requestIdleCallback(() => start(), { timeout: 500 });
       } else {
-        setTimeout(load, 0);
+        setTimeout(start, 0);
       }
     });
   }

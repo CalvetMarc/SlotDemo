@@ -64,27 +64,32 @@ export class Layer extends Container {
 
     /** Updates layout for all views in this layer. Uses two-pass for relativeTo support. */
     updateViewLayouts(canvas: DesignCanvas): void {
-        // Pass layerId to convert relativeTo coordinates to this layer's local space
         const viewLookup = CentralLayerManager.I.createViewLookup(this.layerId);
 
-        // Pass 1: Layout views that DON'T use relativeTo
+        // Single pass: partition into independent and relativeTo-dependent views
+        const independent: { view: View; config: ViewConfig }[] = [];
+        const dependent: { view: View; config: ViewConfig }[] = [];
+
         for (const [viewId, view] of Object.entries(this.layerViews)) {
             if (!view) continue;
+            const config = this.viewConfigs.get(viewId);
+            if (!config) continue;
 
-            const viewConfig = this.viewConfigs.get(viewId);
-            if (viewConfig && !this.layoutManager.usesRelativeTo(viewConfig, canvas)) {
-                this.layoutManager.updateLayout(view, viewConfig, canvas, viewLookup);
+            if (this.layoutManager.usesRelativeTo(config, canvas)) {
+                dependent.push({ view, config });
+            } else {
+                independent.push({ view, config });
             }
         }
 
-        // Pass 2: Layout views that DO use relativeTo (now their targets are positioned)
-        for (const [viewId, view] of Object.entries(this.layerViews)) {
-            if (!view) continue;
+        // Pass 1: Layout independent views first
+        for (const { view, config } of independent) {
+            this.layoutManager.updateLayout(view, config, canvas, viewLookup);
+        }
 
-            const viewConfig = this.viewConfigs.get(viewId);
-            if (viewConfig && this.layoutManager.usesRelativeTo(viewConfig, canvas)) {
-                this.layoutManager.updateLayout(view, viewConfig, canvas, viewLookup);
-            }
+        // Pass 2: Layout dependent views (their targets are now positioned)
+        for (const { view, config } of dependent) {
+            this.layoutManager.updateLayout(view, config, canvas, viewLookup);
         }
     }
 

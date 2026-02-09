@@ -24,7 +24,7 @@ export class ViewInitializer {
 
     /** Checks if a view has been initialized. */
     isInitialized(view: View): boolean {
-        return view.id !== undefined && view.id !== null && view.id !== '';
+        return view.isInitialized;
     }
 
     /** Initializes all views with error handling. Returns array of errors if any. */

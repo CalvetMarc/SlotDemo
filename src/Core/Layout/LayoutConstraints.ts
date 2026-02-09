@@ -35,6 +35,13 @@ export interface LayoutConfig {
   overrides?: Partial<Record<LayoutAspectKey, LayoutConstraint>>;
 }
 
+/** Cached intrinsic dimensions to avoid repeated getLocalBounds() calls */
+interface CachedIntrinsicSize {
+    width: number;
+    height: number;
+    bounds: { x: number; y: number; width: number; height: number };
+}
+
 /** Target with optional sprite-like properties for layout resolution */
 interface LayoutTarget {
     position: { set(x: number, y: number): void; x: number; y: number };
@@ -47,6 +54,7 @@ interface LayoutTarget {
     width?: number;
     height?: number;
     getLocalBounds?: () => { x: number; y: number; width: number; height: number };
+    _cachedIntrinsicSize?: CachedIntrinsicSize;
 }
 
 export class LayoutResolver {
@@ -407,17 +415,29 @@ export class LayoutResolver {
       }
     }
 
-    // If still no dimensions found, try getLocalBounds
-    if (viewWidth === 0 && viewHeight === 0 && target.getLocalBounds) {
-      const currentScaleX = target.scale.x ?? 1;
-      const currentScaleY = target.scale.y ?? 1;
-      target.scale.set(1, 1);
+    // If still no dimensions found, use cached intrinsic size or compute via getLocalBounds
+    if (viewWidth === 0 && viewHeight === 0) {
+      if (target._cachedIntrinsicSize) {
+        viewWidth = target._cachedIntrinsicSize.width;
+        viewHeight = target._cachedIntrinsicSize.height;
+      } else if (target.getLocalBounds) {
+        const currentScaleX = target.scale.x ?? 1;
+        const currentScaleY = target.scale.y ?? 1;
+        target.scale.set(1, 1);
 
-      const bounds = target.getLocalBounds();
-      viewWidth = bounds.width;
-      viewHeight = bounds.height;
+        const bounds = target.getLocalBounds();
+        viewWidth = bounds.width;
+        viewHeight = bounds.height;
 
-      target.scale.set(currentScaleX, currentScaleY);
+        target.scale.set(currentScaleX, currentScaleY);
+
+        // Cache for subsequent resize calls (explicit copy — PixiJS Bounds uses prototype getters)
+        target._cachedIntrinsicSize = {
+          width: viewWidth,
+          height: viewHeight,
+          bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height }
+        };
+      }
     }
 
     // Last resort: use width/height properties
@@ -436,9 +456,9 @@ export class LayoutResolver {
         // Direct sprite: use anchor (0-1 range)
         target.anchor.set(originX, originY);
       }
-      // Container: use pivot based on local bounds
-      else if (target.pivot && target.getLocalBounds) {
-        const bounds = target.getLocalBounds();
+      // Container: use pivot based on local bounds (use cached if available)
+      else if (target.pivot && (target._cachedIntrinsicSize || target.getLocalBounds)) {
+        const bounds = target._cachedIntrinsicSize?.bounds ?? target.getLocalBounds!();
         const pivotX = bounds.x + originX * bounds.width;
         const pivotY = bounds.y + originY * bounds.height;
         target.pivot.set(pivotX, pivotY);

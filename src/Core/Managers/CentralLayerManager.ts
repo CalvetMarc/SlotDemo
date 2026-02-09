@@ -33,6 +33,9 @@ export class CentralLayerManager extends SingletonBase {
   // View registry for relativeTo lookups (viewId -> { view, layerId })
   private viewRegistry: Map<string, { view: Container; layerId: string }> = new Map();
 
+  // Bounds cache: invalidated at the start of each resize cycle
+  private boundsCache: Map<string, { x: number; y: number; width: number; height: number }> = new Map();
+
   // Colors for each layer border
   private readonly layerColors: Record<string, number> = {
     'background': 0xff00ff,  // Magenta
@@ -99,6 +102,7 @@ export class CentralLayerManager extends SingletonBase {
   resize(viewportW: number, viewportH: number, canvas: DesignCanvas): void {
     this.currentViewport = { width: viewportW, height: viewportH };
     this.currentCanvas = canvas;
+    this.boundsCache.clear();
 
     for (const [layerId, layer] of this.layers) {
       const config = this.layerConfigs.get(layerId);
@@ -206,6 +210,10 @@ export class CentralLayerManager extends SingletonBase {
    * Returns null if view not found.
    */
   getViewBounds(viewId: string): { x: number; y: number; width: number; height: number } | null {
+    // Return cached bounds if available (cache is cleared at start of each resize)
+    const cached = this.boundsCache.get(viewId);
+    if (cached) return cached;
+
     const entry = this.viewRegistry.get(viewId);
     if (!entry) return null;
 
@@ -216,8 +224,9 @@ export class CentralLayerManager extends SingletonBase {
     const viewScaleX = view.scale.x;
     const viewScaleY = view.scale.y;
 
-    // Get bounds in local space
-    const localBounds = view.getLocalBounds();
+    // Use cached intrinsic size if available, otherwise compute
+    const viewWithCache = view as { _cachedIntrinsicSize?: { bounds: { x: number; y: number; width: number; height: number } } };
+    const localBounds = viewWithCache._cachedIntrinsicSize?.bounds ?? view.getLocalBounds();
 
     // Calculate scaled dimensions at view level
     const scaledWidth = localBounds.width * viewScaleX;
@@ -228,8 +237,10 @@ export class CentralLayerManager extends SingletonBase {
     const pivotY = (view.pivot?.y ?? 0) * viewScaleY;
 
     // Calculate position in layer-local space considering pivot
-    let localX = view.position.x - pivotX + (localBounds.x * viewScaleX);
-    let localY = view.position.y - pivotY + (localBounds.y * viewScaleY);
+    const localX = view.position.x - pivotX + (localBounds.x * viewScaleX);
+    const localY = view.position.y - pivotY + (localBounds.y * viewScaleY);
+
+    let result: { x: number; y: number; width: number; height: number };
 
     // Convert to global/screen coordinates using layer transform
     if (layer) {
@@ -238,21 +249,23 @@ export class CentralLayerManager extends SingletonBase {
       const layerPosX = layer.position.x;
       const layerPosY = layer.position.y;
 
-      return {
+      result = {
         x: localX * layerScaleX + layerPosX,
         y: localY * layerScaleY + layerPosY,
         width: scaledWidth * layerScaleX,
         height: scaledHeight * layerScaleY
       };
+    } else {
+      result = {
+        x: localX,
+        y: localY,
+        width: scaledWidth,
+        height: scaledHeight
+      };
     }
 
-    // Fallback if layer not found
-    return {
-      x: localX,
-      y: localY,
-      width: scaledWidth,
-      height: scaledHeight
-    };
+    this.boundsCache.set(viewId, result);
+    return result;
   }
 
   /**
@@ -362,7 +375,7 @@ export class CentralLayerManager extends SingletonBase {
 
     for (const [layerId, border] of this.debugBorders) {
       const layer = this.layers.get(layerId);
-      const layerCanvas = layer?.['currentCanvas'];
+      const layerCanvas = layer?.getCurrentCanvas();
       if (layerCanvas) {
         this.drawLayerBorder(border, layerId, layerCanvas.width, layerCanvas.height);
       }
