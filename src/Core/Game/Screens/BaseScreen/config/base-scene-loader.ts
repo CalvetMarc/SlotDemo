@@ -2,8 +2,7 @@ import { ViewRegistry } from "../../../../Managers/view-factory";
 import { BaseBackgroundView } from "../../SplashScreen/views/base-background-view";
 import { FogOverlayView } from "../../SplashScreen/views/fog-overlay-view";
 import { FliesView } from "../views/flies-view";
-import { FrameBackgroundView } from "../views/frame-background-view";
-import { FrameView } from "../views/frame-view";
+import { SlotMachineView } from "../views/slot-machine-view";
 import { SlotLogoView } from "../views/slot-logo-view";
 import { BatsView } from "../views/bats-view";
 
@@ -19,8 +18,7 @@ export const BASE_VIEW_REGISTRY: ViewRegistry = {
     BaseBackgroundView,
     FogOverlayView,
     FliesView,
-    FrameBackgroundView,
-    FrameView,
+    SlotMachineView,
     SlotLogoView,
     BatsView,
     // UI Components

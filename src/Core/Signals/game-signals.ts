@@ -29,6 +29,14 @@ export const gameSignals = {
     /** Fired when the menu button is pressed. */
     menuPressed: new Signal<void>(),
 
+    // ── Spin lifecycle ───────────────────────────────────────────
+
+    /** Fired when a spin begins (reels start moving). */
+    spinStarted: new Signal<void>(),
+
+    /** Fired when all reels have stopped and the final grid is known. */
+    spinComplete: new Signal<{ grid: string[][] }>(),
+
     // ── Game state ──────────────────────────────────────────────
 
     /** Fired when balance updates. */
