@@ -1,0 +1,51 @@
+import { Router, Request } from 'express';
+import { sql } from '../db.js';
+import { authMiddleware } from '../middleware/auth.js';
+import { generateSpin } from '../services/spin-service.js';
+
+const router = Router();
+
+router.post('/', authMiddleware, async (req: Request, res) => {
+    const sessionId = (req as Request & { sessionId: string }).sessionId;
+    const { betAmount } = req.body;
+
+    if (typeof betAmount !== 'number' || betAmount <= 0) {
+        res.status(400).json({ error: 'betAmount must be a positive number' });
+        return;
+    }
+
+    try {
+        // Fetch session and validate balance
+        const rows = await sql`
+            SELECT balance FROM sessions WHERE id = ${sessionId}
+        `;
+
+        if (rows.length === 0) {
+            res.status(404).json({ error: 'Session not found' });
+            return;
+        }
+
+        const currentBalance = parseFloat(rows[0].balance);
+        if (currentBalance < betAmount) {
+            res.status(400).json({ error: 'Insufficient balance' });
+            return;
+        }
+
+        // Generate spin result
+        const { grid, winAmount } = generateSpin();
+        const newBalance = currentBalance - betAmount + winAmount;
+
+        // Update balance and last_seen
+        await sql`
+            UPDATE sessions SET balance = ${newBalance}, last_seen = now()
+            WHERE id = ${sessionId}
+        `;
+
+        res.json({ grid, balance: newBalance, winAmount });
+    } catch (err) {
+        console.error('Spin failed:', err);
+        res.status(500).json({ error: 'Spin request failed' });
+    }
+});
+
+export default router;
