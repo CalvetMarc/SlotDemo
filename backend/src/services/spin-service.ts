@@ -1,10 +1,10 @@
-import type { SymbolId } from '../../../shared/types.js';
-
-const SYMBOL_IDS: readonly SymbolId[] = [
+const SYMBOL_IDS = [
     '1.png', '2.png', '3.png',
     'J.png', 'K.png', 'Q.png', 'A.png',
     'Scatter_01.png', 'Wild_01.png',
-];
+] as const;
+
+type SymbolId = (typeof SYMBOL_IDS)[number];
 
 const REEL_COUNT = 5;
 const VISIBLE_ROWS = 3;

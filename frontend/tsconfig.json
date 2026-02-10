@@ -7,9 +7,9 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "paths": {
-      "@shared/*": ["../shared/*"]
+      "@shared/*": ["src/shared/*"]
     },
     "baseUrl": "."
   },
-  "include": ["src/**/*.ts", "../shared/**/*.ts"]
+  "include": ["src/**/*.ts"]
 }
