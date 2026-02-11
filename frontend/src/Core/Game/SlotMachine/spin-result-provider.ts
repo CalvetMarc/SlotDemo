@@ -1,16 +1,23 @@
-import type { SpinResult, SpinResponse, SymbolId } from '@shared/types';
+import type { SpinResult, SpinResponse, SymbolId, LineWin } from '@shared/types';
 import { SYMBOL_IDS, REEL_COUNT, VISIBLE_ROWS } from '@shared/types';
 import { gameSignals } from '../../Signals/game-signals';
 import { SessionManager } from './session-manager';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
+export interface SpinResultWithWins extends SpinResult {
+    winAmount: number;
+    lineWins: LineWin[];
+    scatterCount: number;
+    bonusTriggered: boolean;
+}
+
 export interface ISpinResultProvider {
-    generateResult(betAmount: number): Promise<SpinResult>;
+    generateResult(betAmount: number): Promise<SpinResultWithWins>;
 }
 
 export class RemoteSpinResultProvider implements ISpinResultProvider {
-    async generateResult(betAmount: number): Promise<SpinResult> {
+    async generateResult(betAmount: number): Promise<SpinResultWithWins> {
         const res = await fetch(`${API_URL}/api/spin`, {
             method: 'POST',
             headers: {
@@ -28,12 +35,18 @@ export class RemoteSpinResultProvider implements ISpinResultProvider {
         const data: SpinResponse = await res.json();
         gameSignals.balanceUpdated.emit({ value: data.balance });
 
-        return { grid: data.grid };
+        return {
+            grid: data.grid,
+            winAmount: data.winAmount,
+            lineWins: data.lineWins,
+            scatterCount: data.scatterCount,
+            bonusTriggered: data.bonusTriggered,
+        };
     }
 }
 
 export class LocalSpinResultProvider implements ISpinResultProvider {
-    async generateResult(_betAmount: number): Promise<SpinResult> {
+    async generateResult(_betAmount: number): Promise<SpinResultWithWins> {
         const grid: SymbolId[][] = [];
         for (let r = 0; r < REEL_COUNT; r++) {
             const column: SymbolId[] = [];
@@ -42,6 +55,6 @@ export class LocalSpinResultProvider implements ISpinResultProvider {
             }
             grid.push(column);
         }
-        return { grid };
+        return { grid, winAmount: 0, lineWins: [], scatterCount: 0, bonusTriggered: false };
     }
 }

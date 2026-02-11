@@ -8,7 +8,7 @@ import { SplashScreen } from '../Game/Screens/SplashScreen/splash-screen';
 import { ScreenTypes } from '../Utils/utils';
 import { View } from '../Abstractions/view';
 import { BaseScreen } from '../Game/Screens/BaseScreen/base-screen';
-import { BonusScreen } from '../Game/Screens/bonus-screen';
+import { BonusScreen } from '../Game/Screens/BonusScreen/bonus-screen';
 
 import { DesignCanvas } from '../Layout/design-canvas';
 

@@ -45,6 +45,16 @@
         "paytable_static": "assets/base/info/static/paytable/paytable_static.json",
         "pattern_lines": "assets/base/info/static/_src/lines.png"
       }
+    },
+    {
+      "name": "bonus",
+      "assets": {
+        "chest_animated_0": "assets/bonus/chest/animated/chest_animated-0.json",
+        "chest_animated_1": "assets/bonus/chest/animated/chest_animated-1.json",
+        "bonus_bg": "assets/bonus/background/static/_src/bonus_game.png",
+        "bonus_bg_back": "assets/bonus/background/static/_src/bonus_game_back.png",
+        "prizes_static": "assets/bonus/prizes/prizes_static.json"
+      }
     }
   ]
 }

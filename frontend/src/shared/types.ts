@@ -11,6 +11,15 @@ export const SYMBOL_IDS = [
 
 export type SymbolId = (typeof SYMBOL_IDS)[number];
 
+// ── Win types ────────────────────────────────────────────────────
+
+export interface LineWin {
+    lineIndex: number;
+    symbol: SymbolId;
+    count: number;
+    payout: number;
+}
+
 // ── API types ────────────────────────────────────────────────────
 
 export interface SpinResult {
@@ -25,12 +34,28 @@ export interface SpinResponse {
     grid: SymbolId[][];
     balance: number;
     winAmount: number;
+    lineWins: LineWin[];
+    scatterCount: number;
+    bonusTriggered: boolean;
+}
+
+export interface BonusStartResponse {
+    chestCount: number;
+    tier: number;
+}
+
+export interface BonusPickResponse {
+    prize: number | null;
+    totalBonusWin: number;
+    isGameOver: boolean;
+    balance?: number;
 }
 
 export interface SessionResponse {
     token: string;
     balance: number;
     gamePhase: 'base' | 'bonus';
+    initialGrid: SymbolId[][];
 }
 
 export interface HeartbeatResponse {

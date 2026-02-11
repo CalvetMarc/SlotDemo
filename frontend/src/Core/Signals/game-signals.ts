@@ -37,6 +37,15 @@ export const gameSignals = {
     /** Fired when all reels have stopped and the final grid is known. */
     spinComplete: new Signal<{ grid: string[][] }>(),
 
+    /** Fired when a win is detected after spin evaluation. */
+    winDetected: new Signal<{ winAmount: number; lineWins: { lineIndex: number; symbol: string; count: number; payout: number }[] }>(),
+
+    /** Fired when 3+ scatters trigger the bonus round. */
+    bonusTriggered: new Signal<{ scatterCount: number }>(),
+
+    /** Fired when the bonus round completes. */
+    bonusComplete: new Signal<{ totalWin: number }>(),
+
     // ── Game state ──────────────────────────────────────────────
 
     /** Fired when balance updates. */

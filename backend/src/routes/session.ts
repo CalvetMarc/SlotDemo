@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { sql } from '../db.js';
 import { signToken } from '../middleware/auth.js';
+import { generateInitialGrid } from '../services/spin-service.js';
 
 const router = Router();
 
@@ -22,6 +23,7 @@ router.post('/', async (_req, res) => {
             token,
             balance: parseFloat(session.balance),
             gamePhase: session.game_phase,
+            initialGrid: generateInitialGrid(),
         });
     } catch (err) {
         console.error('Session creation failed:', err);

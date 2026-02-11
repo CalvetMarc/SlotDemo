@@ -1,4 +1,4 @@
-import type { SessionResponse, HeartbeatResponse } from '@shared/types';
+import type { SessionResponse, HeartbeatResponse, SymbolId } from '@shared/types';
 import { gameSignals } from '../../Signals/game-signals';
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
@@ -7,6 +7,7 @@ const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 class SessionManagerClass {
     private _token = '';
     private _heartbeatId: ReturnType<typeof setInterval> | null = null;
+    private _initialGrid: SymbolId[][] | null = null;
 
     async init(): Promise<void> {
         const res = await fetch(`${API_URL}/api/session`, { method: 'POST' });
@@ -18,6 +19,7 @@ class SessionManagerClass {
 
         const data: SessionResponse = await res.json();
         this._token = data.token;
+        this._initialGrid = data.initialGrid;
 
         gameSignals.balanceUpdated.emit({ value: data.balance });
 
@@ -26,6 +28,12 @@ class SessionManagerClass {
 
     getToken(): string {
         return this._token;
+    }
+
+    consumeInitialGrid(): SymbolId[][] | null {
+        const grid = this._initialGrid;
+        this._initialGrid = null;
+        return grid;
     }
 
     dispose(): void {

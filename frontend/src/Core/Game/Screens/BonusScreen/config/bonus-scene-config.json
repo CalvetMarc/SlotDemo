@@ -1,0 +1,95 @@
+{
+  "scene": "BonusScene",
+  "views": [
+    {
+      "id": "bonus_bg",
+      "type": "BonusBackgroundView",
+      "layer": "background",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "scaleMode": "cover",
+          "maxScale": 1.5
+        }
+      }
+    },
+    {
+      "id": "bonus_chest_0",
+      "type": "ChestView",
+      "layer": "game",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "offset": { "x": "-30h%", "y": "-5h%" },
+          "scale": { "x": 0.28, "y": 0.28 }
+        }
+      }
+    },
+    {
+      "id": "bonus_chest_1",
+      "type": "ChestView",
+      "layer": "game",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "offset": { "x": "-15h%", "y": "-5h%" },
+          "scale": { "x": 0.28, "y": 0.28 }
+        }
+      }
+    },
+    {
+      "id": "bonus_chest_2",
+      "type": "ChestView",
+      "layer": "game",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "offset": { "x": 0, "y": "-5h%" },
+          "scale": { "x": 0.28, "y": 0.28 }
+        }
+      }
+    },
+    {
+      "id": "bonus_chest_3",
+      "type": "ChestView",
+      "layer": "game",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "offset": { "x": "15h%", "y": "-5h%" },
+          "scale": { "x": 0.28, "y": 0.28 }
+        }
+      }
+    },
+    {
+      "id": "bonus_chest_4",
+      "type": "ChestView",
+      "layer": "game",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "offset": { "x": "30h%", "y": "-5h%" },
+          "scale": { "x": 0.28, "y": 0.28 }
+        }
+      }
+    },
+    {
+      "id": "bonus_win_counter",
+      "type": "BonusWinCounterView",
+      "layer": "ui",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "offset": { "x": 0, "y": "25h%" }
+        }
+      }
+    }
+  ]
+}

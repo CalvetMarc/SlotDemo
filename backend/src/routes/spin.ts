@@ -17,7 +17,7 @@ router.post('/', authMiddleware, async (req: Request, res) => {
     try {
         // Fetch session and validate balance
         const rows = await sql`
-            SELECT balance FROM sessions WHERE id = ${sessionId}
+            SELECT balance, game_phase FROM sessions WHERE id = ${sessionId}
         `;
 
         if (rows.length === 0) {
@@ -31,17 +31,34 @@ router.post('/', authMiddleware, async (req: Request, res) => {
             return;
         }
 
-        // Generate spin result
-        const { grid, winAmount } = generateSpin();
+        // Block spins during bonus phase
+        if (rows[0].game_phase === 'bonus') {
+            res.status(400).json({ error: 'Cannot spin during bonus' });
+            return;
+        }
+
+        // Generate spin result (betPerLine = betAmount / 20 paylines)
+        const betPerLine = betAmount / 20;
+        const { grid, winAmount, lineWins, scatterCount, bonusTriggered } = generateSpin(betPerLine);
         const newBalance = currentBalance - betAmount + winAmount;
 
-        // Update balance and last_seen
-        await sql`
-            UPDATE sessions SET balance = ${newBalance}, last_seen = now()
-            WHERE id = ${sessionId}
-        `;
+        if (bonusTriggered) {
+            // Enter bonus phase — store scatter info for /api/bonus/start
+            await sql`
+                UPDATE sessions
+                SET balance = ${newBalance}, game_phase = 'bonus',
+                    bonus_data = ${JSON.stringify({ scatterCount, totalBet: betAmount })},
+                    last_seen = now()
+                WHERE id = ${sessionId}
+            `;
+        } else {
+            await sql`
+                UPDATE sessions SET balance = ${newBalance}, last_seen = now()
+                WHERE id = ${sessionId}
+            `;
+        }
 
-        res.json({ grid, balance: newBalance, winAmount });
+        res.json({ grid, balance: newBalance, winAmount, lineWins, scatterCount, bonusTriggered });
     } catch (err) {
         console.error('Spin failed:', err);
         res.status(500).json({ error: 'Spin request failed' });
