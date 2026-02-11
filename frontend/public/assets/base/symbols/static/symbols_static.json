@@ -26,10 +26,10 @@
 },
 "A.png":
 {
-	"frame": {"x":1157,"y":1,"w":415,"h":415},
+	"frame": {"x":1194,"y":38,"w":340,"h":340},
 	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":415,"h":415},
+	"trimmed": true,
+	"spriteSourceSize": {"x":37,"y":37,"w":340,"h":340},
 	"sourceSize": {"w":415,"h":415}
 },
 "J.png":

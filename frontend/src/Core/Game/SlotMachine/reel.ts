@@ -17,6 +17,7 @@ const LANDING_MS = 200;
  */
 export class Reel extends Container {
     private _symbols: Sprite[] = [];
+    private _symbolIds: SymbolId[] = [];
     private _state: ReelState = 'idle';
 
     /** Total sprites = visible rows + 1 top buffer + 1 bottom buffer. */
@@ -190,17 +191,32 @@ export class Reel extends Container {
         return this._state === 'idle';
     }
 
+    /** Get the sprite at a visible row (0 = top, 2 = bottom). */
+    getVisibleSymbol(row: number): Sprite {
+        const sorted = [...this._symbols].sort((a, b) => a.y - b.y);
+        return sorted[row + 1]; // +1 to skip top buffer
+    }
+
+    /** Get the symbol ID at a visible row (0 = top, 2 = bottom). */
+    getSymbolId(row: number): SymbolId {
+        const sprite = this.getVisibleSymbol(row);
+        const idx = this._symbols.indexOf(sprite);
+        return this._symbolIds[idx];
+    }
+
     // ── Private ──────────────────────────────────────────────────
 
     private _createSymbols(): void {
         for (let i = 0; i < this._totalSlots; i++) {
             const sprite = new Sprite();
             sprite.anchor.set(0.5);
-            this._setTexture(sprite, this._randomSymbol());
+            const id = this._randomSymbol();
             sprite.y = (i - 1) * CELL_SIZE + CELL_SIZE * 0.5;
             sprite.x = CELL_SIZE * 0.5;
             this.addChild(sprite);
             this._symbols.push(sprite);
+            this._symbolIds.push(id);
+            this._setTexture(sprite, id);
         }
     }
 
@@ -209,6 +225,8 @@ export class Reel extends Container {
         sprite.texture = this._sheet.textures[symbolId];
         const scale = Math.min(SYMBOL_SIZE / sprite.texture.width, SYMBOL_SIZE / sprite.texture.height);
         sprite.scale.set(scale);
+        const idx = this._symbols.indexOf(sprite);
+        if (idx !== -1) this._symbolIds[idx] = symbolId;
     }
 
     /** Return the next symbol for a recycled sprite: from queue if stopping, else random. */
