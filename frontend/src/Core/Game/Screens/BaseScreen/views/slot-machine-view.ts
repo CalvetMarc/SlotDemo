@@ -33,6 +33,7 @@ const WIN_VFX_FIRST_FRAME = 2;
 const WIN_VFX_LAST_FRAME = 39;
 const WIN_VFX_FRAME_SIZE = 350;
 const WIN_VFX_FADE_MS = 300;
+
 const WIN_VFX_PAUSE_MS = 1000;
 
 type WinVfxPhase = 'fadingIn' | 'playing' | 'fadingOut' | 'waiting';
@@ -68,6 +69,7 @@ export class SlotMachineView extends View {
     private _frame!: Sprite;
     private _reelContainer!: Container;
     private _reelMask!: Graphics;
+    private _vfxLayer!: Container;
     private _reels: Reel[] = [];
     private _resultProvider!: RemoteSpinResultProvider;
     private _isSpinning = false;
@@ -126,6 +128,10 @@ export class SlotMachineView extends View {
             this._reelContainer.addChild(reel);
             this._reels.push(reel);
         }
+
+        // VFX layer sits above all reels (still masked by _reelMask)
+        this._vfxLayer = new Container();
+        this._reelContainer.addChild(this._vfxLayer);
 
         // Set initial symbols from backend session
         this._setInitialSymbols();
@@ -477,56 +483,33 @@ export class SlotMachineView extends View {
 
     private _spawnWinVfx(positions: Set<string>): void {
         const sheet: Spritesheet | undefined = Assets.get('win_vfx');
-        if (!sheet) {
-            console.warn('[WinVFX] win_vfx spritesheet not found');
-            return;
-        }
+        if (!sheet) return;
 
-        // Build ordered frame array from individual textures (win_effect_02 → win_effect_39)
         const textures = sheet.textures;
         const frames = [];
         for (let i = WIN_VFX_FIRST_FRAME; i <= WIN_VFX_LAST_FRAME; i++) {
             const key = `win_effect_${String(i).padStart(2, '0')}.png`;
-            if (textures[key]) {
-                frames.push(textures[key]);
-            }
+            if (textures[key]) frames.push(textures[key]);
         }
-
-        if (frames.length === 0) {
-            console.warn('[WinVFX] no frames found in win_vfx sheet');
-            return;
-        }
+        if (frames.length === 0) return;
 
         for (const posKey of positions) {
             const [reelIdx, rowIdx] = posKey.split(',').map(Number);
             const symbol = this._reels[reelIdx].getVisibleSymbol(rowIdx);
 
-            const vfx = new AnimatedSprite(frames);
+            const vfx = new AnimatedSprite(frames, false);
             vfx.anchor.set(0.5);
             vfx.animationSpeed = 0.25;
             vfx.loop = false;
-            vfx.x = symbol.x;
+            vfx.x = reelIdx * CELL_SIZE + symbol.x;
             vfx.y = symbol.y;
             vfx.alpha = 0;
+            vfx.scale.set(CELL_SIZE / WIN_VFX_FRAME_SIZE);
 
-            const scale = (CELL_SIZE / WIN_VFX_FRAME_SIZE) * 1.2;
-            vfx.scale.set(scale);
-
-            const state: WinVfxState = {
-                sprite: vfx,
-                phase: 'fadingIn',
-                elapsedMs: 0,
-            };
-
-            vfx.onComplete = () => {
-                state.phase = 'fadingOut';
-                state.elapsedMs = 0;
-            };
-
-            this._reels[reelIdx].addChild(vfx);
-            vfx.play();
+            this._vfxLayer.addChild(vfx);
+            vfx.gotoAndPlay(0);
             this._winVfxSprites.push(vfx);
-            this._winVfxStates.push(state);
+            this._winVfxStates.push({ sprite: vfx, phase: 'fadingIn', elapsedMs: 0 });
         }
     }
 
@@ -535,6 +518,15 @@ export class SlotMachineView extends View {
             const vfx = state.sprite;
             state.elapsedMs += deltaMs;
 
+            // Manually advance frames (autoUpdate is off)
+            if (vfx.playing) vfx.update(Ticker.shared);
+
+            // Detect animation end
+            if (!vfx.playing && state.phase === 'playing') {
+                state.phase = 'fadingOut';
+                state.elapsedMs = 0;
+            }
+
             if (state.phase === 'fadingIn') {
                 const t = Math.min(state.elapsedMs / WIN_VFX_FADE_MS, 1);
                 vfx.alpha = t;
@@ -542,30 +534,24 @@ export class SlotMachineView extends View {
                     state.phase = 'playing';
                     state.elapsedMs = 0;
                 }
-                continue;
-            }
-
-            if (state.phase === 'fadingOut') {
+            } else if (state.phase === 'fadingOut') {
                 const t = Math.min(state.elapsedMs / WIN_VFX_FADE_MS, 1);
                 vfx.alpha = 1 - t;
                 if (t >= 1) {
-                    vfx.stop();
+                    vfx.alpha = 0;
+                    vfx.visible = false;
                     state.phase = 'waiting';
                     state.elapsedMs = 0;
                 }
-                continue;
-            }
-
-            if (state.phase === 'waiting') {
+            } else if (state.phase === 'waiting') {
                 if (state.elapsedMs >= WIN_VFX_PAUSE_MS) {
+                    vfx.gotoAndPlay(0);
+                    vfx.alpha = 0;
+                    vfx.visible = true;
                     state.phase = 'fadingIn';
                     state.elapsedMs = 0;
-                    vfx.gotoAndPlay(0);
                 }
-                continue;
             }
-
-            // 'playing' — nothing to do, animation runs on its own
         }
     }
 
@@ -582,20 +568,21 @@ export class SlotMachineView extends View {
     /** Clears visuals for the current line (keeps cycling state). */
     private _clearLineVisuals(): void {
         for (const pulse of this._winPulseStates) {
+            pulse.anim.onComplete = undefined;
+            pulse.anim.visible = false;
+            if (pulse.anim.parent) pulse.anim.parent.removeChild(pulse.anim);
+            pulse.anim.stop();
+            pulse.anim.destroy();
             pulse.staticSprite.visible = true;
             pulse.staticSprite.scale.set(pulse.staticBaseScaleX, pulse.staticBaseScaleY);
-        }
-        for (const anim of this._winAnimSprites) {
-            anim.stop();
-            anim.destroy();
         }
         this._winAnimSprites.length = 0;
         this._winPulseStates.length = 0;
 
-        for (const vfx of this._winVfxSprites) {
-            vfx.stop();
-            vfx.destroy();
-        }
+        // Nuke the entire VFX layer and create a fresh one
+        this._vfxLayer.destroy({ children: true });
+        this._vfxLayer = new Container();
+        this._reelContainer.addChild(this._vfxLayer);
         this._winVfxSprites.length = 0;
         this._winVfxStates.length = 0;
 
