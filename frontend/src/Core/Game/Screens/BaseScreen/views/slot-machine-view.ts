@@ -11,7 +11,7 @@ import { SYMBOL_IDS, REEL_COUNT, VISIBLE_ROWS } from '@shared/types';
 import {
     CELL_SIZE, GRID_WIDTH, GRID_HEIGHT, PAYLINES,
     SPIN_MIN_DURATION, REEL_START_INTERVAL, REEL_STOP_INTERVAL,
-    getWinPositions,
+    getWinPositions, getFullPaylinePositions,
 } from '../../../SlotMachine/slot-config';
 import { ScreenManager } from '../../../../Managers/screen-manager';
 import { SessionManager } from '../../../SlotMachine/session-manager';
@@ -27,6 +27,20 @@ const ANIMATED_SYMBOL_MAP: Partial<Record<SymbolId, { asset: string; anim: strin
     'A.png':           { asset: 'a_animated',       anim: 'A' },
     'Scatter_01.png':  { asset: 'scatter_animated', anim: 'Scatter' },
     'Wild_01.png':     { asset: 'wild_animated',    anim: 'Wild' },
+};
+
+const WIN_VFX_FIRST_FRAME = 2;
+const WIN_VFX_LAST_FRAME = 39;
+const WIN_VFX_FRAME_SIZE = 350;
+const WIN_VFX_FADE_MS = 300;
+const WIN_VFX_PAUSE_MS = 1000;
+
+type WinVfxPhase = 'fadingIn' | 'playing' | 'fadingOut' | 'waiting';
+
+type WinVfxState = {
+    sprite: AnimatedSprite;
+    phase: WinVfxPhase;
+    elapsedMs: number;
 };
 
 const WIN_PULSE_GROW_MS = 280;
@@ -65,8 +79,15 @@ export class SlotMachineView extends View {
     private _debugWinTimeout?: ReturnType<typeof setTimeout>;
     private _forcedDebugResult?: SpinResultWithWins;
 
+    // Win presentation – line cycling state
+    private _pendingLineWins: import('@shared/types').LineWin[] = [];
+    private _currentLineIndex = 0;
+    private _lineCycleComplete = false;
+
     // Win presentation cleanup state
     private _winAnimSprites: AnimatedSprite[] = [];
+    private _winVfxSprites: AnimatedSprite[] = [];
+    private _winVfxStates: WinVfxState[] = [];
     private _winPulseStates: WinPulseState[] = [];
     private _dimmedSprites: { sprite: Sprite; previousFilters: Filter[] | null }[] = [];
 
@@ -89,9 +110,11 @@ export class SlotMachineView extends View {
         this._reelContainer.y = -GRID_HEIGHT * 0.5;
         this.addChild(this._reelContainer);
 
-        // Mask to clip symbols to the grid area
+        // Mask to clip symbols to the grid area (expanded to match frame_back)
+        const maskPadX = (1736 - GRID_WIDTH) / 2;  // 48
+        const maskPadY = (1049 - GRID_HEIGHT) / 2;  // 32.5
         this._reelMask = new Graphics();
-        this._reelMask.rect(0, 0, GRID_WIDTH, GRID_HEIGHT);
+        this._reelMask.rect(-maskPadX, -maskPadY, GRID_WIDTH + maskPadX * 2, GRID_HEIGHT + maskPadY * 2);
         this._reelMask.fill({ color: 0xffffff });
         this._reelContainer.addChild(this._reelMask);
         this._reelContainer.mask = this._reelMask;
@@ -158,6 +181,7 @@ export class SlotMachineView extends View {
             reel.update(dt);
         }
         this._updateWinPulses(dt * 16.67);
+        this._updateWinVfx(dt * 16.67);
     }
 
     // ── Spin flow ────────────────────────────────────────────────
@@ -258,15 +282,24 @@ export class SlotMachineView extends View {
     // ── Win presentation ────────────────────────────────────────
 
     private async _showWinPresentation(result: SpinResultWithWins): Promise<void> {
-        console.log('[WinPresentation] lineWins:', result.lineWins);
         await Assets.loadBundle('win');
-        console.log('[WinPresentation] win bundle loaded');
 
         // Guard: if a new spin started while we were loading, bail out
         if (this._winAnimSprites.length > 0 || !this._reels[0].isIdle) return;
 
-        const winPositions = getWinPositions(result.lineWins);
-        console.log('[WinPresentation] winPositions:', [...winPositions]);
+        this._pendingLineWins = result.lineWins;
+        this._currentLineIndex = 0;
+        this._presentCurrentLine();
+    }
+
+    /** Show a single winning line: animate its symbols, dim the rest, spawn VFX. */
+    private _presentCurrentLine(): void {
+        this._clearLineVisuals();
+        this._lineCycleComplete = false;
+
+        const lw = this._pendingLineWins[this._currentLineIndex];
+        const winPositions = getWinPositions([lw]);
+        const fullPositions = getFullPaylinePositions([lw]);
 
         for (let reel = 0; reel < REEL_COUNT; reel++) {
             for (let row = 0; row < VISIBLE_ROWS; row++) {
@@ -280,7 +313,14 @@ export class SlotMachineView extends View {
                 }
             }
         }
-        console.log('[WinPresentation] animated:', this._winAnimSprites.length, 'dimmed:', this._dimmedSprites.length);
+
+        this._spawnWinVfx(fullPositions);
+    }
+
+    /** Advance to the next winning line (wraps around). */
+    private _advanceLine(): void {
+        this._currentLineIndex = (this._currentLineIndex + 1) % this._pendingLineWins.length;
+        this._presentCurrentLine();
     }
 
     private _animateWinSymbol(reel: number, row: number, staticSprite: Sprite): void {
@@ -419,12 +459,113 @@ export class SlotMachineView extends View {
             }
 
             if (pulse.elapsedMs >= WIN_PULSE_PAUSE_MS) {
+                if (this._pendingLineWins.length > 1 && !this._lineCycleComplete) {
+                    // Advance to next line instead of looping the same one
+                    this._lineCycleComplete = true;
+                    this._advanceLine();
+                    return;
+                }
+                // Single line win — loop the pulse
                 pulse.phase = 'growing';
                 pulse.elapsedMs = 0;
                 pulse.staticSprite.visible = true;
                 pulse.anim.visible = false;
                 pulse.staticSprite.scale.set(pulse.staticBaseScaleX, pulse.staticBaseScaleY);
             }
+        }
+    }
+
+    private _spawnWinVfx(positions: Set<string>): void {
+        const sheet: Spritesheet | undefined = Assets.get('win_vfx');
+        if (!sheet) {
+            console.warn('[WinVFX] win_vfx spritesheet not found');
+            return;
+        }
+
+        // Build ordered frame array from individual textures (win_effect_02 → win_effect_39)
+        const textures = sheet.textures;
+        const frames = [];
+        for (let i = WIN_VFX_FIRST_FRAME; i <= WIN_VFX_LAST_FRAME; i++) {
+            const key = `win_effect_${String(i).padStart(2, '0')}.png`;
+            if (textures[key]) {
+                frames.push(textures[key]);
+            }
+        }
+
+        if (frames.length === 0) {
+            console.warn('[WinVFX] no frames found in win_vfx sheet');
+            return;
+        }
+
+        for (const posKey of positions) {
+            const [reelIdx, rowIdx] = posKey.split(',').map(Number);
+            const symbol = this._reels[reelIdx].getVisibleSymbol(rowIdx);
+
+            const vfx = new AnimatedSprite(frames);
+            vfx.anchor.set(0.5);
+            vfx.animationSpeed = 0.25;
+            vfx.loop = false;
+            vfx.x = symbol.x;
+            vfx.y = symbol.y;
+            vfx.alpha = 0;
+
+            const scale = (CELL_SIZE / WIN_VFX_FRAME_SIZE) * 1.2;
+            vfx.scale.set(scale);
+
+            const state: WinVfxState = {
+                sprite: vfx,
+                phase: 'fadingIn',
+                elapsedMs: 0,
+            };
+
+            vfx.onComplete = () => {
+                state.phase = 'fadingOut';
+                state.elapsedMs = 0;
+            };
+
+            this._reels[reelIdx].addChild(vfx);
+            vfx.play();
+            this._winVfxSprites.push(vfx);
+            this._winVfxStates.push(state);
+        }
+    }
+
+    private _updateWinVfx(deltaMs: number): void {
+        for (const state of this._winVfxStates) {
+            const vfx = state.sprite;
+            state.elapsedMs += deltaMs;
+
+            if (state.phase === 'fadingIn') {
+                const t = Math.min(state.elapsedMs / WIN_VFX_FADE_MS, 1);
+                vfx.alpha = t;
+                if (t >= 1) {
+                    state.phase = 'playing';
+                    state.elapsedMs = 0;
+                }
+                continue;
+            }
+
+            if (state.phase === 'fadingOut') {
+                const t = Math.min(state.elapsedMs / WIN_VFX_FADE_MS, 1);
+                vfx.alpha = 1 - t;
+                if (t >= 1) {
+                    vfx.stop();
+                    state.phase = 'waiting';
+                    state.elapsedMs = 0;
+                }
+                continue;
+            }
+
+            if (state.phase === 'waiting') {
+                if (state.elapsedMs >= WIN_VFX_PAUSE_MS) {
+                    state.phase = 'fadingIn';
+                    state.elapsedMs = 0;
+                    vfx.gotoAndPlay(0);
+                }
+                continue;
+            }
+
+            // 'playing' — nothing to do, animation runs on its own
         }
     }
 
@@ -438,7 +579,8 @@ export class SlotMachineView extends View {
         sprite.filters = [...(previousFilters ?? []), filter];
     }
 
-    private _clearWinPresentation(): void {
+    /** Clears visuals for the current line (keeps cycling state). */
+    private _clearLineVisuals(): void {
         for (const pulse of this._winPulseStates) {
             pulse.staticSprite.visible = true;
             pulse.staticSprite.scale.set(pulse.staticBaseScaleX, pulse.staticBaseScaleY);
@@ -450,10 +592,24 @@ export class SlotMachineView extends View {
         this._winAnimSprites.length = 0;
         this._winPulseStates.length = 0;
 
+        for (const vfx of this._winVfxSprites) {
+            vfx.stop();
+            vfx.destroy();
+        }
+        this._winVfxSprites.length = 0;
+        this._winVfxStates.length = 0;
+
         for (const { sprite, previousFilters } of this._dimmedSprites) {
             sprite.filters = previousFilters;
         }
         this._dimmedSprites.length = 0;
+    }
+
+    /** Full reset — clears visuals and line cycling state (called on new spin). */
+    private _clearWinPresentation(): void {
+        this._clearLineVisuals();
+        this._pendingLineWins = [];
+        this._currentLineIndex = 0;
     }
 
     // ── Helpers ──────────────────────────────────────────────────
@@ -493,7 +649,7 @@ export class SlotMachineView extends View {
     private _onDebugKeyDown = (event: KeyboardEvent): void => {
         if (event.repeat || this._isSpinning) return;
 
-        const map: Partial<Record<string, { type: 'lineWin'; lineIndex: number; symbol: SymbolId } | { type: 'bonus' }>> = {
+        const map: Partial<Record<string, { type: 'lineWin'; lineIndex: number; symbol: SymbolId } | { type: 'bonus' } | { type: 'multiLine' }>> = {
             Digit1: { type: 'lineWin', lineIndex: 0, symbol: '1.png' },
             Digit2: { type: 'lineWin', lineIndex: 1, symbol: '2.png' },
             Digit3: { type: 'lineWin', lineIndex: 2, symbol: '3.png' },
@@ -503,14 +659,19 @@ export class SlotMachineView extends View {
             Digit7: { type: 'lineWin', lineIndex: 6, symbol: 'A.png' },
             Digit8: { type: 'lineWin', lineIndex: 0, symbol: 'Wild_01.png' },
             Digit9: { type: 'bonus' },
+            Digit0: { type: 'multiLine' },
         };
         const debugPreset = map[event.code];
         if (!debugPreset) return;
 
         event.preventDefault();
-        this._forcedDebugResult = debugPreset.type === 'bonus'
-            ? this._createDebugBonusTrigger()
-            : this._createDebugLineWin(debugPreset.lineIndex, debugPreset.symbol);
+        if (debugPreset.type === 'multiLine') {
+            this._forcedDebugResult = this._createDebugMultiLineWin();
+        } else {
+            this._forcedDebugResult = debugPreset.type === 'bonus'
+                ? this._createDebugBonusTrigger()
+                : this._createDebugLineWin(debugPreset.lineIndex, debugPreset.symbol);
+        }
         this._startSpin().catch(err => console.error('[DebugSpin] failed:', err));
     };
 
@@ -555,6 +716,27 @@ export class SlotMachineView extends View {
             lineWins: [],
             scatterCount: 3,
             bonusTriggered: true,
+        };
+    }
+
+    /** 3 simultaneous line wins: top (Queen), middle (King), bottom (Wolf). */
+    private _createDebugMultiLineWin(): SpinResultWithWins {
+        const grid: SymbolId[][] = [];
+        for (let reel = 0; reel < REEL_COUNT; reel++) {
+            grid.push(['2.png', '1.png', '3.png']);
+        }
+
+        const payout = this._currentBetAmount * 10;
+        return {
+            grid,
+            winAmount: payout * 3,
+            lineWins: [
+                { lineIndex: 0, symbol: '1.png', count: 5, payout }, // middle: King
+                { lineIndex: 1, symbol: '2.png', count: 5, payout }, // top: Queen
+                { lineIndex: 2, symbol: '3.png', count: 5, payout }, // bottom: Wolf
+            ],
+            scatterCount: 0,
+            bonusTriggered: false,
         };
     }
 }

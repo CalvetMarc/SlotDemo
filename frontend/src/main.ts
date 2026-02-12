@@ -68,6 +68,7 @@ async function main() {
     const canvas = layoutManager.getCanvas();
     layerManager.resize(width, height, canvas);
     guideManager.setViewportSize(width, height);
+    ScreenManager.I.transitionMask.resize(width, height);
   };
 
   // Get viewport dimensions - try visualViewport first, then fallback

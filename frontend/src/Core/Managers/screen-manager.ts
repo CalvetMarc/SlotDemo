@@ -11,11 +11,13 @@ import { BaseScreen } from '../Game/Screens/BaseScreen/base-screen';
 import { BonusScreen } from '../Game/Screens/BonusScreen/bonus-screen';
 
 import { DesignCanvas } from '../Layout/design-canvas';
+import { TransitionMask } from '../Transitions/transition-mask';
 
 export class ScreenManager extends SingletonBase {
   private _app!: Application;
   private _currentScreen?: GameScreen;
   private _root!: Container;
+  private _transitionMask!: TransitionMask;
 
   private _sceneMap: Record<ScreenTypes, GameScreen | null> = {
     "SPLASH": null,
@@ -25,8 +27,8 @@ export class ScreenManager extends SingletonBase {
 
   public transitionMap: Record<ScreenTypes, () => Promise<void>> = {
     SPLASH: () => this.changeScene("SPLASH", "BASE", true),
-    BASE: () => this.changeScene("BASE", "BONUS", false),
-    BONUS: () => this.changeScene("BONUS", "BASE", true)
+    BASE: () => this.changeScene("BASE", "BONUS", false, true),
+    BONUS: () => this.changeScene("BONUS", "BASE", true, true)
   };
 
   protected constructor() {
@@ -38,9 +40,16 @@ export class ScreenManager extends SingletonBase {
   }
 
   public init(app: Application, root: Container): void {
-    this._app = app;   
+    this._app = app;
     this._root = root;
     this._app.ticker.add(this.update, this);
+
+    this._transitionMask = new TransitionMask();
+    this._app.stage.addChild(this._transitionMask);
+  }
+
+  public get transitionMask(): TransitionMask {
+    return this._transitionMask;
   }
 
   public async start(): Promise<void> {
@@ -88,28 +97,72 @@ export class ScreenManager extends SingletonBase {
     this._currentScreen?.onUpdate(ticker.deltaMS);
   }
 
-  private async changeScene(transitionFrom: ScreenTypes, transitionTo: ScreenTypes, destroyCurrent: boolean): Promise<void>{
+  private async changeScene(
+    transitionFrom: ScreenTypes,
+    transitionTo: ScreenTypes,
+    destroyCurrent: boolean,
+    useMask = false,
+  ): Promise<void> {
+    if (useMask) {
+      // Kick off asset loading NOW so it runs in parallel with the fadeIn video.
+      const loadPromise = this._ensureLoaded(transitionTo);
+
+      const { width, height } = this._app.screen;
+      await this._transitionMask.playTransition(width, height, async () => {
+        // By the time fadeIn finishes the load is likely done; if not, wait here.
+        await loadPromise;
+        await this._swapScene(transitionFrom, transitionTo, destroyCurrent);
+      });
+    } else {
+      await this._swapScene(transitionFrom, transitionTo, destroyCurrent);
+    }
+  }
+
+  /** Makes sure the target screen is created and its assets loaded. */
+  private async _ensureLoaded(screenType: ScreenTypes): Promise<void> {
+    if (!this._sceneMap[screenType]) {
+      this._sceneMap[screenType] = this.screenFactory(screenType);
+    }
+    const screen = this._sceneMap[screenType]!;
+    if (!screen.loaded) {
+      await screen.load();
+    }
+  }
+
+  private async _swapScene(
+    transitionFrom: ScreenTypes,
+    transitionTo: ScreenTypes,
+    destroyCurrent: boolean,
+  ): Promise<void> {
     let pool: Map<string, View> | undefined;
 
-    if(this._currentScreen){
+    console.log(`[SwapScene] ${transitionFrom} → ${transitionTo} (destroy=${destroyCurrent})`);
+
+    if (this._currentScreen) {
+      console.log('[SwapScene] onExit…');
       await this._currentScreen.onExit();
       if (destroyCurrent) {
         pool = this._currentScreen.releaseViews();
       } else {
         this._sceneMap[transitionFrom] = this._currentScreen;
       }
+      console.log('[SwapScene] onExit done');
     }
 
     this._currentScreen = this._sceneMap[transitionTo] ?? this.screenFactory(transitionTo);
-    if(!this._currentScreen.loaded){
+    if (!this._currentScreen.loaded) {
+      console.log('[SwapScene] loading screen…');
       await this._currentScreen.load();
+      console.log('[SwapScene] load done');
     }
 
     if (pool) {
       this._currentScreen.viewPool = pool;
     }
 
+    console.log('[SwapScene] onEnter…');
     await this._currentScreen.onEnter();
+    console.log('[SwapScene] onEnter done');
   }
 
   private screenFactory(screenKey: ScreenTypes): GameScreen{

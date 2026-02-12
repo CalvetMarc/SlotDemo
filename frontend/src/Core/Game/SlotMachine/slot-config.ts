@@ -48,6 +48,18 @@ export function getWinPositions(lineWins: LineWin[]): Set<string> {
     return positions;
 }
 
+/** Returns a set of "reel,row" keys for ALL cells in winning payline patterns (all 5 reels). */
+export function getFullPaylinePositions(lineWins: LineWin[]): Set<string> {
+    const positions = new Set<string>();
+    for (const lw of lineWins) {
+        const payline = PAYLINES[lw.lineIndex];
+        for (let reel = 0; reel < REEL_COUNT; reel++) {
+            positions.add(`${reel},${payline[reel]}`);
+        }
+    }
+    return positions;
+}
+
 // ── Animation ────────────────────────────────────────────────────
 export const SPIN_SPEED = 65;           // px per frame at full speed
 export const SPIN_MIN_DURATION = 800;   // ms before first reel can stop
