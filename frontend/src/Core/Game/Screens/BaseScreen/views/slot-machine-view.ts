@@ -1,4 +1,4 @@
-import { Sprite, Container, Graphics, Ticker, Text, TextStyle, AnimatedSprite, Assets, ColorMatrixFilter, Spritesheet, Filter } from 'pixi.js';
+import { Sprite, Container, Graphics, Ticker, Text, TextStyle, Assets } from 'pixi.js';
 import { View, bundle } from '../../../../Abstractions/view';
 import { Reel } from '../../../SlotMachine/reel';
 import {
@@ -15,54 +15,7 @@ import {
 } from '../../../SlotMachine/slot-config';
 import { ScreenManager } from '../../../../Managers/screen-manager';
 import { SessionManager } from '../../../SlotMachine/session-manager';
-
-/** Maps SymbolId → { asset: bundle asset key, anim: animation key inside the spritesheet }. */
-const ANIMATED_SYMBOL_MAP: Partial<Record<SymbolId, { asset: string; anim: string }>> = {
-    '1.png':           { asset: 'king_animated',    anim: 'king' },
-    '2.png':           { asset: 'queen_animated',   anim: 'queen' },
-    '3.png':           { asset: 'wolf_animated',    anim: 'wolf_icon' },
-    'J.png':           { asset: 'j_animated',       anim: 'J' },
-    'K.png':           { asset: 'k_animated',       anim: 'K' },
-    'Q.png':           { asset: 'q_animated',       anim: 'Q' },
-    'A.png':           { asset: 'a_animated',       anim: 'A' },
-    'Scatter_01.png':  { asset: 'scatter_animated', anim: 'Scatter' },
-    'Wild_01.png':     { asset: 'wild_animated',    anim: 'Wild' },
-};
-
-const WIN_VFX_FIRST_FRAME = 2;
-const WIN_VFX_LAST_FRAME = 39;
-const WIN_VFX_FRAME_SIZE = 350;
-const WIN_VFX_FADE_MS = 300;
-
-const WIN_VFX_PAUSE_MS = 1000;
-
-type WinVfxPhase = 'fadingIn' | 'playing' | 'fadingOut' | 'waiting';
-
-type WinVfxState = {
-    sprite: AnimatedSprite;
-    phase: WinVfxPhase;
-    elapsedMs: number;
-};
-
-const WIN_PULSE_GROW_MS = 280;
-const WIN_PULSE_SHRINK_MS = 220;
-const WIN_PULSE_PAUSE_MS = 800;
-const WIN_SCALE = 1.15;
-
-type WinPulsePhase = 'growing' | 'playing' | 'shrinking' | 'waiting';
-
-type WinPulseState = {
-    anim: AnimatedSprite;
-    staticSprite: Sprite;
-    staticBaseScaleX: number;
-    staticBaseScaleY: number;
-    animBaseScale: number;
-    animRefFrameWidth: number;
-    animRefFrameHeight: number;
-    elapsedMs: number;
-    phase: WinPulsePhase;
-    animationFinished: boolean;
-};
+import { SymbolView, getWinVfxFrames } from '../../../SlotMachine/symbol-view';
 
 export class SlotMachineView extends View {
     private _frameBackground!: Sprite;
@@ -86,12 +39,8 @@ export class SlotMachineView extends View {
     private _currentLineIndex = 0;
     private _lineCycleComplete = false;
 
-    // Win presentation cleanup state
-    private _winAnimSprites: AnimatedSprite[] = [];
-    private _winVfxSprites: AnimatedSprite[] = [];
-    private _winVfxStates: WinVfxState[] = [];
-    private _winPulseStates: WinPulseState[] = [];
-    private _dimmedSprites: { sprite: Sprite; previousFilters: Filter[] | null }[] = [];
+    // Win presentation – per-symbol views
+    private _symbolViews: SymbolView[] = [];
 
     bundleNeeded(): bundle {
         return 'base';
@@ -186,8 +135,9 @@ export class SlotMachineView extends View {
         for (const reel of this._reels) {
             reel.update(dt);
         }
-        this._updateWinPulses(dt * 16.67);
-        this._updateWinVfx(dt * 16.67);
+
+        const deltaMs = dt * 16.67;
+        this._updateSymbolViews(deltaMs);
     }
 
     // ── Spin flow ────────────────────────────────────────────────
@@ -291,7 +241,7 @@ export class SlotMachineView extends View {
         await Assets.loadBundle('win');
 
         // Guard: if a new spin started while we were loading, bail out
-        if (this._winAnimSprites.length > 0 || !this._reels[0].isIdle) return;
+        if (this._symbolViews.length > 0 || !this._reels[0].isIdle) return;
 
         this._pendingLineWins = result.lineWins;
         this._currentLineIndex = 0;
@@ -306,21 +256,29 @@ export class SlotMachineView extends View {
         const lw = this._pendingLineWins[this._currentLineIndex];
         const winPositions = getWinPositions([lw]);
         const fullPositions = getFullPaylinePositions([lw]);
+        const vfxFrames = getWinVfxFrames();
 
         for (let reel = 0; reel < REEL_COUNT; reel++) {
             for (let row = 0; row < VISIBLE_ROWS; row++) {
                 const sprite = this._reels[reel].getVisibleSymbol(row);
+                const symbolId = this._reels[reel].getSymbolId(row);
                 const key = `${reel},${row}`;
 
+                const sv = new SymbolView(reel, row, symbolId, sprite);
+
                 if (winPositions.has(key)) {
-                    this._animateWinSymbol(reel, row, sprite);
+                    sv.showWinAnimation(this._reels[reel]);
                 } else {
-                    this._dimSymbol(sprite);
+                    sv.dim();
                 }
+
+                if (fullPositions.has(key)) {
+                    sv.showVfx(this._vfxLayer, vfxFrames);
+                }
+
+                this._symbolViews.push(sv);
             }
         }
-
-        this._spawnWinVfx(fullPositions);
     }
 
     /** Advance to the next winning line (wraps around). */
@@ -329,267 +287,38 @@ export class SlotMachineView extends View {
         this._presentCurrentLine();
     }
 
-    private _animateWinSymbol(reel: number, row: number, staticSprite: Sprite): void {
-        const symbolId = this._reels[reel].getSymbolId(row);
-        const mapping = ANIMATED_SYMBOL_MAP[symbolId];
-        if (!mapping) {
-            console.warn('[WinPresentation] no mapping for', symbolId);
-            return;
-        }
+    /** Update all active SymbolView pulse and VFX state machines. */
+    private _updateSymbolViews(deltaMs: number): void {
+        if (this._symbolViews.length === 0) return;
 
-        const sheet: Spritesheet = Assets.get(mapping.asset);
-        if (!sheet) {
-            console.warn('[WinPresentation] sheet not found for', mapping.asset);
-            return;
-        }
-        if (!sheet.animations?.[mapping.anim]) {
-            console.warn('[WinPresentation] animation not found:', mapping.anim, 'in', mapping.asset, '| available:', Object.keys(sheet.animations ?? {}));
-            return;
-        }
-
-        const anim = new AnimatedSprite(sheet.animations[mapping.anim]);
-        anim.anchor.set(0.5);
-        anim.animationSpeed = 0.3;
-        anim.loop = false;
-
-        const baseScale = Math.min(Math.abs(staticSprite.scale.x), Math.abs(staticSprite.scale.y));
-        const refFrame = anim.texture.frame;
-
-        const applyAnimSize = (scaleMultiplier = 1): void => {
-            const frame = anim.texture.frame;
-            const frameAdjust = Math.min(
-                refFrame.width / frame.width,
-                refFrame.height / frame.height,
-            );
-            anim.scale.set(baseScale * frameAdjust * scaleMultiplier);
-        };
-
-        // Position at the same location as the static sprite within its reel
-        anim.x = staticSprite.x;
-        anim.y = staticSprite.y;
-        // Keep overlay size stable even if animation frames have different source sizes.
-        applyAnimSize();
-        anim.visible = false;
-        anim.gotoAndStop(0);
-
-        this._reels[reel].addChild(anim);
-
-        const pulse: WinPulseState = {
-            anim,
-            staticSprite,
-            staticBaseScaleX: staticSprite.scale.x,
-            staticBaseScaleY: staticSprite.scale.y,
-            animBaseScale: baseScale,
-            animRefFrameWidth: refFrame.width,
-            animRefFrameHeight: refFrame.height,
-            elapsedMs: 0,
-            phase: 'growing',
-            animationFinished: false,
-        };
-        anim.onComplete = () => {
-            anim.gotoAndStop(0);
-            pulse.animationFinished = true;
-        };
-
-        this._winAnimSprites.push(anim);
-        this._winPulseStates.push(pulse);
-    }
-
-    private _updateWinPulses(deltaMs: number): void {
-        if (this._winPulseStates.length === 0) return;
-
-        for (const pulse of this._winPulseStates) {
-            pulse.elapsedMs += deltaMs;
-
-            if (pulse.phase === 'growing') {
-                const t = Math.min(pulse.elapsedMs / WIN_PULSE_GROW_MS, 1);
-                pulse.staticSprite.visible = true;
-                pulse.anim.visible = false;
-                const scaleMul = 1 + (WIN_SCALE - 1) * t;
-                pulse.staticSprite.scale.set(
-                    pulse.staticBaseScaleX * scaleMul,
-                    pulse.staticBaseScaleY * scaleMul,
-                );
-                if (t >= 1) {
-                    pulse.phase = 'playing';
-                    pulse.elapsedMs = 0;
-                    pulse.animationFinished = false;
-                    const frame = pulse.anim.texture.frame;
-                    const frameAdjust = Math.min(
-                        pulse.animRefFrameWidth / frame.width,
-                        pulse.animRefFrameHeight / frame.height,
-                    );
-                    pulse.anim.scale.set(pulse.animBaseScale * frameAdjust * WIN_SCALE);
-                    pulse.staticSprite.visible = false;
-                    pulse.anim.visible = true;
-                    pulse.anim.gotoAndPlay(0);
-                }
-                continue;
-            }
-
-            if (pulse.phase === 'playing') {
-                pulse.staticSprite.visible = false;
-                pulse.anim.visible = true;
-                const tex = pulse.anim.texture;
-                const frame = tex.frame;
-                const frameAdjust = Math.min(
-                    pulse.animRefFrameWidth / frame.width,
-                    pulse.animRefFrameHeight / frame.height,
-                );
-                const scale = pulse.animBaseScale * frameAdjust * WIN_SCALE;
-                pulse.anim.scale.set(scale);
-                if (pulse.animationFinished) {
-                    pulse.phase = 'shrinking';
-                    pulse.elapsedMs = 0;
-                    pulse.anim.visible = false;
-                    pulse.staticSprite.visible = true;
-                }
-                continue;
-            }
-
-            if (pulse.phase === 'shrinking') {
-                const t = Math.min(pulse.elapsedMs / WIN_PULSE_SHRINK_MS, 1);
-                pulse.staticSprite.visible = true;
-                pulse.anim.visible = false;
-                const scaleMul = WIN_SCALE + (1 - WIN_SCALE) * t;
-                pulse.staticSprite.scale.set(
-                    pulse.staticBaseScaleX * scaleMul,
-                    pulse.staticBaseScaleY * scaleMul,
-                );
-                if (t >= 1) {
-                    pulse.phase = 'waiting';
-                    pulse.elapsedMs = 0;
-                    pulse.staticSprite.scale.set(pulse.staticBaseScaleX, pulse.staticBaseScaleY);
-                }
-                continue;
-            }
-
-            if (pulse.elapsedMs >= WIN_PULSE_PAUSE_MS) {
-                if (this._pendingLineWins.length > 1 && !this._lineCycleComplete) {
-                    // Advance to next line instead of looping the same one
-                    this._lineCycleComplete = true;
-                    this._advanceLine();
-                    return;
-                }
-                // Single line win — loop the pulse
-                pulse.phase = 'growing';
-                pulse.elapsedMs = 0;
-                pulse.staticSprite.visible = true;
-                pulse.anim.visible = false;
-                pulse.staticSprite.scale.set(pulse.staticBaseScaleX, pulse.staticBaseScaleY);
-            }
-        }
-    }
-
-    private _spawnWinVfx(positions: Set<string>): void {
-        const sheet: Spritesheet | undefined = Assets.get('win_vfx');
-        if (!sheet) return;
-
-        const textures = sheet.textures;
-        const frames = [];
-        for (let i = WIN_VFX_FIRST_FRAME; i <= WIN_VFX_LAST_FRAME; i++) {
-            const key = `win_effect_${String(i).padStart(2, '0')}.png`;
-            if (textures[key]) frames.push(textures[key]);
-        }
-        if (frames.length === 0) return;
-
-        for (const posKey of positions) {
-            const [reelIdx, rowIdx] = posKey.split(',').map(Number);
-            const symbol = this._reels[reelIdx].getVisibleSymbol(rowIdx);
-
-            const vfx = new AnimatedSprite(frames, false);
-            vfx.anchor.set(0.5);
-            vfx.animationSpeed = 0.25;
-            vfx.loop = false;
-            vfx.x = reelIdx * CELL_SIZE + symbol.x;
-            vfx.y = symbol.y;
-            vfx.alpha = 0;
-            vfx.scale.set(CELL_SIZE / WIN_VFX_FRAME_SIZE);
-
-            this._vfxLayer.addChild(vfx);
-            vfx.gotoAndPlay(0);
-            this._winVfxSprites.push(vfx);
-            this._winVfxStates.push({ sprite: vfx, phase: 'fadingIn', elapsedMs: 0 });
-        }
-    }
-
-    private _updateWinVfx(deltaMs: number): void {
-        for (const state of this._winVfxStates) {
-            const vfx = state.sprite;
-            state.elapsedMs += deltaMs;
-
-            // Manually advance frames (autoUpdate is off)
-            if (vfx.playing) vfx.update(Ticker.shared);
-
-            // Detect animation end
-            if (!vfx.playing && state.phase === 'playing') {
-                state.phase = 'fadingOut';
-                state.elapsedMs = 0;
-            }
-
-            if (state.phase === 'fadingIn') {
-                const t = Math.min(state.elapsedMs / WIN_VFX_FADE_MS, 1);
-                vfx.alpha = t;
-                if (t >= 1) {
-                    state.phase = 'playing';
-                    state.elapsedMs = 0;
-                }
-            } else if (state.phase === 'fadingOut') {
-                const t = Math.min(state.elapsedMs / WIN_VFX_FADE_MS, 1);
-                vfx.alpha = 1 - t;
-                if (t >= 1) {
-                    vfx.alpha = 0;
-                    vfx.visible = false;
-                    state.phase = 'waiting';
-                    state.elapsedMs = 0;
-                }
-            } else if (state.phase === 'waiting') {
-                if (state.elapsedMs >= WIN_VFX_PAUSE_MS) {
-                    vfx.gotoAndPlay(0);
-                    vfx.alpha = 0;
-                    vfx.visible = true;
-                    state.phase = 'fadingIn';
-                    state.elapsedMs = 0;
+        for (const sv of this._symbolViews) {
+            if (sv.hasAnimation) {
+                const cycleComplete = sv.updatePulse(deltaMs);
+                if (cycleComplete) {
+                    if (this._pendingLineWins.length > 1 && !this._lineCycleComplete) {
+                        this._lineCycleComplete = true;
+                        this._advanceLine();
+                        return;
+                    }
+                    // Single line win — loop the pulse
+                    sv.restartPulse();
                 }
             }
+            sv.updateVfx(deltaMs);
         }
-    }
-
-    private _dimSymbol(sprite: Sprite): void {
-        const filter = new ColorMatrixFilter();
-        filter.brightness(0.35, false);
-        filter.desaturate();
-
-        const previousFilters = sprite.filters ? [...sprite.filters] : null;
-        this._dimmedSprites.push({ sprite, previousFilters });
-        sprite.filters = [...(previousFilters ?? []), filter];
     }
 
     /** Clears visuals for the current line (keeps cycling state). */
     private _clearLineVisuals(): void {
-        for (const pulse of this._winPulseStates) {
-            pulse.anim.onComplete = undefined;
-            pulse.anim.visible = false;
-            if (pulse.anim.parent) pulse.anim.parent.removeChild(pulse.anim);
-            pulse.anim.stop();
-            pulse.anim.destroy();
-            pulse.staticSprite.visible = true;
-            pulse.staticSprite.scale.set(pulse.staticBaseScaleX, pulse.staticBaseScaleY);
+        for (const sv of this._symbolViews) {
+            sv.clear();
         }
-        this._winAnimSprites.length = 0;
-        this._winPulseStates.length = 0;
+        this._symbolViews.length = 0;
 
         // Nuke the entire VFX layer and create a fresh one
         this._vfxLayer.destroy({ children: true });
         this._vfxLayer = new Container();
         this._reelContainer.addChild(this._vfxLayer);
-        this._winVfxSprites.length = 0;
-        this._winVfxStates.length = 0;
-
-        for (const { sprite, previousFilters } of this._dimmedSprites) {
-            sprite.filters = previousFilters;
-        }
-        this._dimmedSprites.length = 0;
     }
 
     /** Full reset — clears visuals and line cycling state (called on new spin). */
