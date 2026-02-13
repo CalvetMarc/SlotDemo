@@ -6,7 +6,7 @@ export interface ChestData {
 
 export interface BonusState {
     chests: ChestData[];
-    tier: number; // 0=3scatter, 1=4scatter, 2=5scatter
+    tier: number; // 0=3wilds, 1=4wilds, 2=5wilds
     totalBet: number;
     picked: boolean[];
     totalBonusWin: number;
@@ -14,9 +14,9 @@ export interface BonusState {
 }
 
 const PRIZE_POOLS: readonly (readonly number[])[] = [
-    [10, 20, 30],           // 3 scatters — 3 prizes (avg=20)
-    [10, 15, 25, 30],       // 4 scatters — 4 prizes (avg=20)
-    [10, 15, 20, 25, 30],   // 5 scatters — 5 prizes (avg=20)
+    [10, 20, 30],           // 3 wilds — 3 prizes (avg=20)
+    [10, 15, 25, 30],       // 4 wilds — 4 prizes (avg=20)
+    [10, 15, 20, 25, 30],   // 5 wilds — 5 prizes (avg=20)
 ];
 
 const EMPTY_COUNTS = [2, 1, 0]; // skulls per tier
@@ -29,8 +29,8 @@ function shuffle<T>(arr: T[]): T[] {
     return arr;
 }
 
-export function generateBonusChests(scatterCount: number, totalBet: number): BonusState {
-    const tier = Math.min(scatterCount - 3, 2);
+export function generateBonusChests(wildCount: number, totalBet: number): BonusState {
+    const tier = Math.min(wildCount - 3, 2);
     const prizes = PRIZE_POOLS[tier];
     const emptyCount = EMPTY_COUNTS[tier];
 

@@ -26,12 +26,12 @@ router.post('/start', authMiddleware, async (req: Request, res) => {
         }
 
         const bonusData = rows[0].bonus_data;
-        if (!bonusData || !bonusData.scatterCount || !bonusData.totalBet) {
+        if (!bonusData || !bonusData.wildCount || !bonusData.totalBet) {
             res.status(400).json({ error: 'Missing bonus trigger data' });
             return;
         }
 
-        const state = generateBonusChests(bonusData.scatterCount, bonusData.totalBet);
+        const state = generateBonusChests(bonusData.wildCount, bonusData.totalBet);
 
         await sql`
             UPDATE sessions SET bonus_data = ${JSON.stringify(state)}, last_seen = now()

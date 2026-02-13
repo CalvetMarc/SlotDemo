@@ -13,7 +13,6 @@ const ANIMATED_SYMBOL_MAP: Partial<Record<SymbolId, { asset: string; anim: strin
     'K.png':           { asset: 'k_animated',       anim: 'K' },
     'Q.png':           { asset: 'q_animated',       anim: 'Q' },
     'A.png':           { asset: 'a_animated',       anim: 'A' },
-    'Scatter_01.png':  { asset: 'scatter_animated', anim: 'Scatter' },
     'Wild_01.png':     { asset: 'wild_animated',    anim: 'Wild' },
 };
 

@@ -54,7 +54,7 @@ for (let spin = 0; spin < NUM_SPINS; spin++) {
     // If bonus triggered, simulate the actual pick-me game
     if (result.bonusTriggered) {
         bonusTriggers++;
-        const state = generateBonusChests(result.scatterCount, TOTAL_BET);
+        const state = generateBonusChests(result.wildCount, TOTAL_BET);
 
         // Pick chests in random order until game over
         const indices = [0, 1, 2, 3, 4];
@@ -101,6 +101,6 @@ console.log(`Bonus triggers: ${bonusTriggers.toLocaleString()} (${bonusFreq.toFi
 console.log(`Avg bonus win: ${bonusTriggers > 0 ? (totalBonusPayout / bonusTriggers).toFixed(2) : 'N/A'}`);
 
 console.log(`\n=== THEORETICAL (exact) ===`);
-console.log(`Total RTP:     96.0865%`);
-console.log(`  Line RTP:    37.9522%`);
+console.log(`Total RTP:     96.1232%`);
+console.log(`  Line RTP:    37.9888%`);
 console.log(`  Bonus RTP:   58.1344%`);

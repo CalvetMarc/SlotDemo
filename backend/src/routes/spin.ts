@@ -39,15 +39,15 @@ router.post('/', authMiddleware, async (req: Request, res) => {
 
         // Generate spin result (betPerLine = betAmount / 20 paylines)
         const betPerLine = betAmount / 20;
-        const { grid, winAmount, lineWins, scatterCount, bonusTriggered } = generateSpin(betPerLine);
+        const { grid, winAmount, lineWins, wildCount, bonusTriggered } = generateSpin(betPerLine);
         const newBalance = currentBalance - betAmount + winAmount;
 
         if (bonusTriggered) {
-            // Enter bonus phase — store scatter info for /api/bonus/start
+            // Enter bonus phase — store wild info for /api/bonus/start
             await sql`
                 UPDATE sessions
                 SET balance = ${newBalance}, game_phase = 'bonus',
-                    bonus_data = ${JSON.stringify({ scatterCount, totalBet: betAmount })},
+                    bonus_data = ${JSON.stringify({ wildCount, totalBet: betAmount })},
                     last_seen = now()
                 WHERE id = ${sessionId}
             `;
@@ -58,7 +58,7 @@ router.post('/', authMiddleware, async (req: Request, res) => {
             `;
         }
 
-        res.json({ grid, balance: newBalance, winAmount, lineWins, scatterCount, bonusTriggered });
+        res.json({ grid, balance: newBalance, winAmount, lineWins, wildCount, bonusTriggered });
     } catch (err) {
         console.error('Spin failed:', err);
         res.status(500).json({ error: 'Spin request failed' });

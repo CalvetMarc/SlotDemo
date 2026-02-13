@@ -8,7 +8,7 @@ const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 export interface SpinResultWithWins extends SpinResult {
     winAmount: number;
     lineWins: LineWin[];
-    scatterCount: number;
+    wildCount: number;
     bonusTriggered: boolean;
 }
 
@@ -39,7 +39,7 @@ export class RemoteSpinResultProvider implements ISpinResultProvider {
             grid: data.grid,
             winAmount: data.winAmount,
             lineWins: data.lineWins,
-            scatterCount: data.scatterCount,
+            wildCount: data.wildCount,
             bonusTriggered: data.bonusTriggered,
         };
     }
@@ -55,6 +55,6 @@ export class LocalSpinResultProvider implements ISpinResultProvider {
             }
             grid.push(column);
         }
-        return { grid, winAmount: 0, lineWins: [], scatterCount: 0, bonusTriggered: false };
+        return { grid, winAmount: 0, lineWins: [], wildCount: 0, bonusTriggered: false };
     }
 }

@@ -40,8 +40,8 @@ export const gameSignals = {
     /** Fired when a win is detected after spin evaluation. */
     winDetected: new Signal<{ winAmount: number; lineWins: { lineIndex: number; symbol: string; count: number; payout: number }[] }>(),
 
-    /** Fired when 3+ scatters trigger the bonus round. */
-    bonusTriggered: new Signal<{ scatterCount: number }>(),
+    /** Fired when 3+ wilds trigger the bonus round. */
+    bonusTriggered: new Signal<{ wildCount: number }>(),
 
     /** Fired when the bonus round completes. */
     bonusComplete: new Signal<{ totalWin: number }>(),

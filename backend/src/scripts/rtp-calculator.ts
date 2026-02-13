@@ -29,7 +29,7 @@ let totalLinePayout = 0;
 let totalBonusPayout = 0;
 let winningSpins = 0;
 const symbolWins: Map<string, { count: number; payout: number }> = new Map();
-const scatterHits: Map<number, number> = new Map();
+const wildHits: Map<number, number> = new Map();
 
 const startTime = performance.now();
 
@@ -69,8 +69,8 @@ for (let s0 = 0; s0 < STRIP_LENGTH; s0++) {
                         symbolWins.set(key, existing);
                     }
 
-                    if (result.scatterCount >= 3) {
-                        scatterHits.set(result.scatterCount, (scatterHits.get(result.scatterCount) ?? 0) + 1);
+                    if (result.wildCount >= 3) {
+                        wildHits.set(result.wildCount, (wildHits.get(result.wildCount) ?? 0) + 1);
                     }
                 }
             }
@@ -101,9 +101,9 @@ for (const [key, { count, payout }] of sortedWins) {
     console.log(`  ${key.padEnd(20)} hits: ${count.toLocaleString().padStart(10)}  RTP: ${contrib.toFixed(4)}%`);
 }
 
-console.log(`\n=== SCATTER/BONUS BREAKDOWN ===`);
-for (const [sc, count] of [...scatterHits.entries()].sort((a, b) => a[0] - b[0])) {
-    const avgPayout = bonusExpectedPayout(sc, TOTAL_BET);
+console.log(`\n=== WILD/BONUS BREAKDOWN ===`);
+for (const [wc, count] of [...wildHits.entries()].sort((a, b) => a[0] - b[0])) {
+    const avgPayout = bonusExpectedPayout(wc, TOTAL_BET);
     const contrib = (count * avgPayout / totalWagered) * 100;
-    console.log(`  ${sc} scatters: ${count.toLocaleString()} hits (E[payout]=${avgPayout}×totalBet)  RTP: ${contrib.toFixed(4)}%`);
+    console.log(`  ${wc} wilds: ${count.toLocaleString()} hits (E[payout]=${avgPayout}×totalBet)  RTP: ${contrib.toFixed(4)}%`);
 }

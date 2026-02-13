@@ -212,8 +212,8 @@ export class SlotMachineView extends View {
 
         if (result.bonusTriggered) {
             // Keep _isSpinning = true to block further spins during transition
-            gameSignals.bonusTriggered.emit({ scatterCount: result.scatterCount });
-            this._showDebugWin(`BONUS! ${result.scatterCount} scatters`);
+            gameSignals.bonusTriggered.emit({ wildCount: result.wildCount });
+            this._showDebugWin(`BONUS! ${result.wildCount} wilds`);
             setTimeout(() => {
                 ScreenManager.I.transitionMap.BASE();
             }, 1500);
@@ -356,7 +356,7 @@ export class SlotMachineView extends View {
             }
             grid.push(column);
         }
-        return { grid, winAmount: 0, lineWins: [], scatterCount: 0, bonusTriggered: false };
+        return { grid, winAmount: 0, lineWins: [], wildCount: 0, bonusTriggered: false };
     }
 
     private _onDebugKeyDown = (event: KeyboardEvent): void => {
@@ -404,7 +404,7 @@ export class SlotMachineView extends View {
             grid,
             winAmount: payout,
             lineWins: [{ lineIndex, symbol, count: 5, payout }],
-            scatterCount: 0,
+            wildCount: 0,
             bonusTriggered: false,
         };
     }
@@ -418,16 +418,16 @@ export class SlotMachineView extends View {
             ['2.png', 'A.png', 'K.png'],
         ];
 
-        // 3 scatters in non-aligned positions to avoid accidental line wins.
-        grid[0][0] = 'Scatter_01.png';
-        grid[2][1] = 'Scatter_01.png';
-        grid[4][2] = 'Scatter_01.png';
+        // 3 wilds in non-aligned positions to avoid accidental line wins.
+        grid[0][0] = 'Wild_01.png';
+        grid[2][1] = 'Wild_01.png';
+        grid[4][2] = 'Wild_01.png';
 
         return {
             grid,
             winAmount: 0,
             lineWins: [],
-            scatterCount: 3,
+            wildCount: 3,
             bonusTriggered: true,
         };
     }
@@ -448,7 +448,7 @@ export class SlotMachineView extends View {
                 { lineIndex: 1, symbol: '2.png', count: 5, payout }, // top: Queen
                 { lineIndex: 2, symbol: '3.png', count: 5, payout }, // bottom: Wolf
             ],
-            scatterCount: 0,
+            wildCount: 0,
             bonusTriggered: false,
         };
     }

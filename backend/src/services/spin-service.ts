@@ -1,24 +1,23 @@
 const SYMBOL_IDS = [
     '1.png', '2.png', '3.png',
     'J.png', 'K.png', 'Q.png', 'A.png',
-    'Scatter_01.png', 'Wild_01.png',
+    'Wild_01.png',
 ] as const;
 
 type SymbolId = (typeof SYMBOL_IDS)[number];
 
-const SCATTER: SymbolId = 'Scatter_01.png';
 const WILD: SymbolId = 'Wild_01.png';
 
 const REEL_COUNT = 5;
 const VISIBLE_ROWS = 3;
 
 /** Virtual reel strips — indices into SYMBOL_IDS. Server-only.
- *  Scatter (7) on all 5 reels. Wild (8) on reels 2,4. */
+ *  Wild (7) appears once per reel. */
 const REEL_STRIPS: readonly (readonly number[])[] = [
     [0, 3, 1, 4, 2, 5, 0, 6, 3, 1, 5, 2, 4, 6, 0, 3, 1, 7, 5, 2],
-    [1, 4, 0, 5, 3, 6, 2, 0, 4, 1, 3, 5, 6, 2, 0, 4, 8, 1, 3, 7],
+    [1, 4, 0, 5, 3, 6, 2, 0, 4, 1, 3, 5, 6, 2, 0, 4, 5, 1, 3, 7],
     [2, 5, 3, 0, 6, 1, 4, 2, 5, 3, 0, 6, 1, 4, 7, 2, 5, 3, 0, 6],
-    [3, 0, 4, 1, 5, 2, 6, 3, 0, 4, 1, 5, 2, 6, 3, 0, 8, 4, 1, 7],
+    [3, 0, 4, 1, 5, 2, 6, 3, 0, 4, 1, 5, 2, 6, 3, 0, 5, 4, 1, 7],
     [4, 1, 5, 2, 0, 3, 6, 4, 1, 5, 2, 0, 3, 6, 4, 7, 1, 5, 2, 0],
 ];
 
@@ -50,21 +49,22 @@ const PAYLINE_COUNT = PAYLINES.length;
 
 /** Paytable: symbol → [x3, x4, x5] multipliers of betPerLine */
 const PAYTABLE: ReadonlyMap<SymbolId, readonly [number, number, number]> = new Map([
-    ['1.png', [19, 67, 336]],
-    ['2.png', [17, 50, 168]],
-    ['3.png', [13, 34, 101]],
-    ['A.png', [7, 17, 67]],
-    ['K.png', [5, 13, 50]],
-    ['Q.png', [4, 10, 34]],
-    ['J.png', [3, 7, 27]],
+    ['Wild_01.png', [10, 34, 250]],
+    ['1.png', [9, 33, 168]],
+    ['2.png', [8, 25, 85]],
+    ['3.png', [7, 17, 51]],
+    ['A.png', [4, 9, 34]],
+    ['K.png', [3, 7, 25]],
+    ['Q.png', [2, 5, 17]],
+    ['J.png', [2, 4, 14]],
 ]);
 
 /**
  * Bonus expected payout per trigger (multipliers of totalBet).
  * Based on pick-me mechanic: 5 chests, pick until empty.
- *   3 scatters: 2 empty, 3 prizes → E[picks]=1.0
- *   4 scatters: 1 empty, 4 prizes → E[picks]=2.0
- *   5 scatters: 0 empty, 5 prizes → E[picks]=5.0
+ *   3 wilds: 2 empty, 3 prizes → E[picks]=1.0
+ *   4 wilds: 1 empty, 4 prizes → E[picks]=2.0
+ *   5 wilds: 0 empty, 5 prizes → E[picks]=5.0
  * Average prize per pick = BONUS_AVG_PRIZE_PER_PICK × totalBet
  */
 const BONUS_AVG_PRIZE_PER_PICK = 20;
@@ -83,7 +83,7 @@ export interface SpinServiceResult {
     grid: SymbolId[][];
     winAmount: number;
     lineWins: LineWin[];
-    scatterCount: number;
+    wildCount: number;
     bonusTriggered: boolean;
 }
 
@@ -102,19 +102,16 @@ function evaluatePayline(
     // Find the base symbol (first non-wild)
     let baseSymbol: SymbolId | null = null;
     for (const s of symbols) {
-        if (s !== WILD && s !== SCATTER) {
+        if (s !== WILD) {
             baseSymbol = s;
             break;
         }
     }
 
-    // All wilds — treat as highest paying symbol
+    // All wilds — pays as Wild from paytable
     if (baseSymbol === null) {
-        baseSymbol = '1.png';
+        baseSymbol = WILD;
     }
-
-    // If first symbol is scatter (not wild), no payline win
-    if (symbols[0] === SCATTER) return null;
 
     // Count consecutive matching from left
     let count = 0;
@@ -135,11 +132,11 @@ function evaluatePayline(
     return { symbol: baseSymbol, count, payout };
 }
 
-function countScatters(grid: SymbolId[][]): number {
+function countWilds(grid: SymbolId[][]): number {
     let count = 0;
     for (let reel = 0; reel < REEL_COUNT; reel++) {
         for (let row = 0; row < VISIBLE_ROWS; row++) {
-            if (grid[reel][row] === SCATTER) {
+            if (grid[reel][row] === WILD) {
                 count++;
             }
         }
@@ -148,16 +145,16 @@ function countScatters(grid: SymbolId[][]): number {
 }
 
 /** Expected bonus payout for RTP calculation purposes */
-export function bonusExpectedPayout(scatterCount: number, totalBet: number): number {
-    if (scatterCount < 3) return 0;
-    const tier = Math.min(scatterCount - 3, 2);
+export function bonusExpectedPayout(wildCount: number, totalBet: number): number {
+    if (wildCount < 3) return 0;
+    const tier = Math.min(wildCount - 3, 2);
     return BONUS_EXPECTED_PICKS[tier] * BONUS_AVG_PRIZE_PER_PICK * totalBet;
 }
 
 export function evaluateWin(
     grid: SymbolId[][],
     betPerLine: number,
-): { lineWins: LineWin[]; scatterCount: number; bonusTriggered: boolean; totalWin: number; bonusExpected: number } {
+): { lineWins: LineWin[]; wildCount: number; bonusTriggered: boolean; totalWin: number; bonusExpected: number } {
     const totalBet = betPerLine * PAYLINE_COUNT;
     const lineWins: LineWin[] = [];
 
@@ -174,15 +171,15 @@ export function evaluateWin(
         }
     }
 
-    // Evaluate scatter
-    const scatterCount = countScatters(grid);
-    const bonusTriggered = scatterCount >= 3;
+    // Evaluate wilds (bonus trigger)
+    const wildCount = countWilds(grid);
+    const bonusTriggered = wildCount >= 3;
 
     // Line wins are immediate; bonus payout comes later from pick-me game
     const lineTotalWin = lineWins.reduce((sum, lw) => sum + lw.payout, 0);
-    const bonusExpected = bonusExpectedPayout(scatterCount, totalBet);
+    const bonusExpected = bonusExpectedPayout(wildCount, totalBet);
 
-    return { lineWins, scatterCount, bonusTriggered, totalWin: lineTotalWin, bonusExpected };
+    return { lineWins, wildCount, bonusTriggered, totalWin: lineTotalWin, bonusExpected };
 }
 
 // ── Spin generation ─────────────────────────────────────────
@@ -202,13 +199,13 @@ export function generateSpin(betPerLine: number): SpinServiceResult {
         grid.push(column);
     }
 
-    const { lineWins, scatterCount, bonusTriggered, totalWin } = evaluateWin(grid, betPerLine);
+    const { lineWins, wildCount, bonusTriggered, totalWin } = evaluateWin(grid, betPerLine);
 
-    return { grid, winAmount: totalWin, lineWins, scatterCount, bonusTriggered };
+    return { grid, winAmount: totalWin, lineWins, wildCount, bonusTriggered };
 }
 
 /**
- * Fixed initial grid — no scatter, no wild, no winning payline.
+ * Fixed initial grid — no wild, no winning payline.
  * Every payline has different symbols on reels 1 & 2, so no 3-of-a-kind.
  */
 const INITIAL_GRID: SymbolId[][] = [
