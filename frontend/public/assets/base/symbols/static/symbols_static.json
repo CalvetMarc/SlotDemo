@@ -66,11 +66,11 @@
 },
 "Wild_01.png":
 {
-	"frame": {"x":581,"y":1,"w":574,"h":392},
+	"frame": {"x":721,"y":65,"w":296,"h":278},
 	"rotated": false,
 	"trimmed": true,
-	"spriteSourceSize": {"x":12,"y":40,"w":574,"h":392},
-	"sourceSize": {"w":596,"h":465}
+	"spriteSourceSize": {"x":60,"y":80,"w":296,"h":278},
+	"sourceSize": {"w":415,"h":415}
 }},
 "meta": {
 	"app": "https://www.codeandweb.com/texturepacker",
