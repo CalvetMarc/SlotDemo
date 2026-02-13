@@ -11,6 +11,7 @@ import { SYMBOL_IDS, REEL_COUNT, VISIBLE_ROWS } from '@shared/types';
 import {
     CELL_SIZE, GRID_WIDTH, GRID_HEIGHT, PAYLINES,
     SPIN_MIN_DURATION, REEL_START_INTERVAL, REEL_STOP_INTERVAL,
+    WILD_TENSION_MULTIPLIERS,
     getWinPositions, getFullPaylinePositions,
 } from '../../../SlotMachine/slot-config';
 import { ScreenManager } from '../../../../Managers/screen-manager';
@@ -184,9 +185,11 @@ export class SlotMachineView extends View {
 
     private _scheduleStops(result: SpinResultWithWins): void {
         let settledCount = 0;
+        let cumulativeDelay = SPIN_MIN_DURATION;
+        let wildsSoFar = 0;
 
         for (let i = 0; i < REEL_COUNT; i++) {
-            const delay = SPIN_MIN_DURATION + i * REEL_STOP_INTERVAL;
+            const delay = cumulativeDelay;
             const timeout = setTimeout(() => {
                 this._reels[i].onSettled = () => {
                     this._reels[i].startWildPop();
@@ -198,6 +201,13 @@ export class SlotMachineView extends View {
                 this._reels[i].stopAt(result.grid[i]);
             }, delay);
             this._stopTimeouts.push(timeout);
+
+            for (const id of result.grid[i]) {
+                if (id === 'Wild_01.png') wildsSoFar++;
+            }
+
+            const multiplier = WILD_TENSION_MULTIPLIERS[wildsSoFar] ?? 1;
+            cumulativeDelay += REEL_STOP_INTERVAL * multiplier;
         }
     }
 

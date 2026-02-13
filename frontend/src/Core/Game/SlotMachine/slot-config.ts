@@ -60,6 +60,13 @@ export function getFullPaylinePositions(lineWins: LineWin[]): Set<string> {
     return positions;
 }
 
+// ── Wild tension ─────────────────────────────────────────────────
+export const WILD_TENSION_MULTIPLIERS: Record<number, number> = {
+    2: 4,
+    3: 5,
+    4: 6,
+};
+
 // ── Animation ────────────────────────────────────────────────────
 export const SPIN_SPEED = 85;           // px per frame at full speed
 export const SPIN_MIN_DURATION = 800;   // ms before first reel can stop
