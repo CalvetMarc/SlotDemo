@@ -4,6 +4,10 @@ import { VideoAlphaFilter } from '../Filters/video-alpha-filter';
 const FADE_IN_PATH = 'assets/bonus/transiotionMask/fadeIn.mp4';
 const FADE_OUT_PATH = 'assets/bonus/transiotionMask/fadeOut.mp4';
 
+const FADE_IN_SPEED = 0.75;
+const FADE_OUT_SPEED = 0.8;
+const HOLD_DELAY_MS = 1000;
+
 export type TransitionType = 'fadeIn' | 'fadeOut';
 
 export class TransitionMask extends Container {
@@ -42,7 +46,7 @@ export class TransitionMask extends Container {
 
         // Phase 1 – cover
         console.log('[TransitionMask] Phase 1 – fadeIn start');
-        await this._showVideo(fadeInVideo, width, height);
+        await this._showVideo(fadeInVideo, width, height, FADE_IN_SPEED);
         console.log('[TransitionMask] Phase 1 – fadeIn done');
 
         // Hold
@@ -61,14 +65,14 @@ export class TransitionMask extends Container {
             console.error('[TransitionMask] onCovered() threw:', err);
         }
 
-        console.log('[TransitionMask] Waiting 2 s…');
-        await this._delay(2000);
+        console.log(`[TransitionMask] Waiting ${HOLD_DELAY_MS} ms…`);
+        await this._delay(HOLD_DELAY_MS);
         console.log('[TransitionMask] Delay done');
 
         // Phase 2 – reveal
         console.log('[TransitionMask] Phase 2 – fadeOut start');
         this._solidCover.visible = false;
-        await this._showVideo(fadeOutVideo, width, height);
+        await this._showVideo(fadeOutVideo, width, height, FADE_OUT_SPEED);
         console.log('[TransitionMask] Phase 2 – fadeOut done');
 
         this.visible = false;
@@ -79,8 +83,9 @@ export class TransitionMask extends Container {
         const video = this._createVideoElement(
             type === 'fadeIn' ? FADE_IN_PATH : FADE_OUT_PATH,
         );
+        const speed = type === 'fadeIn' ? FADE_IN_SPEED : FADE_OUT_SPEED;
         await this._waitCanPlay(video);
-        await this._showVideo(video, width, height);
+        await this._showVideo(video, width, height, speed);
         this.visible = false;
     }
 
@@ -121,6 +126,7 @@ export class TransitionMask extends Container {
         video: HTMLVideoElement,
         w: number,
         h: number,
+        speed = 1,
     ): Promise<void> {
         console.log(
             `[TransitionMask] _showVideo src=${video.src.split('/').pop()}`
@@ -153,7 +159,8 @@ export class TransitionMask extends Container {
         };
         Ticker.shared.add(drawFrame);
 
-        console.log('[TransitionMask] calling video.play()…');
+        video.playbackRate = speed;
+        console.log(`[TransitionMask] calling video.play() (speed=${speed})…`);
         await new Promise<void>((resolve) => {
             video.addEventListener('ended', () => {
                 console.log('[TransitionMask] video ended');
