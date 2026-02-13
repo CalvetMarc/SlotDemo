@@ -61,10 +61,10 @@ export function getFullPaylinePositions(lineWins: LineWin[]): Set<string> {
 }
 
 // ── Animation ────────────────────────────────────────────────────
-export const SPIN_SPEED = 65;           // px per frame at full speed
+export const SPIN_SPEED = 85;           // px per frame at full speed
 export const SPIN_MIN_DURATION = 800;   // ms before first reel can stop
 export const REEL_START_INTERVAL = 100; // ms between each reel starting
-export const REEL_STOP_INTERVAL = 150;  // ms between each reel stopping
+export const REEL_STOP_INTERVAL = 450;  // ms between each reel stopping
 export const ANTICIPATION_PX = 110;     // pull-up distance before spin
 export const ANTICIPATION_MS = 350;     // pull-up duration
 export const OVERSHOOT_PX = 50;         // bounce past target

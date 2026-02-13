@@ -36,7 +36,6 @@
         "queen_animated": "assets/base/symbols/animated/Queen/queen_animated.json",
         "king_animated": "assets/base/symbols/animated/King/king_animated.json",
         "scatter_animated": "assets/base/symbols/animated/Scatter/scatter_animated-0.json",
-        "wild_animated": "assets/base/symbols/animated/Wild/wild_animated-0.json",
         "win_vfx": "assets/base/win/winVFX-0.json"
       }
     },

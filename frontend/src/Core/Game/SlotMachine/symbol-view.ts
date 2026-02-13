@@ -13,7 +13,6 @@ const ANIMATED_SYMBOL_MAP: Partial<Record<SymbolId, { asset: string; anim: strin
     'K.png':           { asset: 'k_animated',       anim: 'K' },
     'Q.png':           { asset: 'q_animated',       anim: 'Q' },
     'A.png':           { asset: 'a_animated',       anim: 'A' },
-    'Wild_01.png':     { asset: 'wild_animated',    anim: 'Wild' },
 };
 
 // ── Celebration phase ────────────────────────────────────────────
@@ -27,6 +26,30 @@ const WIN_PULSE_SHRINK_MS = 220;
 const WIN_SCALE = 1.15;
 
 type PulseSubPhase = 'growing' | 'playing' | 'shrinking';
+
+// ── Heartbeat (scale-only beats for symbols without spritesheet animation) ──
+// Runs during the 'playing' sub-phase. Values are scale multipliers (WIN_SCALE = baseline).
+// Two lub-DUB beats that roughly match the duration of spritesheet animations.
+
+// 30 frames @ 0.3 speed @ 60fps ≈ 1667ms — two slow lub-DUB beats to match
+const HEARTBEAT_BEAT_SCALE = 1.08;
+const HEARTBEAT_BEAT_SMALL = HEARTBEAT_BEAT_SCALE * 0.7;
+const HEARTBEAT_KEYFRAMES = [
+    { time: 0,    scale: WIN_SCALE },
+    // Beat 1
+    { time: 200,  scale: WIN_SCALE * HEARTBEAT_BEAT_SCALE },
+    { time: 420,  scale: WIN_SCALE },
+    { time: 580,  scale: WIN_SCALE * HEARTBEAT_BEAT_SMALL },
+    { time: 800,  scale: WIN_SCALE },
+    // Beat 2
+    { time: 1000, scale: WIN_SCALE * HEARTBEAT_BEAT_SCALE },
+    { time: 1220, scale: WIN_SCALE },
+    { time: 1380, scale: WIN_SCALE * HEARTBEAT_BEAT_SMALL },
+    { time: 1560, scale: WIN_SCALE },
+    // Hold to match spritesheet duration
+    { time: 1670, scale: WIN_SCALE },
+];
+const HEARTBEAT_DURATION_MS = HEARTBEAT_KEYFRAMES[HEARTBEAT_KEYFRAMES.length - 1].time;
 
 // ── Win VFX constants ────────────────────────────────────────────
 
@@ -70,9 +93,11 @@ export class SymbolView {
 
     // Celebration phase
     private _phase: CelebrationPhase = 'vfx';
+    private _isWinning = false;
 
     // Win animation (pulse)
     private _animSprite?: AnimatedSprite;
+    private _heartbeatElapsed = 0;
     private _pulsePhase: PulseSubPhase = 'growing';
     private _pulseElapsed = 0;
     private _animFinished = false;
@@ -102,9 +127,11 @@ export class SymbolView {
 
     /** Spawn animated overlay on the reel container and start pulse cycle. */
     showWinAnimation(reelContainer: Container): void {
+        this._isWinning = true;
+
         const mapping = ANIMATED_SYMBOL_MAP[this.symbolId];
         if (!mapping) {
-            console.warn('[SymbolView] no mapping for', this.symbolId);
+            // No spritesheet animation — heartbeat scale pulse will be used
             return;
         }
 
@@ -195,7 +222,7 @@ export class SymbolView {
     update(deltaMs: number): boolean {
         if (this._phase === 'vfx') {
             if (!this._vfxSprite) {
-                this._phase = this._animSprite ? 'pulse' : 'done';
+                this._phase = this._isWinning ? 'pulse' : 'done';
                 return this._phase === 'done';
             }
             this._advanceVfx(deltaMs);
@@ -217,6 +244,7 @@ export class SymbolView {
         this._vfxElapsed = 0;
         this._pulsePhase = 'growing';
         this._pulseElapsed = 0;
+        this._heartbeatElapsed = 0;
         this._animFinished = false;
         this.staticSprite.visible = true;
         this.staticSprite.scale.set(this._staticBaseScaleX, this._staticBaseScaleY);
@@ -233,11 +261,13 @@ export class SymbolView {
 
     /** Whether this view has an active win animation (pulse). */
     get hasAnimation(): boolean {
-        return this._animSprite !== undefined;
+        return this._isWinning;
     }
 
     /** Remove all overlays, restore static sprite, remove dim filter. */
     clear(): void {
+        this._isWinning = false;
+
         // Clean up animated overlay
         if (this._animSprite) {
             this._animSprite.onComplete = undefined;
@@ -293,10 +323,11 @@ export class SymbolView {
             if (t >= 1) {
                 this._vfxSprite.alpha = 0;
                 this._vfxSprite.visible = false;
-                if (this._animSprite) {
+                if (this._isWinning) {
                     this._phase = 'pulse';
                     this._pulsePhase = 'growing';
                     this._pulseElapsed = 0;
+                    this._heartbeatElapsed = 0;
                 } else {
                     this._phase = 'done';
                 }
@@ -307,15 +338,13 @@ export class SymbolView {
     // ── Private: Pulse sub-phase ─────────────────────────────────
 
     private _advancePulse(deltaMs: number): void {
-        if (!this._animSprite) return;
-
         this._pulseElapsed += deltaMs;
 
         if (this._pulsePhase === 'growing') {
             const t = Math.min(this._pulseElapsed / WIN_PULSE_GROW_MS, 1);
-            this.staticSprite.visible = true;
-            this._animSprite.visible = false;
             const scaleMul = 1 + (WIN_SCALE - 1) * t;
+            this.staticSprite.visible = true;
+            if (this._animSprite) this._animSprite.visible = false;
             this.staticSprite.scale.set(
                 this._staticBaseScaleX * scaleMul,
                 this._staticBaseScaleY * scaleMul,
@@ -323,36 +352,56 @@ export class SymbolView {
             if (t >= 1) {
                 this._pulsePhase = 'playing';
                 this._pulseElapsed = 0;
-                this._animFinished = false;
+                this._heartbeatElapsed = 0;
+
+                if (this._animSprite) {
+                    this._animFinished = false;
+                    const frame = this._animSprite.texture.frame;
+                    const frameAdjust = Math.min(
+                        this._animRefFrameWidth / frame.width,
+                        this._animRefFrameHeight / frame.height,
+                    );
+                    this._animSprite.scale.set(this._animBaseScale * frameAdjust * WIN_SCALE);
+                    this.staticSprite.visible = false;
+                    this._animSprite.visible = true;
+                    this._animSprite.gotoAndPlay(0);
+                }
+            }
+        } else if (this._pulsePhase === 'playing') {
+            if (this._animSprite) {
+                // Spritesheet animation path
+                this.staticSprite.visible = false;
+                this._animSprite.visible = true;
                 const frame = this._animSprite.texture.frame;
                 const frameAdjust = Math.min(
                     this._animRefFrameWidth / frame.width,
                     this._animRefFrameHeight / frame.height,
                 );
                 this._animSprite.scale.set(this._animBaseScale * frameAdjust * WIN_SCALE);
-                this.staticSprite.visible = false;
-                this._animSprite.visible = true;
-                this._animSprite.gotoAndPlay(0);
-            }
-        } else if (this._pulsePhase === 'playing') {
-            this.staticSprite.visible = false;
-            this._animSprite.visible = true;
-            const frame = this._animSprite.texture.frame;
-            const frameAdjust = Math.min(
-                this._animRefFrameWidth / frame.width,
-                this._animRefFrameHeight / frame.height,
-            );
-            this._animSprite.scale.set(this._animBaseScale * frameAdjust * WIN_SCALE);
-            if (this._animFinished) {
-                this._pulsePhase = 'shrinking';
-                this._pulseElapsed = 0;
-                this._animSprite.visible = false;
-                this.staticSprite.visible = true;
+                if (this._animFinished) {
+                    this._pulsePhase = 'shrinking';
+                    this._pulseElapsed = 0;
+                    this._animSprite.visible = false;
+                    this.staticSprite.visible = true;
+                }
+            } else {
+                // Heartbeat path: scale beats on the static sprite
+                this._heartbeatElapsed += deltaMs;
+                if (this._heartbeatElapsed >= HEARTBEAT_DURATION_MS) {
+                    this._pulsePhase = 'shrinking';
+                    this._pulseElapsed = 0;
+                    this.staticSprite.scale.set(
+                        this._staticBaseScaleX * WIN_SCALE,
+                        this._staticBaseScaleY * WIN_SCALE,
+                    );
+                } else {
+                    this._applyHeartbeatScale();
+                }
             }
         } else if (this._pulsePhase === 'shrinking') {
             const t = Math.min(this._pulseElapsed / WIN_PULSE_SHRINK_MS, 1);
             this.staticSprite.visible = true;
-            this._animSprite.visible = false;
+            if (this._animSprite) this._animSprite.visible = false;
             const scaleMul = WIN_SCALE + (1 - WIN_SCALE) * t;
             this.staticSprite.scale.set(
                 this._staticBaseScaleX * scaleMul,
@@ -363,5 +412,24 @@ export class SymbolView {
                 this.staticSprite.scale.set(this._staticBaseScaleX, this._staticBaseScaleY);
             }
         }
+    }
+
+    // ── Private: Heartbeat keyframe interpolation ────────────────
+
+    private _applyHeartbeatScale(): void {
+        const t = this._heartbeatElapsed;
+        let i = 0;
+        while (i < HEARTBEAT_KEYFRAMES.length - 1 && HEARTBEAT_KEYFRAMES[i + 1].time <= t) i++;
+
+        const kf0 = HEARTBEAT_KEYFRAMES[i];
+        const kf1 = HEARTBEAT_KEYFRAMES[Math.min(i + 1, HEARTBEAT_KEYFRAMES.length - 1)];
+        const segLen = kf1.time - kf0.time;
+        const lerp = segLen > 0 ? (t - kf0.time) / segLen : 1;
+        const scaleMul = kf0.scale + (kf1.scale - kf0.scale) * lerp;
+
+        this.staticSprite.scale.set(
+            this._staticBaseScaleX * scaleMul,
+            this._staticBaseScaleY * scaleMul,
+        );
     }
 }

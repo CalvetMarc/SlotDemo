@@ -30,6 +30,7 @@ export class SlotMachineView extends View {
     private _unsubscribeSpin?: () => void;
     private _unsubscribeBet?: () => void;
     private _stopTimeouts: ReturnType<typeof setTimeout>[] = [];
+    private _wildShrinkTimeout?: ReturnType<typeof setTimeout>;
     private _debugWinText!: Text;
     private _debugWinTimeout?: ReturnType<typeof setTimeout>;
     private _forcedDebugResult?: SpinResultWithWins;
@@ -134,6 +135,9 @@ export class SlotMachineView extends View {
         }
 
         const deltaMs = dt * 16.67;
+        for (const reel of this._reels) {
+            reel.updateWildPop(deltaMs);
+        }
         this._updateSymbolViews(deltaMs);
     }
 
@@ -184,6 +188,7 @@ export class SlotMachineView extends View {
             const delay = SPIN_MIN_DURATION + i * REEL_STOP_INTERVAL;
             const timeout = setTimeout(() => {
                 this._reels[i].onSettled = () => {
+                    this._reels[i].startWildPop();
                     settledCount++;
                     if (settledCount === REEL_COUNT) {
                         this._onAllReelsStopped(result);
@@ -196,6 +201,9 @@ export class SlotMachineView extends View {
     }
 
     private _onAllReelsStopped(result: SpinResultWithWins): void {
+        this._wildShrinkTimeout = setTimeout(() => {
+            for (const reel of this._reels) reel.shrinkWildPop();
+        }, REEL_STOP_INTERVAL * 2);
         this._stopTimeouts.length = 0;
         gameSignals.spinComplete.emit({ grid: result.grid });
 
@@ -239,6 +247,9 @@ export class SlotMachineView extends View {
 
         // Guard: if a new spin started while we were loading, bail out
         if (this._reels[0].isCelebrating || !this._reels[0].isIdle) return;
+
+        // Ensure wild pops are fully resolved before celebration takes over sprites
+        for (const reel of this._reels) reel.clearWildPop();
 
         this._pendingLineWins = result.lineWins;
         this._currentLineIndex = 0;
@@ -319,6 +330,11 @@ export class SlotMachineView extends View {
 
     /** Full reset — clears visuals and line cycling state (called on new spin). */
     private _clearWinPresentation(): void {
+        if (this._wildShrinkTimeout) {
+            clearTimeout(this._wildShrinkTimeout);
+            this._wildShrinkTimeout = undefined;
+        }
+        for (const reel of this._reels) reel.clearWildPop();
         this._clearLineVisuals();
         this._pendingLineWins = [];
         this._currentLineIndex = 0;

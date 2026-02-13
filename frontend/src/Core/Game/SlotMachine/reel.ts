@@ -11,6 +11,46 @@ type ReelState = 'idle' | 'anticipating' | 'spinning' | 'stopping';
 
 const LANDING_MS = 200;
 
+// ── Wild landing pop: grow on land, shrink when all reels stop ──
+
+const WILD_ID: SymbolId = 'Wild_01.png';
+const WILD_POP_SCALE = 1.25;
+const WILD_POP_SHRINK_MS = 200;
+
+// Elastic grow: slow build-up → explosive release → spring overshoot → settle
+const WILD_POP_GROW_KEYFRAMES = [
+    { time: 0,   scale: 1.0 },
+    { time: 80,  scale: 0.96 },   // squeeze (building tension)
+    { time: 120, scale: 0.94 },   // max squeeze
+    { time: 160, scale: 1.35 },   // explosive release, overshoots
+    { time: 230, scale: 1.16 },   // spring back
+    { time: 290, scale: 1.30 },   // second overshoot
+    { time: 340, scale: 1.22 },   // spring back
+    { time: 380, scale: 1.25 },   // settle at target
+];
+const WILD_POP_GROW_MS = WILD_POP_GROW_KEYFRAMES[WILD_POP_GROW_KEYFRAMES.length - 1].time;
+
+function lerpWildGrow(elapsed: number): number {
+    const t = Math.min(elapsed, WILD_POP_GROW_MS);
+    let i = 0;
+    while (i < WILD_POP_GROW_KEYFRAMES.length - 1 && WILD_POP_GROW_KEYFRAMES[i + 1].time <= t) i++;
+    const kf0 = WILD_POP_GROW_KEYFRAMES[i];
+    const kf1 = WILD_POP_GROW_KEYFRAMES[Math.min(i + 1, WILD_POP_GROW_KEYFRAMES.length - 1)];
+    const seg = kf1.time - kf0.time;
+    const lerp = seg > 0 ? (t - kf0.time) / seg : 1;
+    return kf0.scale + (kf1.scale - kf0.scale) * lerp;
+}
+
+type WildPopPhase = 'growing' | 'holding' | 'shrinking';
+
+interface WildPop {
+    sprite: Sprite;
+    baseScaleX: number;
+    baseScaleY: number;
+    phase: WildPopPhase;
+    elapsed: number;
+}
+
 /**
  * A single vertical reel.
  * Holds (VISIBLE_ROWS + 2) symbol sprites that scroll downward.
@@ -25,6 +65,9 @@ export class Reel extends Container {
 
     // Celebration
     private _celebrationViews: SymbolView[] = [];
+
+    // Wild landing pop
+    private _wildPops: WildPop[] = [];
 
     /** Total sprites = visible rows + 1 top buffer + 1 bottom buffer. */
     private readonly _totalSlots = VISIBLE_ROWS + 2;
@@ -263,6 +306,73 @@ export class Reel extends Container {
 
     get isCelebrating(): boolean {
         return this._celebrationViews.length > 0;
+    }
+
+    // ── Wild landing pop ───────────────────────────────────────────
+
+    /** Grow any visible Wild symbols when this reel lands. */
+    startWildPop(): void {
+        for (let row = 0; row < VISIBLE_ROWS; row++) {
+            if (this.getSymbolId(row) === WILD_ID) {
+                const sprite = this.getVisibleSymbol(row);
+                this._wildPops.push({
+                    sprite,
+                    baseScaleX: sprite.scale.x,
+                    baseScaleY: sprite.scale.y,
+                    phase: 'growing',
+                    elapsed: 0,
+                });
+            }
+        }
+    }
+
+    /** Trigger shrink back to normal (called when all reels have stopped). */
+    shrinkWildPop(): void {
+        for (const pop of this._wildPops) {
+            if (pop.phase !== 'shrinking') {
+                pop.phase = 'shrinking';
+                pop.elapsed = 0;
+            }
+        }
+    }
+
+    /** Advance wild pop animations. Auto-clears when all shrinks complete. */
+    updateWildPop(deltaMs: number): void {
+        if (this._wildPops.length === 0) return;
+
+        let allDone = true;
+        for (const pop of this._wildPops) {
+            pop.elapsed += deltaMs;
+            if (pop.phase === 'growing') {
+                const s = lerpWildGrow(pop.elapsed);
+                pop.sprite.scale.set(pop.baseScaleX * s, pop.baseScaleY * s);
+                if (pop.elapsed >= WILD_POP_GROW_MS) pop.phase = 'holding';
+                allDone = false;
+            } else if (pop.phase === 'holding') {
+                allDone = false;
+            } else {
+                const t = Math.min(pop.elapsed / WILD_POP_SHRINK_MS, 1);
+                const ease = 1 - (1 - t) * (1 - t);
+                const s = WILD_POP_SCALE + (1 - WILD_POP_SCALE) * ease;
+                pop.sprite.scale.set(pop.baseScaleX * s, pop.baseScaleY * s);
+                if (t < 1) allDone = false;
+            }
+        }
+
+        if (allDone) {
+            for (const pop of this._wildPops) {
+                pop.sprite.scale.set(pop.baseScaleX, pop.baseScaleY);
+            }
+            this._wildPops.length = 0;
+        }
+    }
+
+    /** Immediately clear all wild pops and restore scale. */
+    clearWildPop(): void {
+        for (const pop of this._wildPops) {
+            pop.sprite.scale.set(pop.baseScaleX, pop.baseScaleY);
+        }
+        this._wildPops.length = 0;
     }
 
     // ── Private ──────────────────────────────────────────────────
