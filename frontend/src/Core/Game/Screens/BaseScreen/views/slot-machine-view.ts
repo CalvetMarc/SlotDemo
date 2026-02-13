@@ -31,6 +31,7 @@ export class SlotMachineView extends View {
     private _unsubscribeBet?: () => void;
     private _stopTimeouts: ReturnType<typeof setTimeout>[] = [];
     private _wildShrinkTimeout?: ReturnType<typeof setTimeout>;
+    private _winPresentationTimeout?: ReturnType<typeof setTimeout>;
     private _debugWinText!: Text;
     private _debugWinTimeout?: ReturnType<typeof setTimeout>;
     private _forcedDebugResult?: SpinResultWithWins;
@@ -208,14 +209,31 @@ export class SlotMachineView extends View {
         gameSignals.spinComplete.emit({ grid: result.grid });
 
         if (result.winAmount > 0) {
-            gameSignals.winDetected.emit({
-                winAmount: result.winAmount,
-                lineWins: result.lineWins,
-            });
-            this._showDebugWin(`WIN ${result.winAmount.toFixed(2)}€`);
-            this._showWinPresentation(result).catch(err =>
-                console.error('[WinPresentation] failed:', err),
-            );
+            const hasWilds = this._reels.some(r => r.hasWildPops);
+            if (hasWilds) {
+                // Wait for wild pop shrink to finish before showing win
+                // shrink starts at REEL_STOP_INTERVAL*2 (900ms) and lasts ~200ms
+                const delay = REEL_STOP_INTERVAL * 2 + 300;
+                this._winPresentationTimeout = setTimeout(() => {
+                    gameSignals.winDetected.emit({
+                        winAmount: result.winAmount,
+                        lineWins: result.lineWins,
+                    });
+                    this._showDebugWin(`WIN ${result.winAmount.toFixed(2)}€`);
+                    this._showWinPresentation(result).catch(err =>
+                        console.error('[WinPresentation] failed:', err),
+                    );
+                }, delay);
+            } else {
+                gameSignals.winDetected.emit({
+                    winAmount: result.winAmount,
+                    lineWins: result.lineWins,
+                });
+                this._showDebugWin(`WIN ${result.winAmount.toFixed(2)}€`);
+                this._showWinPresentation(result).catch(err =>
+                    console.error('[WinPresentation] failed:', err),
+                );
+            }
         }
 
         if (result.bonusTriggered) {
@@ -333,6 +351,10 @@ export class SlotMachineView extends View {
         if (this._wildShrinkTimeout) {
             clearTimeout(this._wildShrinkTimeout);
             this._wildShrinkTimeout = undefined;
+        }
+        if (this._winPresentationTimeout) {
+            clearTimeout(this._winPresentationTimeout);
+            this._winPresentationTimeout = undefined;
         }
         for (const reel of this._reels) reel.clearWildPop();
         this._clearLineVisuals();

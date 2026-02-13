@@ -308,6 +308,10 @@ export class Reel extends Container {
         return this._celebrationViews.length > 0;
     }
 
+    get hasWildPops(): boolean {
+        return this._wildPops.length > 0;
+    }
+
     // ── Wild landing pop ───────────────────────────────────────────
 
     /** Grow any visible Wild symbols when this reel lands. */
