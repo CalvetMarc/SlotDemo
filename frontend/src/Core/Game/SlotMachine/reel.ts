@@ -1,10 +1,11 @@
-import { Container, Sprite, Assets, Spritesheet } from 'pixi.js';
+import { Container, Sprite, Assets, Spritesheet, type Texture } from 'pixi.js';
 import {
     CELL_SIZE, SYMBOL_SIZE, VISIBLE_ROWS,
     SPIN_SPEED, OVERSHOOT_PX, BOUNCE_DURATION,
     ANTICIPATION_PX, ANTICIPATION_MS,
     SYMBOL_IDS, SymbolId,
 } from './slot-config';
+import { SymbolView } from './symbol-view';
 
 type ReelState = 'idle' | 'anticipating' | 'spinning' | 'stopping';
 
@@ -16,9 +17,14 @@ const LANDING_MS = 200;
  * When a sprite leaves the bottom edge it's recycled to the top.
  */
 export class Reel extends Container {
+    readonly index: number;
+
     private _symbols: Sprite[] = [];
     private _symbolIds: SymbolId[] = [];
     private _state: ReelState = 'idle';
+
+    // Celebration
+    private _celebrationViews: SymbolView[] = [];
 
     /** Total sprites = visible rows + 1 top buffer + 1 bottom buffer. */
     private readonly _totalSlots = VISIBLE_ROWS + 2;
@@ -44,8 +50,9 @@ export class Reel extends Container {
     /** Callback invoked once this reel has fully settled after stopping. */
     public onSettled?: () => void;
 
-    constructor() {
+    constructor(index: number) {
         super();
+        this.index = index;
         this._sheet = Assets.get('symbols_static');
         this._createSymbols();
     }
@@ -202,6 +209,60 @@ export class Reel extends Container {
         const sprite = this.getVisibleSymbol(row);
         const idx = this._symbols.indexOf(sprite);
         return this._symbolIds[idx];
+    }
+
+    // ── Celebration ─────────────────────────────────────────────
+
+    /** Set up celebration visuals for this reel's symbols. */
+    setCelebration(winRows: Set<number>, vfxRows: Set<number>, vfxLayer: Container, vfxFrames: Texture[]): void {
+        for (let row = 0; row < VISIBLE_ROWS; row++) {
+            const sprite = this.getVisibleSymbol(row);
+            const symbolId = this.getSymbolId(row);
+            const sv = new SymbolView(this.index, row, symbolId, sprite);
+
+            if (winRows.has(row)) {
+                sv.showWinAnimation(this);
+            } else {
+                sv.dim();
+            }
+
+            if (vfxRows.has(row)) {
+                sv.showVfx(vfxLayer, vfxFrames);
+            }
+
+            this._celebrationViews.push(sv);
+        }
+    }
+
+    /** Update all celebration views. Returns true when all animated symbols are done. */
+    updateCelebration(deltaMs: number): boolean {
+        let allAnimatedDone = true;
+        for (const sv of this._celebrationViews) {
+            const done = sv.update(deltaMs);
+            if (sv.hasAnimation && !done) {
+                allAnimatedDone = false;
+            }
+        }
+        return allAnimatedDone;
+    }
+
+    /** Restart all celebration views for looping. */
+    restartCelebration(): void {
+        for (const sv of this._celebrationViews) {
+            sv.restart();
+        }
+    }
+
+    /** Clear all celebration visuals. */
+    clearCelebration(): void {
+        for (const sv of this._celebrationViews) {
+            sv.clear();
+        }
+        this._celebrationViews.length = 0;
+    }
+
+    get isCelebrating(): boolean {
+        return this._celebrationViews.length > 0;
     }
 
     // ── Private ──────────────────────────────────────────────────

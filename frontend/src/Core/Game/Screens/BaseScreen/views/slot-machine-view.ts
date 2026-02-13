@@ -15,7 +15,7 @@ import {
 } from '../../../SlotMachine/slot-config';
 import { ScreenManager } from '../../../../Managers/screen-manager';
 import { SessionManager } from '../../../SlotMachine/session-manager';
-import { SymbolView, getWinVfxFrames } from '../../../SlotMachine/symbol-view';
+import { getWinVfxFrames } from '../../../SlotMachine/symbol-view';
 
 export class SlotMachineView extends View {
     private _frameBackground!: Sprite;
@@ -37,10 +37,7 @@ export class SlotMachineView extends View {
     // Win presentation – line cycling state
     private _pendingLineWins: import('@shared/types').LineWin[] = [];
     private _currentLineIndex = 0;
-    private _lineCycleComplete = false;
-
-    // Win presentation – per-symbol views
-    private _symbolViews: SymbolView[] = [];
+    private _linePauseElapsed = -1;
 
     bundleNeeded(): bundle {
         return 'base';
@@ -72,7 +69,7 @@ export class SlotMachineView extends View {
 
         // Create reels
         for (let i = 0; i < REEL_COUNT; i++) {
-            const reel = new Reel();
+            const reel = new Reel(i);
             reel.x = i * CELL_SIZE;
             this._reelContainer.addChild(reel);
             this._reels.push(reel);
@@ -241,7 +238,7 @@ export class SlotMachineView extends View {
         await Assets.loadBundle('win');
 
         // Guard: if a new spin started while we were loading, bail out
-        if (this._symbolViews.length > 0 || !this._reels[0].isIdle) return;
+        if (this._reels[0].isCelebrating || !this._reels[0].isIdle) return;
 
         this._pendingLineWins = result.lineWins;
         this._currentLineIndex = 0;
@@ -251,7 +248,6 @@ export class SlotMachineView extends View {
     /** Show a single winning line: animate its symbols, dim the rest, spawn VFX. */
     private _presentCurrentLine(): void {
         this._clearLineVisuals();
-        this._lineCycleComplete = false;
 
         const lw = this._pendingLineWins[this._currentLineIndex];
         const winPositions = getWinPositions([lw]);
@@ -259,25 +255,14 @@ export class SlotMachineView extends View {
         const vfxFrames = getWinVfxFrames();
 
         for (let reel = 0; reel < REEL_COUNT; reel++) {
+            const winRows = new Set<number>();
+            const vfxRows = new Set<number>();
             for (let row = 0; row < VISIBLE_ROWS; row++) {
-                const sprite = this._reels[reel].getVisibleSymbol(row);
-                const symbolId = this._reels[reel].getSymbolId(row);
                 const key = `${reel},${row}`;
-
-                const sv = new SymbolView(reel, row, symbolId, sprite);
-
-                if (winPositions.has(key)) {
-                    sv.showWinAnimation(this._reels[reel]);
-                } else {
-                    sv.dim();
-                }
-
-                if (fullPositions.has(key)) {
-                    sv.showVfx(this._vfxLayer, vfxFrames);
-                }
-
-                this._symbolViews.push(sv);
+                if (winPositions.has(key)) winRows.add(row);
+                if (fullPositions.has(key)) vfxRows.add(row);
             }
+            this._reels[reel].setCelebration(winRows, vfxRows, this._vfxLayer, vfxFrames);
         }
     }
 
@@ -287,33 +272,44 @@ export class SlotMachineView extends View {
         this._presentCurrentLine();
     }
 
-    /** Update all active SymbolView pulse and VFX state machines. */
-    private _updateSymbolViews(deltaMs: number): void {
-        if (this._symbolViews.length === 0) return;
+    private static readonly _LINE_PAUSE_MS = 800;
 
-        for (const sv of this._symbolViews) {
-            if (sv.hasAnimation) {
-                const cycleComplete = sv.updatePulse(deltaMs);
-                if (cycleComplete) {
-                    if (this._pendingLineWins.length > 1 && !this._lineCycleComplete) {
-                        this._lineCycleComplete = true;
-                        this._advanceLine();
-                        return;
-                    }
-                    // Single line win — loop the pulse
-                    sv.restartPulse();
+    /** Update celebration state across all reels. */
+    private _updateSymbolViews(deltaMs: number): void {
+        if (this._pendingLineWins.length === 0) return;
+
+        // Pause phase — wait between cycles
+        if (this._linePauseElapsed >= 0) {
+            this._linePauseElapsed += deltaMs;
+            if (this._linePauseElapsed >= SlotMachineView._LINE_PAUSE_MS) {
+                this._linePauseElapsed = -1;
+                if (this._pendingLineWins.length > 1) {
+                    this._advanceLine();
+                } else {
+                    for (const reel of this._reels) reel.restartCelebration();
                 }
             }
-            sv.updateVfx(deltaMs);
+            return;
+        }
+
+        // Update all reels — check if all animated symbols are done
+        let allDone = true;
+        for (const reel of this._reels) {
+            if (!reel.updateCelebration(deltaMs)) {
+                allDone = false;
+            }
+        }
+
+        if (allDone) {
+            this._linePauseElapsed = 0; // start pause
         }
     }
 
     /** Clears visuals for the current line (keeps cycling state). */
     private _clearLineVisuals(): void {
-        for (const sv of this._symbolViews) {
-            sv.clear();
+        for (const reel of this._reels) {
+            reel.clearCelebration();
         }
-        this._symbolViews.length = 0;
 
         // Nuke the entire VFX layer and create a fresh one
         this._vfxLayer.destroy({ children: true });
@@ -326,6 +322,7 @@ export class SlotMachineView extends View {
         this._clearLineVisuals();
         this._pendingLineWins = [];
         this._currentLineIndex = 0;
+        this._linePauseElapsed = -1;
     }
 
     // ── Helpers ──────────────────────────────────────────────────
