@@ -1,6 +1,6 @@
 import { Sprite, Container, Graphics, Ticker, Text, TextStyle, Assets } from 'pixi.js';
 import { View, bundle } from '../../../../Abstractions/view';
-import { Reel } from '../../../SlotMachine/reel';
+import { Reel, WILD_POP_GROW_MS } from '../../../SlotMachine/reel';
 import {
     RemoteSpinResultProvider,
     SpinResultWithWins,
@@ -41,6 +41,10 @@ export class SlotMachineView extends View {
     private _pendingLineWins: import('@shared/types').LineWin[] = [];
     private _currentLineIndex = 0;
     private _linePauseElapsed = -1;
+
+    // Tension spotlight state
+    private _isTensionSpin = false;
+    private _tensionDimTimeout?: ReturnType<typeof setTimeout>;
 
     // Bonus celebration state
     private _isBonusPending = false;
@@ -157,6 +161,7 @@ export class SlotMachineView extends View {
 
         gameSignals.spinStarted.emit();
         this._clearWinPresentation();
+        for (const reel of this._reels) reel.setDim(false);
         this._debugWinText.visible = false;
         if (this._debugWinTimeout) {
             clearTimeout(this._debugWinTimeout);
@@ -194,11 +199,41 @@ export class SlotMachineView extends View {
         let cumulativeDelay = SPIN_MIN_DURATION;
         let wildsSoFar = 0;
 
+        // Precompute which gaps have tension (multiplier > 1)
+        const hasTensionAfter: boolean[] = [];
+        let preWilds = 0;
+        for (let i = 0; i < REEL_COUNT; i++) {
+            for (const id of result.grid[i]) {
+                if (id === 'Wild_01.png') preWilds++;
+            }
+            const mult = WILD_TENSION_MULTIPLIERS[preWilds] ?? 1;
+            hasTensionAfter.push(mult > 1);
+        }
+        this._isTensionSpin = hasTensionAfter.some(v => v);
+
         for (let i = 0; i < REEL_COUNT; i++) {
             const delay = cumulativeDelay;
             const timeout = setTimeout(() => {
                 this._reels[i].onSettled = () => {
                     this._reels[i].startWildPop();
+
+                    // Spotlight: dim all reels except the next one to stop
+                    if (i < REEL_COUNT - 1 && hasTensionAfter[i]) {
+                        const applySpotlight = () => {
+                            // Guard: don't re-dim if all reels already stopped
+                            if (this._reels.every(r => r.isIdle)) return;
+                            for (let j = 0; j < REEL_COUNT; j++) {
+                                this._reels[j].setDim(j !== i + 1);
+                            }
+                        };
+                        if (this._reels[i].hasWildPops) {
+                            const t = setTimeout(applySpotlight, WILD_POP_GROW_MS);
+                            this._stopTimeouts.push(t);
+                        } else {
+                            applySpotlight();
+                        }
+                    }
+
                     settledCount++;
                     if (settledCount === REEL_COUNT) {
                         this._onAllReelsStopped(result);
@@ -217,20 +252,64 @@ export class SlotMachineView extends View {
         }
     }
 
+    private static readonly _TENSION_DIM_HOLD_MS = 1500;
+    private static readonly _TENSION_DIM_EXTRA_MS = 300;
+
     private _onAllReelsStopped(result: SpinResultWithWins): void {
-        this._wildShrinkTimeout = setTimeout(() => {
-            for (const reel of this._reels) reel.shrinkWildPop();
-        }, REEL_STOP_INTERVAL * 2);
+        const shouldCelebrate = result.winAmount > 0 || result.bonusTriggered;
+
+        // ── Tension dim sequence ─────────────────────────────────────
+        let isTension = false;
+        if (this._isTensionSpin) {
+            isTension = true;
+            const lastReel = this._reels[REEL_COUNT - 1];
+            const popDelay = lastReel.hasWildPops
+                ? WILD_POP_GROW_MS + SlotMachineView._TENSION_DIM_EXTRA_MS
+                : 0;
+
+            // Preload celebration assets during the dim hold
+            if (shouldCelebrate) Assets.loadBundle('win');
+
+            const dimAllThenRestore = () => {
+                for (const reel of this._reels) reel.setDim(true);
+                setTimeout(() => {
+                    for (const reel of this._reels) reel.shrinkWildPop();
+                }, 200);
+                this._tensionDimTimeout = setTimeout(() => {
+                    // Clear reel-level dim and go straight into celebration
+                    // (celebration handles its own per-symbol dimming)
+                    for (const reel of this._reels) reel.setDim(false);
+                    this._showTensionResult(result);
+                    if (shouldCelebrate) {
+                        this._showWinPresentation(result).catch(err =>
+                            console.error('[WinPresentation] failed:', err),
+                        );
+                    }
+                }, SlotMachineView._TENSION_DIM_HOLD_MS);
+            };
+            if (popDelay > 0) {
+                this._tensionDimTimeout = setTimeout(dimAllThenRestore, popDelay);
+            } else {
+                dimAllThenRestore();
+            }
+            this._isTensionSpin = false;
+        } else {
+            for (const reel of this._reels) reel.setDim(false);
+        }
+
+        // ── Non-tension wild shrink ──────────────────────────────────
+        if (!isTension) {
+            this._wildShrinkTimeout = setTimeout(() => {
+                for (const reel of this._reels) reel.shrinkWildPop();
+            }, REEL_STOP_INTERVAL * 2);
+        }
         this._stopTimeouts.length = 0;
         gameSignals.spinComplete.emit({ grid: result.grid });
 
-        const shouldCelebrate = result.winAmount > 0 || result.bonusTriggered;
-
+        // ── Bonus setup ──────────────────────────────────────────────
         if (result.bonusTriggered) {
             this._isBonusPending = true;
-            // Bonus step only if < 5 wilds (5 wilds are covered by the wild line win)
             this._hasBonusCelebrationStep = result.wildCount < 5;
-            // Precompute wild positions for the bonus celebration step
             this._bonusWildPositions.clear();
             for (let reel = 0; reel < REEL_COUNT; reel++) {
                 for (let row = 0; row < VISIBLE_ROWS; row++) {
@@ -240,10 +319,13 @@ export class SlotMachineView extends View {
                 }
             }
             gameSignals.bonusTriggered.emit({ wildCount: result.wildCount });
-            this._showDebugWin(`BONUS! ${result.wildCount} wilds`);
+            if (!isTension) {
+                this._showDebugWin(`BONUS! ${result.wildCount} wilds`);
+            }
         }
 
-        if (shouldCelebrate) {
+        // ── Non-tension win presentation ─────────────────────────────
+        if (shouldCelebrate && !isTension) {
             const hasWilds = this._reels.some(r => r.hasWildPops);
             if (hasWilds) {
                 const delay = REEL_STOP_INTERVAL * 2 + 300;
@@ -279,6 +361,19 @@ export class SlotMachineView extends View {
         // If bonus pending → _isSpinning stays true to block further spins
     }
 
+    /** Show result text + signal when tension dim restores. */
+    private _showTensionResult(result: SpinResultWithWins): void {
+        if (result.winAmount > 0) {
+            gameSignals.winDetected.emit({
+                winAmount: result.winAmount,
+                lineWins: result.lineWins,
+            });
+            this._showDebugWin(`WIN ${result.winAmount.toFixed(2)}€`);
+        } else if (result.bonusTriggered) {
+            this._showDebugWin(`BONUS! ${result.wildCount} wilds`);
+        }
+    }
+
     private _showDebugWin(message: string): void {
         this._debugWinText.text = message;
         this._debugWinText.visible = true;
@@ -302,11 +397,11 @@ export class SlotMachineView extends View {
         this._pendingLineWins = result.lineWins;
         this._currentLineIndex = 0;
 
-        // Present first step
-        if (this._pendingLineWins.length > 0) {
-            this._presentCurrentLine();
-        } else if (this._hasBonusCelebrationStep) {
+        // Present first step — bonus (wilds) first if present
+        if (this._hasBonusCelebrationStep) {
             this._presentBonusStep();
+        } else if (this._pendingLineWins.length > 0) {
+            this._presentCurrentLine();
         }
 
         // Listen for dismiss when bonus is pending
@@ -319,7 +414,10 @@ export class SlotMachineView extends View {
     private _presentCurrentLine(): void {
         this._clearLineVisuals();
 
-        const lw = this._pendingLineWins[this._currentLineIndex];
+        const lineIdx = this._hasBonusCelebrationStep
+            ? this._currentLineIndex - 1
+            : this._currentLineIndex;
+        const lw = this._pendingLineWins[lineIdx];
         const winPositions = getWinPositions([lw]);
         const fullPositions = getFullPaylinePositions([lw]);
         const vfxFrames = getWinVfxFrames();
@@ -336,16 +434,16 @@ export class SlotMachineView extends View {
         }
     }
 
-    /** Advance to the next celebration step (line wins + optional bonus step, wraps around). */
+    /** Advance to the next celebration step (bonus step first, then line wins, wraps around). */
     private _advanceStep(): void {
         const totalSteps = this._pendingLineWins.length
             + (this._hasBonusCelebrationStep ? 1 : 0);
         this._currentLineIndex = (this._currentLineIndex + 1) % totalSteps;
 
-        if (this._currentLineIndex < this._pendingLineWins.length) {
-            this._presentCurrentLine();
-        } else {
+        if (this._hasBonusCelebrationStep && this._currentLineIndex === 0) {
             this._presentBonusStep();
+        } else {
+            this._presentCurrentLine();
         }
     }
 
@@ -424,6 +522,11 @@ export class SlotMachineView extends View {
             clearTimeout(this._winPresentationTimeout);
             this._winPresentationTimeout = undefined;
         }
+        if (this._tensionDimTimeout) {
+            clearTimeout(this._tensionDimTimeout);
+            this._tensionDimTimeout = undefined;
+        }
+        this._isTensionSpin = false;
         for (const reel of this._reels) reel.clearWildPop();
         this._clearLineVisuals();
         this._pendingLineWins = [];

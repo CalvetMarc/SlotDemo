@@ -1,4 +1,4 @@
-import { Container, Sprite, Assets, Spritesheet, type Texture } from 'pixi.js';
+import { Container, Sprite, Assets, Spritesheet, ColorMatrixFilter, type Texture } from 'pixi.js';
 import {
     CELL_SIZE, SYMBOL_SIZE, VISIBLE_ROWS,
     SPIN_SPEED, OVERSHOOT_PX, BOUNCE_DURATION,
@@ -10,6 +10,7 @@ import { SymbolView } from './symbol-view';
 type ReelState = 'idle' | 'anticipating' | 'spinning' | 'stopping';
 
 const LANDING_MS = 200;
+const TENSION_DIM_BRIGHTNESS = 0.5;
 
 // ── Wild landing pop: grow on land, shrink when all reels stop ──
 
@@ -28,7 +29,7 @@ const WILD_POP_GROW_KEYFRAMES = [
     { time: 340, scale: 1.22 },   // spring back
     { time: 380, scale: 1.25 },   // settle at target
 ];
-const WILD_POP_GROW_MS = WILD_POP_GROW_KEYFRAMES[WILD_POP_GROW_KEYFRAMES.length - 1].time;
+export const WILD_POP_GROW_MS = WILD_POP_GROW_KEYFRAMES[WILD_POP_GROW_KEYFRAMES.length - 1].time;
 
 function lerpWildGrow(elapsed: number): number {
     const t = Math.min(elapsed, WILD_POP_GROW_MS);
@@ -68,6 +69,9 @@ export class Reel extends Container {
 
     // Wild landing pop
     private _wildPops: WildPop[] = [];
+
+    // Tension dim
+    private _dimFilter: ColorMatrixFilter | null = null;
 
     /** Total sprites = visible rows + 1 top buffer + 1 bottom buffer. */
     private readonly _totalSlots = VISIBLE_ROWS + 2;
@@ -310,6 +314,20 @@ export class Reel extends Container {
 
     get hasWildPops(): boolean {
         return this._wildPops.length > 0;
+    }
+
+    // ── Tension dim ───────────────────────────────────────────────
+
+    setDim(dimmed: boolean): void {
+        if (dimmed) {
+            if (!this._dimFilter) {
+                this._dimFilter = new ColorMatrixFilter();
+                this._dimFilter.brightness(TENSION_DIM_BRIGHTNESS, false);
+            }
+            this.filters = [this._dimFilter];
+        } else {
+            this.filters = [];
+        }
     }
 
     // ── Wild landing pop ───────────────────────────────────────────
