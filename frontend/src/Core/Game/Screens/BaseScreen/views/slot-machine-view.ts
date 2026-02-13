@@ -42,6 +42,11 @@ export class SlotMachineView extends View {
     private _currentLineIndex = 0;
     private _linePauseElapsed = -1;
 
+    // Bonus celebration state
+    private _isBonusPending = false;
+    private _hasBonusCelebrationStep = false;
+    private _bonusWildPositions = new Set<string>();
+
     bundleNeeded(): bundle {
         return 'base';
     }
@@ -123,6 +128,7 @@ export class SlotMachineView extends View {
         this._unsubscribeSpin?.();
         this._unsubscribeBet?.();
         window.removeEventListener('keydown', this._onDebugKeyDown);
+        this._removeBonusDismissListeners();
         this._clearWinPresentation();
         for (const timeout of this._stopTimeouts) {
             clearTimeout(timeout);
@@ -218,45 +224,59 @@ export class SlotMachineView extends View {
         this._stopTimeouts.length = 0;
         gameSignals.spinComplete.emit({ grid: result.grid });
 
-        if (result.winAmount > 0) {
+        const shouldCelebrate = result.winAmount > 0 || result.bonusTriggered;
+
+        if (result.bonusTriggered) {
+            this._isBonusPending = true;
+            // Bonus step only if < 5 wilds (5 wilds are covered by the wild line win)
+            this._hasBonusCelebrationStep = result.wildCount < 5;
+            // Precompute wild positions for the bonus celebration step
+            this._bonusWildPositions.clear();
+            for (let reel = 0; reel < REEL_COUNT; reel++) {
+                for (let row = 0; row < VISIBLE_ROWS; row++) {
+                    if (result.grid[reel][row] === 'Wild_01.png') {
+                        this._bonusWildPositions.add(`${reel},${row}`);
+                    }
+                }
+            }
+            gameSignals.bonusTriggered.emit({ wildCount: result.wildCount });
+            this._showDebugWin(`BONUS! ${result.wildCount} wilds`);
+        }
+
+        if (shouldCelebrate) {
             const hasWilds = this._reels.some(r => r.hasWildPops);
             if (hasWilds) {
-                // Wait for wild pop shrink to finish before showing win
-                // shrink starts at REEL_STOP_INTERVAL*2 (900ms) and lasts ~200ms
                 const delay = REEL_STOP_INTERVAL * 2 + 300;
                 this._winPresentationTimeout = setTimeout(() => {
-                    gameSignals.winDetected.emit({
-                        winAmount: result.winAmount,
-                        lineWins: result.lineWins,
-                    });
-                    this._showDebugWin(`WIN ${result.winAmount.toFixed(2)}€`);
+                    if (result.winAmount > 0) {
+                        gameSignals.winDetected.emit({
+                            winAmount: result.winAmount,
+                            lineWins: result.lineWins,
+                        });
+                        this._showDebugWin(`WIN ${result.winAmount.toFixed(2)}€`);
+                    }
                     this._showWinPresentation(result).catch(err =>
                         console.error('[WinPresentation] failed:', err),
                     );
                 }, delay);
             } else {
-                gameSignals.winDetected.emit({
-                    winAmount: result.winAmount,
-                    lineWins: result.lineWins,
-                });
-                this._showDebugWin(`WIN ${result.winAmount.toFixed(2)}€`);
+                if (result.winAmount > 0) {
+                    gameSignals.winDetected.emit({
+                        winAmount: result.winAmount,
+                        lineWins: result.lineWins,
+                    });
+                    this._showDebugWin(`WIN ${result.winAmount.toFixed(2)}€`);
+                }
                 this._showWinPresentation(result).catch(err =>
                     console.error('[WinPresentation] failed:', err),
                 );
             }
         }
 
-        if (result.bonusTriggered) {
-            // Keep _isSpinning = true to block further spins during transition
-            gameSignals.bonusTriggered.emit({ wildCount: result.wildCount });
-            this._showDebugWin(`BONUS! ${result.wildCount} wilds`);
-            setTimeout(() => {
-                ScreenManager.I.transitionMap.BASE();
-            }, 1500);
-            return;
+        if (!result.bonusTriggered) {
+            this._isSpinning = false;
         }
-
-        this._isSpinning = false;
+        // If bonus pending → _isSpinning stays true to block further spins
     }
 
     private _showDebugWin(message: string): void {
@@ -281,7 +301,18 @@ export class SlotMachineView extends View {
 
         this._pendingLineWins = result.lineWins;
         this._currentLineIndex = 0;
-        this._presentCurrentLine();
+
+        // Present first step
+        if (this._pendingLineWins.length > 0) {
+            this._presentCurrentLine();
+        } else if (this._hasBonusCelebrationStep) {
+            this._presentBonusStep();
+        }
+
+        // Listen for dismiss when bonus is pending
+        if (this._isBonusPending) {
+            this._addBonusDismissListeners();
+        }
     }
 
     /** Show a single winning line: animate its symbols, dim the rest, spawn VFX. */
@@ -305,25 +336,52 @@ export class SlotMachineView extends View {
         }
     }
 
-    /** Advance to the next winning line (wraps around). */
-    private _advanceLine(): void {
-        this._currentLineIndex = (this._currentLineIndex + 1) % this._pendingLineWins.length;
-        this._presentCurrentLine();
+    /** Advance to the next celebration step (line wins + optional bonus step, wraps around). */
+    private _advanceStep(): void {
+        const totalSteps = this._pendingLineWins.length
+            + (this._hasBonusCelebrationStep ? 1 : 0);
+        this._currentLineIndex = (this._currentLineIndex + 1) % totalSteps;
+
+        if (this._currentLineIndex < this._pendingLineWins.length) {
+            this._presentCurrentLine();
+        } else {
+            this._presentBonusStep();
+        }
+    }
+
+    /** Highlight wild positions as a bonus celebration step. */
+    private _presentBonusStep(): void {
+        this._clearLineVisuals();
+        const vfxFrames = getWinVfxFrames();
+
+        for (let reel = 0; reel < REEL_COUNT; reel++) {
+            const winRows = new Set<number>();
+            const vfxRows = new Set<number>();
+            for (let row = 0; row < VISIBLE_ROWS; row++) {
+                if (this._bonusWildPositions.has(`${reel},${row}`)) {
+                    winRows.add(row);
+                    vfxRows.add(row);
+                }
+            }
+            this._reels[reel].setCelebration(winRows, vfxRows, this._vfxLayer, vfxFrames);
+        }
     }
 
     private static readonly _LINE_PAUSE_MS = 800;
 
     /** Update celebration state across all reels. */
     private _updateSymbolViews(deltaMs: number): void {
-        if (this._pendingLineWins.length === 0) return;
+        if (this._pendingLineWins.length === 0 && !this._hasBonusCelebrationStep) return;
 
         // Pause phase — wait between cycles
         if (this._linePauseElapsed >= 0) {
             this._linePauseElapsed += deltaMs;
             if (this._linePauseElapsed >= SlotMachineView._LINE_PAUSE_MS) {
                 this._linePauseElapsed = -1;
-                if (this._pendingLineWins.length > 1) {
-                    this._advanceLine();
+                const totalSteps = this._pendingLineWins.length
+                    + (this._hasBonusCelebrationStep ? 1 : 0);
+                if (totalSteps > 1) {
+                    this._advanceStep();
                 } else {
                     for (const reel of this._reels) reel.restartCelebration();
                 }
@@ -371,6 +429,29 @@ export class SlotMachineView extends View {
         this._pendingLineWins = [];
         this._currentLineIndex = 0;
         this._linePauseElapsed = -1;
+        this._hasBonusCelebrationStep = false;
+        this._bonusWildPositions.clear();
+        this._isBonusPending = false;
+        this._removeBonusDismissListeners();
+    }
+
+    // ── Bonus dismiss ─────────────────────────────────────────────
+
+    private _onBonusDismiss = (): void => {
+        this._removeBonusDismissListeners();
+        this._clearWinPresentation();
+        this._isBonusPending = false;
+        ScreenManager.I.transitionMap.BASE();
+    };
+
+    private _addBonusDismissListeners(): void {
+        window.addEventListener('keydown', this._onBonusDismiss);
+        window.addEventListener('pointerdown', this._onBonusDismiss);
+    }
+
+    private _removeBonusDismissListeners(): void {
+        window.removeEventListener('keydown', this._onBonusDismiss);
+        window.removeEventListener('pointerdown', this._onBonusDismiss);
     }
 
     // ── Helpers ──────────────────────────────────────────────────
@@ -404,13 +485,24 @@ export class SlotMachineView extends View {
             }
             grid.push(column);
         }
-        return { grid, winAmount: 0, lineWins: [], wildCount: 0, bonusTriggered: false };
+        const wildCount = this._countWilds(grid);
+        return { grid, winAmount: 0, lineWins: [], wildCount, bonusTriggered: wildCount >= 3 };
+    }
+
+    private _countWilds(grid: SymbolId[][]): number {
+        let count = 0;
+        for (const reel of grid) {
+            for (const id of reel) {
+                if (id === 'Wild_01.png') count++;
+            }
+        }
+        return count;
     }
 
     private _onDebugKeyDown = (event: KeyboardEvent): void => {
         if (event.repeat || this._isSpinning) return;
 
-        const map: Partial<Record<string, { type: 'lineWin'; lineIndex: number; symbol: SymbolId } | { type: 'bonus' } | { type: 'multiLine' }>> = {
+        const map: Partial<Record<string, { type: 'lineWin'; lineIndex: number; symbol: SymbolId } | { type: 'bonus' } | { type: 'wildLine' }>> = {
             Digit1: { type: 'lineWin', lineIndex: 0, symbol: '1.png' },
             Digit2: { type: 'lineWin', lineIndex: 1, symbol: '2.png' },
             Digit3: { type: 'lineWin', lineIndex: 2, symbol: '3.png' },
@@ -420,14 +512,14 @@ export class SlotMachineView extends View {
             Digit7: { type: 'lineWin', lineIndex: 6, symbol: 'A.png' },
             Digit8: { type: 'lineWin', lineIndex: 0, symbol: 'Wild_01.png' },
             Digit9: { type: 'bonus' },
-            Digit0: { type: 'multiLine' },
+            Digit0: { type: 'wildLine' },
         };
         const debugPreset = map[event.code];
         if (!debugPreset) return;
 
         event.preventDefault();
-        if (debugPreset.type === 'multiLine') {
-            this._forcedDebugResult = this._createDebugMultiLineWin();
+        if (debugPreset.type === 'wildLine') {
+            this._forcedDebugResult = this._createDebugWildLineWin();
         } else {
             this._forcedDebugResult = debugPreset.type === 'bonus'
                 ? this._createDebugBonusTrigger()
@@ -437,10 +529,14 @@ export class SlotMachineView extends View {
     };
 
     private _createDebugLineWin(lineIndex: number, symbol: SymbolId): SpinResultWithWins {
-        const grid: SymbolId[][] = [];
-        for (let reel = 0; reel < REEL_COUNT; reel++) {
-            grid.push(['J.png', 'Q.png', 'K.png']);
-        }
+        // Diverse filler so no accidental line wins on straight paylines
+        const grid: SymbolId[][] = [
+            ['J.png', 'Q.png', 'K.png'],
+            ['K.png', 'A.png', 'J.png'],
+            ['Q.png', 'K.png', 'A.png'],
+            ['A.png', 'J.png', 'Q.png'],
+            ['K.png', 'Q.png', 'J.png'],
+        ];
 
         const payline = PAYLINES[lineIndex];
         for (let reel = 0; reel < REEL_COUNT; reel++) {
@@ -448,12 +544,13 @@ export class SlotMachineView extends View {
         }
 
         const payout = this._currentBetAmount * 10;
+        const wildCount = this._countWilds(grid);
         return {
             grid,
             winAmount: payout,
             lineWins: [{ lineIndex, symbol, count: 5, payout }],
-            wildCount: 0,
-            bonusTriggered: false,
+            wildCount,
+            bonusTriggered: wildCount >= 3,
         };
     }
 
@@ -471,33 +568,34 @@ export class SlotMachineView extends View {
         grid[2][1] = 'Wild_01.png';
         grid[4][2] = 'Wild_01.png';
 
+        const wildCount = this._countWilds(grid);
         return {
             grid,
             winAmount: 0,
             lineWins: [],
-            wildCount: 3,
-            bonusTriggered: true,
+            wildCount,
+            bonusTriggered: wildCount >= 3,
         };
     }
 
-    /** 3 simultaneous line wins: top (Queen), middle (King), bottom (Wolf). */
-    private _createDebugMultiLineWin(): SpinResultWithWins {
-        const grid: SymbolId[][] = [];
-        for (let reel = 0; reel < REEL_COUNT; reel++) {
-            grid.push(['2.png', '1.png', '3.png']);
-        }
+    /** 3 wilds (reels 0, 1, 2) + King line win on middle payline. */
+    private _createDebugWildLineWin(): SpinResultWithWins {
+        const grid: SymbolId[][] = [
+            ['Wild_01.png', '1.png', 'J.png'],
+            ['Q.png', '1.png', 'Wild_01.png'],
+            ['Wild_01.png', '1.png', 'K.png'],
+            ['A.png', '1.png', 'Q.png'],
+            ['K.png', '1.png', 'J.png'],
+        ];
 
         const payout = this._currentBetAmount * 10;
+        const wildCount = this._countWilds(grid);
         return {
             grid,
-            winAmount: payout * 3,
-            lineWins: [
-                { lineIndex: 0, symbol: '1.png', count: 5, payout }, // middle: King
-                { lineIndex: 1, symbol: '2.png', count: 5, payout }, // top: Queen
-                { lineIndex: 2, symbol: '3.png', count: 5, payout }, // bottom: Wolf
-            ],
-            wildCount: 0,
-            bonusTriggered: false,
+            winAmount: payout,
+            lineWins: [{ lineIndex: 0, symbol: '1.png', count: 5, payout }],
+            wildCount,
+            bonusTriggered: wildCount >= 3,
         };
     }
 }
