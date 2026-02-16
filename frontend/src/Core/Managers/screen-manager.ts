@@ -1,4 +1,4 @@
-import { Application, Container } from 'pixi.js';
+import { Application, Assets, Container } from 'pixi.js';
 import { Ticker } from 'pixi.js';
 
 import { SingletonBase } from '../Abstractions/singleton-base';
@@ -62,9 +62,11 @@ export class ScreenManager extends SingletonBase {
 
   private scheduleTransitionToBase(): void {
     const preloadPromise = this.preloadScene("BASE");
+    const winPreload = Assets.loadBundle('win');
+    const infoPreload = Assets.loadBundle('info');
     const minTimePromise = this.delay(2000);
 
-    Promise.all([preloadPromise, minTimePromise]).then(() => {
+    Promise.all([preloadPromise, winPreload, infoPreload, minTimePromise]).then(() => {
       this.transitionMap.SPLASH();
     });
   }
