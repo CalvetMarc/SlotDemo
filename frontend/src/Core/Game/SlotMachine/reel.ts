@@ -10,7 +10,7 @@ import { SymbolView } from './symbol-view';
 type ReelState = 'idle' | 'anticipating' | 'spinning' | 'stopping';
 
 const LANDING_MS = 200;
-const TENSION_DIM_BRIGHTNESS = 0.5;
+const TENSION_DIM_BRIGHTNESS = 0.2;
 
 // ── Wild landing pop: grow on land, shrink when all reels stop ──
 
@@ -324,9 +324,15 @@ export class Reel extends Container {
                 this._dimFilter = new ColorMatrixFilter();
                 this._dimFilter.brightness(TENSION_DIM_BRIGHTNESS, false);
             }
-            this.filters = [this._dimFilter];
+            for (let i = 0; i < this._symbols.length; i++) {
+                this._symbols[i].filters = this._symbolIds[i] === WILD_ID
+                    ? []
+                    : [this._dimFilter];
+            }
         } else {
-            this.filters = [];
+            for (const sprite of this._symbols) {
+                sprite.filters = [];
+            }
         }
     }
 

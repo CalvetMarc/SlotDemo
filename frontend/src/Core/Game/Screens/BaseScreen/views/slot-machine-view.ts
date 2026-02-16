@@ -209,7 +209,8 @@ export class SlotMachineView extends View {
             const mult = WILD_TENSION_MULTIPLIERS[preWilds] ?? 1;
             hasTensionAfter.push(mult > 1);
         }
-        this._isTensionSpin = hasTensionAfter.some(v => v);
+        // Only count tension between actual reel pairs (ignore last reel — no next reel)
+        this._isTensionSpin = hasTensionAfter.slice(0, REEL_COUNT - 1).some(v => v);
 
         for (let i = 0; i < REEL_COUNT; i++) {
             const delay = cumulativeDelay;
@@ -605,7 +606,7 @@ export class SlotMachineView extends View {
     private _onDebugKeyDown = (event: KeyboardEvent): void => {
         if (event.repeat || this._isSpinning) return;
 
-        const map: Partial<Record<string, { type: 'lineWin'; lineIndex: number; symbol: SymbolId } | { type: 'bonus' } | { type: 'wildLine' }>> = {
+        const map: Partial<Record<string, { type: 'lineWin'; lineIndex: number; symbol: SymbolId } | { type: 'bonus' } | { type: 'wildLine' } | { type: 'tensionTest' }>> = {
             Digit1: { type: 'lineWin', lineIndex: 0, symbol: '1.png' },
             Digit2: { type: 'lineWin', lineIndex: 1, symbol: '2.png' },
             Digit3: { type: 'lineWin', lineIndex: 2, symbol: '3.png' },
@@ -613,7 +614,7 @@ export class SlotMachineView extends View {
             Digit5: { type: 'lineWin', lineIndex: 4, symbol: 'Q.png' },
             Digit6: { type: 'lineWin', lineIndex: 5, symbol: 'K.png' },
             Digit7: { type: 'lineWin', lineIndex: 6, symbol: 'A.png' },
-            Digit8: { type: 'lineWin', lineIndex: 0, symbol: 'Wild_01.png' },
+            Digit8: { type: 'tensionTest' },
             Digit9: { type: 'bonus' },
             Digit0: { type: 'wildLine' },
         };
@@ -623,6 +624,8 @@ export class SlotMachineView extends View {
         event.preventDefault();
         if (debugPreset.type === 'wildLine') {
             this._forcedDebugResult = this._createDebugWildLineWin();
+        } else if (debugPreset.type === 'tensionTest') {
+            this._forcedDebugResult = this._createDebugTensionTest();
         } else {
             this._forcedDebugResult = debugPreset.type === 'bonus'
                 ? this._createDebugBonusTrigger()
@@ -682,6 +685,19 @@ export class SlotMachineView extends View {
     }
 
     /** 3 wilds (reels 0, 1, 2) + King line win on middle payline. */
+    /** 2 wilds on reels 1 and 3 — tension spotlight without bonus. */
+    private _createDebugTensionTest(): SpinResultWithWins {
+        const grid: SymbolId[][] = [
+            ['Wild_01.png', 'Q.png', 'K.png'],
+            ['K.png', 'A.png', 'J.png'],
+            ['Wild_01.png', 'K.png', 'A.png'],
+            ['A.png', 'J.png', 'Q.png'],
+            ['K.png', 'Q.png', 'J.png'],
+        ];
+        const wildCount = this._countWilds(grid);
+        return { grid, winAmount: 0, lineWins: [], wildCount, bonusTriggered: wildCount >= 3 };
+    }
+
     private _createDebugWildLineWin(): SpinResultWithWins {
         const grid: SymbolId[][] = [
             ['Wild_01.png', '1.png', 'J.png'],
