@@ -57,6 +57,9 @@ export const gameSignals = {
     /** Fired when layout/canvas changes (orientation, resize). */
     layoutChanged: new Signal<{ canvasId: string }>(),
 
+    /** Fired when a 401 is received, meaning the JWT expired. */
+    sessionExpired: new Signal<void>(),
+
 } as const;
 
 /** Type helper: extracts the payload type for a given signal key. */

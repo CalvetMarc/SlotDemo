@@ -27,6 +27,12 @@ export class RemoteSpinResultProvider implements ISpinResultProvider {
             body: JSON.stringify({ betAmount }),
         });
 
+        if (res.status === 401) {
+            SessionManager.clearSession();
+            gameSignals.sessionExpired.emit();
+            throw new Error('Session expired');
+        }
+
         if (!res.ok) {
             const err = await res.json();
             throw new Error(err.error ?? 'Spin request failed');

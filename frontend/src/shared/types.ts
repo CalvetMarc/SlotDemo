@@ -51,13 +51,9 @@ export interface BonusPickResponse {
     balance?: number;
 }
 
-export interface SessionResponse {
+export interface StartResponse {
     token: string;
     balance: number;
     gamePhase: 'base' | 'bonus';
     initialGrid: SymbolId[][];
-}
-
-export interface HeartbeatResponse {
-    token: string;
 }

@@ -1,8 +1,7 @@
 import express from 'express';
 import cors from 'cors';
-import sessionRouter from './routes/session.js';
+import startRouter from './routes/start.js';
 import spinRouter from './routes/spin.js';
-import heartbeatRouter from './routes/heartbeat.js';
 import bonusRouter from './routes/bonus.js';
 
 const app = express();
@@ -20,9 +19,8 @@ app.use(cors({
 }));
 app.use(express.json());
 
-app.use('/api/session', sessionRouter);
+app.use('/api/start', startRouter);
 app.use('/api/spin', spinRouter);
-app.use('/api/heartbeat', heartbeatRouter);
 app.use('/api/bonus', bonusRouter);
 
 app.get('/api/health', (_req, res) => {

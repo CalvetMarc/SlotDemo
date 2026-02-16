@@ -27,12 +27,8 @@ export interface SpinResponse {
     winAmount: number;
 }
 
-export interface SessionResponse {
+export interface StartResponse {
     token: string;
     balance: number;
     gamePhase: 'base' | 'bonus';
-}
-
-export interface HeartbeatResponse {
-    token: string;
 }

@@ -61,6 +61,12 @@ export class BonusScreen extends GameScreen {
                 },
             });
 
+            if (res.status === 401) {
+                SessionManager.clearSession();
+                gameSignals.sessionExpired.emit();
+                return;
+            }
+
             if (!res.ok) {
                 console.error('Bonus start failed:', await res.text());
                 return;
@@ -86,6 +92,13 @@ export class BonusScreen extends GameScreen {
                 },
                 body: JSON.stringify({ chestIndex: index }),
             });
+
+            if (res.status === 401) {
+                SessionManager.clearSession();
+                gameSignals.sessionExpired.emit();
+                this._isPicking = false;
+                return;
+            }
 
             if (!res.ok) {
                 console.error('Bonus pick failed:', await res.text());

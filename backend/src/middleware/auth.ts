@@ -8,7 +8,16 @@ export interface AuthPayload {
 }
 
 export function signToken(sessionId: string): string {
-    return jwt.sign({ sessionId }, JWT_SECRET, { expiresIn: '5m' });
+    return jwt.sign({ sessionId }, JWT_SECRET, { expiresIn: '1h' });
+}
+
+export function verifyTokenSafe(token: string): string | null {
+    try {
+        const payload = jwt.verify(token, JWT_SECRET) as AuthPayload;
+        return payload.sessionId;
+    } catch {
+        return null;
+    }
 }
 
 export function authMiddleware(req: Request, res: Response, next: NextFunction): void {

@@ -12,6 +12,8 @@ import { BonusScreen } from '../Game/Screens/BonusScreen/bonus-screen';
 
 import { DesignCanvas } from '../Layout/design-canvas';
 import { TransitionMask } from '../Transitions/transition-mask';
+import { gameSignals } from '../Signals/game-signals';
+import { SessionManager } from '../Game/SlotMachine/session-manager';
 
 export class ScreenManager extends SingletonBase {
   private _app!: Application;
@@ -46,6 +48,8 @@ export class ScreenManager extends SingletonBase {
 
     this._transitionMask = new TransitionMask();
     this._app.stage.addChild(this._transitionMask);
+
+    gameSignals.sessionExpired.connect(() => this._onSessionExpired());
   }
 
   public get transitionMask(): TransitionMask {
@@ -165,6 +169,23 @@ export class ScreenManager extends SingletonBase {
     console.log('[SwapScene] onEnter…');
     await this._currentScreen.onEnter();
     console.log('[SwapScene] onEnter done');
+  }
+
+  private async _onSessionExpired(): Promise<void> {
+    // Exit current screen
+    if (this._currentScreen) {
+      await this._currentScreen.onExit();
+    }
+
+    // Clear cached scenes so they are recreated fresh
+    for (const key of Object.keys(this._sceneMap) as ScreenTypes[]) {
+      this._sceneMap[key] = null;
+    }
+    this._currentScreen = undefined;
+
+    // Create a fresh session and restart from splash
+    await SessionManager.init();
+    await this.start();
   }
 
   private screenFactory(screenKey: ScreenTypes): GameScreen{
