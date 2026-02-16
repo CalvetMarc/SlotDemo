@@ -11,6 +11,7 @@ type ReelState = 'idle' | 'anticipating' | 'spinning' | 'stopping';
 
 const LANDING_MS = 200;
 const TENSION_DIM_BRIGHTNESS = 0.2;
+const TENSION_DIM_FADE_MS = 80;
 
 // ── Wild landing pop: grow on land, shrink when all reels stop ──
 
@@ -72,6 +73,9 @@ export class Reel extends Container {
 
     // Tension dim
     private _dimFilter: ColorMatrixFilter | null = null;
+    private _dimTarget = 0;
+    private _dimAmount = 0;
+    private _isDimAnimating = false;
 
     /** Total sprites = visible rows + 1 top buffer + 1 bottom buffer. */
     private readonly _totalSlots = VISIBLE_ROWS + 2;
@@ -148,6 +152,8 @@ export class Reel extends Container {
     }
 
     update(dt: number): void {
+        if (this._isDimAnimating) this._updateDim(dt * 16.67);
+
         if (this._state === 'idle') return;
 
         const ms = dt * 16.67;
@@ -319,15 +325,32 @@ export class Reel extends Container {
     // ── Tension dim ───────────────────────────────────────────────
 
     setDim(dimmed: boolean): void {
-        if (dimmed) {
-            if (!this._dimFilter) {
-                this._dimFilter = new ColorMatrixFilter();
-                this._dimFilter.brightness(TENSION_DIM_BRIGHTNESS, false);
-            }
+        this._dimTarget = dimmed ? 1 : 0;
+        this._isDimAnimating = true;
+        if (!this._dimFilter) {
+            this._dimFilter = new ColorMatrixFilter();
+        }
+    }
+
+    private _updateDim(ms: number): void {
+        const speed = ms / TENSION_DIM_FADE_MS;
+        if (this._dimTarget === 1) {
+            this._dimAmount = Math.min(this._dimAmount + speed, 1);
+        } else {
+            this._dimAmount = Math.max(this._dimAmount - speed, 0);
+        }
+
+        if (this._dimAmount === this._dimTarget) {
+            this._isDimAnimating = false;
+        }
+
+        if (this._dimAmount > 0) {
+            const brightness = 1.0 + (TENSION_DIM_BRIGHTNESS - 1.0) * this._dimAmount;
+            this._dimFilter!.brightness(brightness, false);
             for (let i = 0; i < this._symbols.length; i++) {
                 this._symbols[i].filters = this._symbolIds[i] === WILD_ID
                     ? []
-                    : [this._dimFilter];
+                    : [this._dimFilter!];
             }
         } else {
             for (const sprite of this._symbols) {
