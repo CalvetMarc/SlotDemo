@@ -1,4 +1,4 @@
-import { Sprite, Container, Graphics, Ticker, Text, TextStyle, Assets } from 'pixi.js';
+import { Sprite, Container, Graphics, Ticker, Text, TextStyle } from 'pixi.js';
 import { View, bundle } from '../../../../Abstractions/view';
 import { Reel, WILD_POP_GROW_MS } from '../../../SlotMachine/reel';
 import {
@@ -268,9 +268,6 @@ export class SlotMachineView extends View {
                 ? WILD_POP_GROW_MS + SlotMachineView._TENSION_DIM_EXTRA_MS
                 : 0;
 
-            // Preload celebration assets during the dim hold
-            if (shouldCelebrate) Assets.loadBundle('win');
-
             const dimAllThenRestore = () => {
                 for (const reel of this._reels) reel.setDim(true);
                 setTimeout(() => {
@@ -282,9 +279,7 @@ export class SlotMachineView extends View {
                     for (const reel of this._reels) reel.setDim(false);
                     this._showTensionResult(result);
                     if (shouldCelebrate) {
-                        this._showWinPresentation(result).catch(err =>
-                            console.error('[WinPresentation] failed:', err),
-                        );
+                        this._showWinPresentation(result);
                     }
                 }, SlotMachineView._TENSION_DIM_HOLD_MS);
             };
@@ -310,7 +305,7 @@ export class SlotMachineView extends View {
         // ── Bonus setup ──────────────────────────────────────────────
         if (result.bonusTriggered) {
             this._isBonusPending = true;
-            this._hasBonusCelebrationStep = result.wildCount < 5;
+            this._hasBonusCelebrationStep = true;
             this._bonusWildPositions.clear();
             for (let reel = 0; reel < REEL_COUNT; reel++) {
                 for (let row = 0; row < VISIBLE_ROWS; row++) {
@@ -338,9 +333,7 @@ export class SlotMachineView extends View {
                         });
                         this._showDebugWin(`WIN ${result.winAmount.toFixed(2)}€`);
                     }
-                    this._showWinPresentation(result).catch(err =>
-                        console.error('[WinPresentation] failed:', err),
-                    );
+                    this._showWinPresentation(result);
                 }, delay);
             } else {
                 if (result.winAmount > 0) {
@@ -350,9 +343,7 @@ export class SlotMachineView extends View {
                     });
                     this._showDebugWin(`WIN ${result.winAmount.toFixed(2)}€`);
                 }
-                this._showWinPresentation(result).catch(err =>
-                    console.error('[WinPresentation] failed:', err),
-                );
+                this._showWinPresentation(result);
             }
         }
 
@@ -386,10 +377,8 @@ export class SlotMachineView extends View {
 
     // ── Win presentation ────────────────────────────────────────
 
-    private async _showWinPresentation(result: SpinResultWithWins): Promise<void> {
-        await Assets.loadBundle('win');
-
-        // Guard: if a new spin started while we were loading, bail out
+    private _showWinPresentation(result: SpinResultWithWins): void {
+        // Guard: if a new spin started, bail out
         if (this._reels[0].isCelebrating || !this._reels[0].isIdle) return;
 
         // Ensure wild pops are fully resolved before celebration takes over sprites
@@ -487,6 +476,9 @@ export class SlotMachineView extends View {
             }
             return;
         }
+
+        // Don't tick celebrations if none are set up yet (async load still pending)
+        if (!this._reels.some(r => r.isCelebrating)) return;
 
         // Update all reels — check if all animated symbols are done
         let allDone = true;
