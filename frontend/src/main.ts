@@ -8,12 +8,10 @@ import { SessionManager } from './Core/Game/SlotMachine/session-manager';
 
 async function main() {
 
-  // Initialize backend session (non-blocking if no backend)
-  try {
-    await SessionManager.init();
-  } catch {
+  // Fire backend session in the background — not needed until BASE screen
+  SessionManager.init().catch(() => {
     console.warn('Backend not available — running in offline mode');
-  }
+  });
 
   const app = new Application();
   await app.init({
