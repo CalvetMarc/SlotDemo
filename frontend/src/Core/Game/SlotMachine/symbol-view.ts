@@ -1,4 +1,4 @@
-import { Sprite, Container, AnimatedSprite, Assets, ColorMatrixFilter, Spritesheet, Ticker, Filter } from 'pixi.js';
+import { Sprite, Container, AnimatedSprite, Assets, ColorMatrixFilter, Spritesheet, Ticker } from 'pixi.js';
 import type { SymbolId } from '@shared/types';
 import { CELL_SIZE } from './slot-config';
 
@@ -114,7 +114,6 @@ export class SymbolView {
 
     // Dim
     private _dimFilter?: ColorMatrixFilter;
-    private _previousFilters: Filter[] | null = null;
 
     constructor(reel: number, row: number, symbolId: SymbolId, staticSprite: Sprite) {
         this.reel = reel;
@@ -210,9 +209,8 @@ export class SymbolView {
         filter.brightness(0.35, false);
         filter.desaturate();
 
-        this._previousFilters = this.staticSprite.filters ? [...this.staticSprite.filters] : null;
         this._dimFilter = filter;
-        this.staticSprite.filters = [...(this._previousFilters ?? []), filter];
+        this.staticSprite.filters = [filter];
     }
 
     /**
@@ -284,9 +282,8 @@ export class SymbolView {
 
         // Remove dim filter
         if (this._dimFilter) {
-            this.staticSprite.filters = this._previousFilters;
+            this.staticSprite.filters = [];
             this._dimFilter = undefined;
-            this._previousFilters = null;
         }
 
         // VFX sprite is destroyed by the vfxLayer nuke in SlotMachineView,

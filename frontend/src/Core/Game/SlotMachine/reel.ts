@@ -344,6 +344,9 @@ export class Reel extends Container {
             this._isDimAnimating = false;
         }
 
+        // Celebrations manage their own per-symbol filters — don't overwrite them
+        if (this.isCelebrating) return;
+
         if (this._dimAmount > 0) {
             const brightness = 1.0 + (TENSION_DIM_BRIGHTNESS - 1.0) * this._dimAmount;
             this._dimFilter!.brightness(brightness, false);

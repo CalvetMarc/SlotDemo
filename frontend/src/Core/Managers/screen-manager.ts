@@ -172,9 +172,10 @@ export class ScreenManager extends SingletonBase {
   }
 
   private async _onSessionExpired(): Promise<void> {
-    // Exit current screen
+    // Exit and destroy current screen so views are disposed (removes ticker/signal listeners)
     if (this._currentScreen) {
       await this._currentScreen.onExit();
+      this._currentScreen.unload();
     }
 
     // Clear cached scenes so they are recreated fresh
