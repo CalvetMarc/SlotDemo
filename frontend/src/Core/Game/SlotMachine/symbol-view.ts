@@ -128,6 +128,9 @@ export class SymbolView {
     showWinAnimation(reelContainer: Container): void {
         this._isWinning = true;
 
+        // Clear any leftover filters (e.g. tension dim still fading out)
+        this.staticSprite.filters = [];
+
         const mapping = ANIMATED_SYMBOL_MAP[this.symbolId];
         if (!mapping) {
             // No spritesheet animation — heartbeat scale pulse will be used

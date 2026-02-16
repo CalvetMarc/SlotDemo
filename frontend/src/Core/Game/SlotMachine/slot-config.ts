@@ -74,5 +74,5 @@ export const REEL_START_INTERVAL = 100; // ms between each reel starting
 export const REEL_STOP_INTERVAL = 450;  // ms between each reel stopping
 export const ANTICIPATION_PX = 110;     // pull-up distance before spin
 export const ANTICIPATION_MS = 350;     // pull-up duration
-export const OVERSHOOT_PX = 50;         // bounce past target
-export const BOUNCE_DURATION = 200;     // ms to settle back
+export const OVERSHOOT_PX = 60;         // bounce past target
+export const BOUNCE_DURATION = 170;     // ms to settle back

@@ -350,8 +350,9 @@ export class Reel extends Container {
         if (this._dimAmount > 0) {
             const brightness = 1.0 + (TENSION_DIM_BRIGHTNESS - 1.0) * this._dimAmount;
             this._dimFilter!.brightness(brightness, false);
+            const exemptWilds = this._state === 'idle';
             for (let i = 0; i < this._symbols.length; i++) {
-                this._symbols[i].filters = this._symbolIds[i] === WILD_ID
+                this._symbols[i].filters = (exemptWilds && this._symbolIds[i] === WILD_ID)
                     ? []
                     : [this._dimFilter!];
             }
