@@ -1,5 +1,5 @@
-import { SYMBOL_IDS, REEL_COUNT, VISIBLE_ROWS } from '@shared/types.js';
-import type { SymbolId, LineWin } from '@shared/types.js';
+import { SYMBOL_IDS, REEL_COUNT, VISIBLE_ROWS } from '../../../shared/types.js';
+import type { SymbolId, LineWin } from '../../../shared/types.js';
 
 const WILD: SymbolId = 'Wild_01.png';
 
