@@ -15,45 +15,48 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 
     try {
-        // Fetch session and validate balance
-        const rows = await sql`
-            SELECT balance, game_phase FROM sessions WHERE id = ${sessionId}
+        // Atomically deduct bet — prevents race conditions on concurrent spins
+        const deducted = await sql`
+            UPDATE sessions
+            SET balance = balance - ${betAmount}, last_seen = now()
+            WHERE id = ${sessionId}
+              AND balance >= ${betAmount}
+              AND game_phase = 'base'
+            RETURNING balance
         `;
 
-        if (rows.length === 0) {
-            res.status(404).json({ error: 'Session not found' });
+        if (deducted.length === 0) {
+            // Distinguish between not found, insufficient balance, or wrong phase
+            const rows = await sql`
+                SELECT balance, game_phase FROM sessions WHERE id = ${sessionId}
+            `;
+            if (rows.length === 0) {
+                res.status(404).json({ error: 'Session not found' });
+            } else if (rows[0].game_phase === 'bonus') {
+                res.status(400).json({ error: 'Cannot spin during bonus' });
+            } else {
+                res.status(400).json({ error: 'Insufficient balance' });
+            }
             return;
         }
 
-        const currentBalance = parseFloat(rows[0].balance);
-        if (currentBalance < betAmount) {
-            res.status(400).json({ error: 'Insufficient balance' });
-            return;
-        }
-
-        // Block spins during bonus phase
-        if (rows[0].game_phase === 'bonus') {
-            res.status(400).json({ error: 'Cannot spin during bonus' });
-            return;
-        }
+        const balanceAfterBet = parseFloat(deducted[0].balance);
 
         // Generate spin result (betPerLine = betAmount / 20 paylines)
         const betPerLine = betAmount / 20;
         const { grid, winAmount, lineWins, wildCount, bonusTriggered } = generateSpin(betPerLine);
-        const newBalance = currentBalance - betAmount + winAmount;
+        const newBalance = balanceAfterBet + winAmount;
 
         if (bonusTriggered) {
-            // Enter bonus phase — store wild info for /api/bonus/start
             await sql`
                 UPDATE sessions
                 SET balance = ${newBalance}, game_phase = 'bonus',
-                    bonus_data = ${JSON.stringify({ wildCount, totalBet: betAmount })},
-                    last_seen = now()
+                    bonus_data = ${JSON.stringify({ wildCount, totalBet: betAmount })}
                 WHERE id = ${sessionId}
             `;
-        } else {
+        } else if (winAmount > 0) {
             await sql`
-                UPDATE sessions SET balance = ${newBalance}, last_seen = now()
+                UPDATE sessions SET balance = ${newBalance}
                 WHERE id = ${sessionId}
             `;
         }
