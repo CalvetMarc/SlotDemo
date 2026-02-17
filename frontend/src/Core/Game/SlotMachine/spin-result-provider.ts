@@ -1,10 +1,7 @@
 import type { SpinResult, SpinResponse, SymbolId, LineWin } from '@shared/types';
 import { SYMBOL_IDS, REEL_COUNT, VISIBLE_ROWS } from '@shared/types';
-import { gameSignals } from '../../Signals/game-signals';
-import { SessionManager } from './session-manager';
 import { GameModel } from './game-model';
-
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+import { ApiClient } from '../../Services/api-client';
 
 export interface SpinResultWithWins extends SpinResult {
     winAmount: number;
@@ -19,27 +16,7 @@ export interface ISpinResultProvider {
 
 export class RemoteSpinResultProvider implements ISpinResultProvider {
     async generateResult(betAmount: number): Promise<SpinResultWithWins> {
-        const res = await fetch(`${API_URL}/api/spin`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${SessionManager.getToken()}`,
-            },
-            body: JSON.stringify({ betAmount }),
-        });
-
-        if (res.status === 401) {
-            SessionManager.clearSession();
-            gameSignals.sessionExpired.emit();
-            throw new Error('Session expired');
-        }
-
-        if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.error ?? 'Spin request failed');
-        }
-
-        const data: SpinResponse = await res.json();
+        const data = await ApiClient.post<SpinResponse>('/api/spin', { betAmount });
         GameModel.setBalance(data.balance);
 
         return {

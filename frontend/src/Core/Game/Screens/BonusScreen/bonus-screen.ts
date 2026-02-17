@@ -3,13 +3,11 @@ import { BONUS_VIEW_REGISTRY } from './config/bonus-scene-loader';
 import bonusConfig from './config/bonus-scene-config.json';
 import { ChestView } from './views/chest-view';
 import { BonusWinCounterView } from './views/bonus-win-counter-view';
-import { SessionManager } from '../../SlotMachine/session-manager';
 import { gameSignals } from '../../../Signals/game-signals';
 import { GameModel } from '../../SlotMachine/game-model';
 import { ScreenManager } from '../../../Managers/screen-manager';
+import { ApiClient } from '../../../Services/api-client';
 import type { BonusStartResponse, BonusPickResponse } from '@shared/types';
-
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 export class BonusScreen extends GameScreen {
     private _chests: ChestView[] = [];
@@ -54,26 +52,7 @@ export class BonusScreen extends GameScreen {
 
     private async _startBonus(): Promise<void> {
         try {
-            const res = await fetch(`${API_URL}/api/bonus/start`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${SessionManager.getToken()}`,
-                },
-            });
-
-            if (res.status === 401) {
-                SessionManager.clearSession();
-                gameSignals.sessionExpired.emit();
-                return;
-            }
-
-            if (!res.ok) {
-                console.error('Bonus start failed:', await res.text());
-                return;
-            }
-
-            const _data: BonusStartResponse = await res.json();
+            await ApiClient.post<BonusStartResponse>('/api/bonus/start');
             // Chests are ready — player can pick
         } catch (err) {
             console.error('Bonus start error:', err);
@@ -85,29 +64,7 @@ export class BonusScreen extends GameScreen {
         this._isPicking = true;
 
         try {
-            const res = await fetch(`${API_URL}/api/bonus/pick`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${SessionManager.getToken()}`,
-                },
-                body: JSON.stringify({ chestIndex: index }),
-            });
-
-            if (res.status === 401) {
-                SessionManager.clearSession();
-                gameSignals.sessionExpired.emit();
-                this._isPicking = false;
-                return;
-            }
-
-            if (!res.ok) {
-                console.error('Bonus pick failed:', await res.text());
-                this._isPicking = false;
-                return;
-            }
-
-            const data: BonusPickResponse = await res.json();
+            const data = await ApiClient.post<BonusPickResponse>('/api/bonus/pick', { chestIndex: index });
 
             // Play chest open animation
             await this._chests[index].playOpen();
