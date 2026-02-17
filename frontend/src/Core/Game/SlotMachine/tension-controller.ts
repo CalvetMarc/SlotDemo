@@ -2,6 +2,7 @@ import type { Reel } from './reel';
 import { WILD_POP_GROW_MS } from './reel';
 import type { SpinResultWithWins } from './spin-result-provider';
 import { REEL_COUNT, REEL_STOP_INTERVAL } from './slot-config';
+import { TweenManager, type TweenHandle } from '../../Animation/tween';
 
 export interface TensionConfig {
     reels: readonly Reel[];
@@ -9,9 +10,7 @@ export interface TensionConfig {
 
 export class TensionController {
     private _reels: readonly Reel[];
-    private _tensionDimTimeout?: ReturnType<typeof setTimeout>;
-    private _wildShrinkTimeout?: ReturnType<typeof setTimeout>;
-    private _shrinkDelayTimeout?: ReturnType<typeof setTimeout>;
+    private _activeTweens: TweenHandle[] = [];
 
     private static readonly _DIM_HOLD_MS = 1500;
     private static readonly _DIM_EXTRA_MS = 300;
@@ -31,17 +30,34 @@ export class TensionController {
 
         const dimAllThenRestore = () => {
             for (const reel of this._reels) reel.setDim(true);
-            this._shrinkDelayTimeout = setTimeout(() => {
-                for (const reel of this._reels) reel.shrinkWildPop();
-            }, 200);
-            this._tensionDimTimeout = setTimeout(() => {
-                for (const reel of this._reels) reel.setDim(false);
-                this.onTensionResolved?.(result, shouldCelebrate);
-            }, TensionController._DIM_HOLD_MS);
+
+            this._addTween(TweenManager.add({
+                duration: 200,
+                context: null,
+                tweenFn: () => {},
+                onComplete: () => {
+                    for (const reel of this._reels) reel.shrinkWildPop();
+                },
+            }));
+
+            this._addTween(TweenManager.add({
+                duration: TensionController._DIM_HOLD_MS,
+                context: null,
+                tweenFn: () => {},
+                onComplete: () => {
+                    for (const reel of this._reels) reel.setDim(false);
+                    this.onTensionResolved?.(result, shouldCelebrate);
+                },
+            }));
         };
 
         if (popDelay > 0) {
-            this._tensionDimTimeout = setTimeout(dimAllThenRestore, popDelay);
+            this._addTween(TweenManager.add({
+                duration: popDelay,
+                context: null,
+                tweenFn: () => {},
+                onComplete: () => dimAllThenRestore(),
+            }));
         } else {
             dimAllThenRestore();
         }
@@ -49,27 +65,29 @@ export class TensionController {
 
     playNonTensionResolve(): void {
         for (const reel of this._reels) reel.setDim(false);
-        this._wildShrinkTimeout = setTimeout(() => {
-            for (const reel of this._reels) reel.shrinkWildPop();
-        }, REEL_STOP_INTERVAL * 2);
+
+        this._addTween(TweenManager.add({
+            duration: REEL_STOP_INTERVAL * 2,
+            context: null,
+            tweenFn: () => {},
+            onComplete: () => {
+                for (const reel of this._reels) reel.shrinkWildPop();
+            },
+        }));
     }
 
     clearTimeouts(): void {
-        if (this._tensionDimTimeout) {
-            clearTimeout(this._tensionDimTimeout);
-            this._tensionDimTimeout = undefined;
+        for (const tween of this._activeTweens) {
+            tween.kill();
         }
-        if (this._wildShrinkTimeout) {
-            clearTimeout(this._wildShrinkTimeout);
-            this._wildShrinkTimeout = undefined;
-        }
-        if (this._shrinkDelayTimeout) {
-            clearTimeout(this._shrinkDelayTimeout);
-            this._shrinkDelayTimeout = undefined;
-        }
+        this._activeTweens.length = 0;
     }
 
     dispose(): void {
         this.clearTimeouts();
+    }
+
+    private _addTween(tween: TweenHandle): void {
+        this._activeTweens.push(tween);
     }
 }

@@ -15,6 +15,7 @@ import { createDebugKeyHandler } from '../../../SlotMachine/debug-spins';
 import { WinPresentationController } from '../../../SlotMachine/win-presentation-controller';
 import { TensionController } from '../../../SlotMachine/tension-controller';
 import { SpinController } from '../../../SlotMachine/spin-controller';
+import { TweenManager } from '../../../../Animation/tween';
 
 export class SlotMachineView extends View {
     private _frameBackground!: Sprite;
@@ -166,6 +167,7 @@ export class SlotMachineView extends View {
             reel.update(dt);
         }
         const deltaMs = dt * 16.67;
+        TweenManager.update(deltaMs);
         for (const reel of this._reels) {
             reel.updateWildPop(deltaMs);
         }

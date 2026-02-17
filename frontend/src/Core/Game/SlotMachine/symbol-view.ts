@@ -1,6 +1,7 @@
 import { Sprite, Container, AnimatedSprite, Assets, ColorMatrixFilter, Spritesheet, Ticker } from 'pixi.js';
 import type { SymbolId } from '@shared/types';
 import { CELL_SIZE } from './slot-config';
+import { evalKeyframes, type Keyframe } from '../../Animation/keyframe-lerp';
 
 // ── Animated symbol mapping ──────────────────────────────────────
 
@@ -34,20 +35,20 @@ type PulseSubPhase = 'growing' | 'playing' | 'shrinking';
 // 30 frames @ 0.3 speed @ 60fps ≈ 1667ms — two slow lub-DUB beats to match
 const HEARTBEAT_BEAT_SCALE = 1.08;
 const HEARTBEAT_BEAT_SMALL = HEARTBEAT_BEAT_SCALE * 0.7;
-const HEARTBEAT_KEYFRAMES = [
-    { time: 0,    scale: WIN_SCALE },
+const HEARTBEAT_KEYFRAMES: readonly Keyframe[] = [
+    { time: 0,    value: WIN_SCALE },
     // Beat 1
-    { time: 200,  scale: WIN_SCALE * HEARTBEAT_BEAT_SCALE },
-    { time: 420,  scale: WIN_SCALE },
-    { time: 580,  scale: WIN_SCALE * HEARTBEAT_BEAT_SMALL },
-    { time: 800,  scale: WIN_SCALE },
+    { time: 200,  value: WIN_SCALE * HEARTBEAT_BEAT_SCALE },
+    { time: 420,  value: WIN_SCALE },
+    { time: 580,  value: WIN_SCALE * HEARTBEAT_BEAT_SMALL },
+    { time: 800,  value: WIN_SCALE },
     // Beat 2
-    { time: 1000, scale: WIN_SCALE * HEARTBEAT_BEAT_SCALE },
-    { time: 1220, scale: WIN_SCALE },
-    { time: 1380, scale: WIN_SCALE * HEARTBEAT_BEAT_SMALL },
-    { time: 1560, scale: WIN_SCALE },
+    { time: 1000, value: WIN_SCALE * HEARTBEAT_BEAT_SCALE },
+    { time: 1220, value: WIN_SCALE },
+    { time: 1380, value: WIN_SCALE * HEARTBEAT_BEAT_SMALL },
+    { time: 1560, value: WIN_SCALE },
     // Hold to match spritesheet duration
-    { time: 1670, scale: WIN_SCALE },
+    { time: 1670, value: WIN_SCALE },
 ];
 const HEARTBEAT_DURATION_MS = HEARTBEAT_KEYFRAMES[HEARTBEAT_KEYFRAMES.length - 1].time;
 
@@ -417,16 +418,7 @@ export class SymbolView {
     // ── Private: Heartbeat keyframe interpolation ────────────────
 
     private _applyHeartbeatScale(): void {
-        const t = this._heartbeatElapsed;
-        let i = 0;
-        while (i < HEARTBEAT_KEYFRAMES.length - 1 && HEARTBEAT_KEYFRAMES[i + 1].time <= t) i++;
-
-        const kf0 = HEARTBEAT_KEYFRAMES[i];
-        const kf1 = HEARTBEAT_KEYFRAMES[Math.min(i + 1, HEARTBEAT_KEYFRAMES.length - 1)];
-        const segLen = kf1.time - kf0.time;
-        const lerp = segLen > 0 ? (t - kf0.time) / segLen : 1;
-        const scaleMul = kf0.scale + (kf1.scale - kf0.scale) * lerp;
-
+        const scaleMul = evalKeyframes(HEARTBEAT_KEYFRAMES, this._heartbeatElapsed);
         this.staticSprite.scale.set(
             this._staticBaseScaleX * scaleMul,
             this._staticBaseScaleY * scaleMul,

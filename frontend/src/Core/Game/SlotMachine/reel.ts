@@ -6,6 +6,8 @@ import {
     SYMBOL_IDS, SymbolId,
 } from './slot-config';
 import { SymbolView } from './symbol-view';
+import { easeOutQuad, easeOutQuartic } from '../../Animation/easing';
+import { evalKeyframes, type Keyframe } from '../../Animation/keyframe-lerp';
 
 type ReelState = 'idle' | 'anticipating' | 'spinning' | 'stopping';
 
@@ -20,28 +22,17 @@ const WILD_POP_SCALE = 1.25;
 const WILD_POP_SHRINK_MS = 200;
 
 // Elastic grow: slow build-up → explosive release → spring overshoot → settle
-const WILD_POP_GROW_KEYFRAMES = [
-    { time: 0,   scale: 1.0 },
-    { time: 80,  scale: 0.96 },   // squeeze (building tension)
-    { time: 120, scale: 0.94 },   // max squeeze
-    { time: 160, scale: 1.35 },   // explosive release, overshoots
-    { time: 230, scale: 1.16 },   // spring back
-    { time: 290, scale: 1.30 },   // second overshoot
-    { time: 340, scale: 1.22 },   // spring back
-    { time: 380, scale: 1.25 },   // settle at target
+const WILD_POP_GROW_KEYFRAMES: readonly Keyframe[] = [
+    { time: 0,   value: 1.0 },
+    { time: 80,  value: 0.96 },   // squeeze (building tension)
+    { time: 120, value: 0.94 },   // max squeeze
+    { time: 160, value: 1.35 },   // explosive release, overshoots
+    { time: 230, value: 1.16 },   // spring back
+    { time: 290, value: 1.30 },   // second overshoot
+    { time: 340, value: 1.22 },   // spring back
+    { time: 380, value: 1.25 },   // settle at target
 ];
 export const WILD_POP_GROW_MS = WILD_POP_GROW_KEYFRAMES[WILD_POP_GROW_KEYFRAMES.length - 1].time;
-
-function lerpWildGrow(elapsed: number): number {
-    const t = Math.min(elapsed, WILD_POP_GROW_MS);
-    let i = 0;
-    while (i < WILD_POP_GROW_KEYFRAMES.length - 1 && WILD_POP_GROW_KEYFRAMES[i + 1].time <= t) i++;
-    const kf0 = WILD_POP_GROW_KEYFRAMES[i];
-    const kf1 = WILD_POP_GROW_KEYFRAMES[Math.min(i + 1, WILD_POP_GROW_KEYFRAMES.length - 1)];
-    const seg = kf1.time - kf0.time;
-    const lerp = seg > 0 ? (t - kf0.time) / seg : 1;
-    return kf0.scale + (kf1.scale - kf0.scale) * lerp;
-}
 
 type WildPopPhase = 'growing' | 'holding' | 'shrinking';
 
@@ -162,8 +153,7 @@ export class Reel extends Container {
         if (this._state === 'anticipating') {
             this._phaseElapsed += ms;
             const t = Math.min(this._phaseElapsed / ANTICIPATION_MS, 1);
-            const inv = 1 - t;
-            const ease = 1 - inv * inv * inv * inv; // ease-out quartic
+            const ease = easeOutQuartic(t);
 
             for (let i = 0; i < this._symbols.length; i++) {
                 this._symbols[i].y = this._anticipationStartY[i] - ANTICIPATION_PX * ease;
@@ -210,7 +200,7 @@ export class Reel extends Container {
             // Phase 2 — Landing: ease from current position to (snap + overshoot).
             this._phaseElapsed += ms;
             const t = Math.min(this._phaseElapsed / LANDING_MS, 1);
-            const ease = 1 - (1 - t) * (1 - t);
+            const ease = easeOutQuad(t);
 
             for (let i = 0; i < this._sortedForLanding.length; i++) {
                 const snapY = (i - 1) * CELL_SIZE + CELL_SIZE * 0.5;
@@ -229,7 +219,7 @@ export class Reel extends Container {
         // Phase 3 — Bounce: ease from overshoot back to snap.
         this._phaseElapsed += ms;
         const t = Math.min(this._phaseElapsed / BOUNCE_DURATION, 1);
-        const ease = 1 - (1 - t) * (1 - t);
+        const ease = easeOutQuad(t);
 
         for (let i = 0; i < this._sortedForLanding.length; i++) {
             const snapY = (i - 1) * CELL_SIZE + CELL_SIZE * 0.5;
@@ -399,7 +389,7 @@ export class Reel extends Container {
         for (const pop of this._wildPops) {
             pop.elapsed += deltaMs;
             if (pop.phase === 'growing') {
-                const s = lerpWildGrow(pop.elapsed);
+                const s = evalKeyframes(WILD_POP_GROW_KEYFRAMES, pop.elapsed);
                 pop.sprite.scale.set(pop.baseScaleX * s, pop.baseScaleY * s);
                 if (pop.elapsed >= WILD_POP_GROW_MS) pop.phase = 'holding';
                 allDone = false;
@@ -407,8 +397,7 @@ export class Reel extends Container {
                 allDone = false;
             } else {
                 const t = Math.min(pop.elapsed / WILD_POP_SHRINK_MS, 1);
-                const ease = 1 - (1 - t) * (1 - t);
-                const s = WILD_POP_SCALE + (1 - WILD_POP_SCALE) * ease;
+                const s = WILD_POP_SCALE + (1 - WILD_POP_SCALE) * easeOutQuad(t);
                 pop.sprite.scale.set(pop.baseScaleX * s, pop.baseScaleY * s);
                 if (t < 1) allDone = false;
             }
