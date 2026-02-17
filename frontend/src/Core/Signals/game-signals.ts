@@ -8,6 +8,14 @@ export const gameSignals = {
     /** Fired when the player presses the spin button. */
     spinPressed: new Signal<void>(),
 
+    // ── Screen transitions ────────────────────────────────────────
+
+    /** Fired when a view requests transition to the bonus screen. */
+    requestBonusTransition: new Signal<void>(),
+
+    /** Fired when a view requests transition back to the base screen. */
+    requestBaseTransition: new Signal<void>(),
+
     // ── Game state ──────────────────────────────────────────────
 
     /** Fired when balance updates. */

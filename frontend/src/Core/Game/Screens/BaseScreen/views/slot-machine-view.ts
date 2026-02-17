@@ -9,7 +9,6 @@ import { gameSignals } from '../../../../Signals/game-signals';
 import type { SymbolId } from '@shared/types';
 import { SYMBOL_IDS, REEL_COUNT, VISIBLE_ROWS } from '@shared/types';
 import { CELL_SIZE, GRID_WIDTH, GRID_HEIGHT, REEL_STOP_INTERVAL } from '../../../SlotMachine/slot-config';
-import { ScreenManager } from '../../../../Managers/screen-manager';
 import { SessionManager } from '../../../SlotMachine/session-manager';
 import { createDebugKeyHandler } from '../../../SlotMachine/debug-spins';
 import { WinPresentationController } from '../../../SlotMachine/win-presentation-controller';
@@ -91,7 +90,7 @@ export class SlotMachineView extends View {
         });
         this._winController.onBonusDismissed = () => {
             this._clearAll();
-            ScreenManager.I.transitionMap.BASE();
+            gameSignals.requestBonusTransition.emit();
         };
 
         this._tensionController = new TensionController({ reels: this._reels });

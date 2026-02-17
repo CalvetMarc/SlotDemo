@@ -4,7 +4,7 @@ import bonusConfig from './config/bonus-scene-config.json';
 import { ChestView } from './views/chest-view';
 import { BonusWinCounterView } from './views/bonus-win-counter-view';
 import { GameModel } from '../../SlotMachine/game-model';
-import { ScreenManager } from '../../../Managers/screen-manager';
+import { gameSignals } from '../../../Signals/game-signals';
 import { ApiClient } from '../../../Services/api-client';
 import type { BonusStartResponse, BonusPickResponse } from '@shared/types';
 
@@ -88,7 +88,7 @@ export class BonusScreen extends GameScreen {
 
                 // Wait then transition back to base
                 setTimeout(() => {
-                    ScreenManager.I.transitionMap.BONUS();
+                    gameSignals.requestBaseTransition.emit();
                 }, 2500);
             }
         } catch (err) {

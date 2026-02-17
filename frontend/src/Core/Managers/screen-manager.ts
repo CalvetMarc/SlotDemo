@@ -50,6 +50,8 @@ export class ScreenManager extends SingletonBase {
     this._app.stage.addChild(this._transitionMask);
 
     gameSignals.sessionExpired.connect(() => this._onSessionExpired());
+    gameSignals.requestBonusTransition.connect(() => this.transitionMap.BASE());
+    gameSignals.requestBaseTransition.connect(() => this.transitionMap.BONUS());
   }
 
   public get transitionMask(): TransitionMask {
