@@ -8,54 +8,10 @@ export const gameSignals = {
     /** Fired when the player presses the spin button. */
     spinPressed: new Signal<void>(),
 
-    /** Fired when auto-spin mode is toggled. */
-    autoSpinToggled: new Signal<{ active: boolean }>(),
-
-    /** Fired when turbo mode is toggled. */
-    turboToggled: new Signal<{ active: boolean }>(),
-
-    /** Fired when the bet value changes. */
-    betChanged: new Signal<{ amount: number }>(),
-
-    /** Fired when audio is toggled. */
-    audioToggled: new Signal<{ on: boolean }>(),
-
-    /** Fired when the buy-bonus button is pressed. */
-    buyBonusPressed: new Signal<void>(),
-
-    /** Fired when the info button is pressed. */
-    infoPressed: new Signal<void>(),
-
-    /** Fired when the menu button is pressed. */
-    menuPressed: new Signal<void>(),
-
-    // ── Spin lifecycle ───────────────────────────────────────────
-
-    /** Fired when a spin begins (reels start moving). */
-    spinStarted: new Signal<void>(),
-
-    /** Fired when all reels have stopped and the final grid is known. */
-    spinComplete: new Signal<{ grid: string[][] }>(),
-
-    /** Fired when a win is detected after spin evaluation. */
-    winDetected: new Signal<{ winAmount: number; lineWins: { lineIndex: number; symbol: string; count: number; payout: number }[] }>(),
-
-    /** Fired when 3+ wilds trigger the bonus round. */
-    bonusTriggered: new Signal<{ wildCount: number }>(),
-
-    /** Fired when the bonus round completes. */
-    bonusComplete: new Signal<{ totalWin: number }>(),
-
     // ── Game state ──────────────────────────────────────────────
 
     /** Fired when balance updates. */
     balanceUpdated: new Signal<{ value: number }>(),
-
-    /** Fired when a screen transition occurs. */
-    screenChanged: new Signal<{ from: string; to: string }>(),
-
-    /** Fired when layout/canvas changes (orientation, resize). */
-    layoutChanged: new Signal<{ canvasId: string }>(),
 
     /** Fired when a 401 is received, meaning the JWT expired. */
     sessionExpired: new Signal<void>(),

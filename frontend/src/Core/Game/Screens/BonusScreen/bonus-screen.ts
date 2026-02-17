@@ -3,7 +3,6 @@ import { BONUS_VIEW_REGISTRY } from './config/bonus-scene-loader';
 import bonusConfig from './config/bonus-scene-config.json';
 import { ChestView } from './views/chest-view';
 import { BonusWinCounterView } from './views/bonus-win-counter-view';
-import { gameSignals } from '../../../Signals/game-signals';
 import { GameModel } from '../../SlotMachine/game-model';
 import { ScreenManager } from '../../../Managers/screen-manager';
 import { ApiClient } from '../../../Services/api-client';
@@ -86,8 +85,6 @@ export class BonusScreen extends GameScreen {
                 if (data.balance !== undefined) {
                     GameModel.setBalance(data.balance);
                 }
-
-                gameSignals.bonusComplete.emit({ totalWin: data.totalBonusWin });
 
                 // Wait then transition back to base
                 setTimeout(() => {

@@ -52,7 +52,6 @@ class GameModelClass {
         this._betIndex = index;
         const amount = BET_STEPS[index];
         this.betChanged.emit({ amount, index });
-        gameSignals.betChanged.emit({ amount });
     }
 
     increaseBet(): void {
@@ -71,13 +70,11 @@ class GameModelClass {
     setTurbo(active: boolean): void {
         this._isTurbo = active;
         this.turboChanged.emit({ active });
-        gameSignals.turboToggled.emit({ active });
     }
 
     setAutoSpin(active: boolean): void {
         this._isAutoSpin = active;
         this.autoSpinChanged.emit({ active });
-        gameSignals.autoSpinToggled.emit({ active });
     }
 
     setLastResult(result: SpinResultWithWins | null): void {

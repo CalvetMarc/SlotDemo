@@ -73,7 +73,6 @@ export class SlotMachineView extends View {
             resultProvider: new RemoteSpinResultProvider(),
         });
         this._spinController.onSpinStarting = () => {
-            gameSignals.spinStarted.emit();
             this._clearAll();
             for (const reel of this._reels) reel.setDim(false);
             this._debugWinText.visible = false;
@@ -184,11 +183,9 @@ export class SlotMachineView extends View {
         }
 
         this._spinController.clearTimeouts();
-        gameSignals.spinComplete.emit({ grid: result.grid });
 
         if (result.bonusTriggered) {
             this._winController.setupBonus(result);
-            gameSignals.bonusTriggered.emit({ wildCount: result.wildCount });
             if (!isTension) {
                 this._showDebugWin(`BONUS! ${result.wildCount} wilds`);
             }
@@ -218,10 +215,6 @@ export class SlotMachineView extends View {
 
     private _emitResultSignals(result: SpinResultWithWins): void {
         if (result.winAmount > 0) {
-            gameSignals.winDetected.emit({
-                winAmount: result.winAmount,
-                lineWins: result.lineWins,
-            });
             this._showDebugWin(`WIN ${result.winAmount.toFixed(2)}€`);
         } else if (result.bonusTriggered) {
             this._showDebugWin(`BONUS! ${result.wildCount} wilds`);
