@@ -1,13 +1,11 @@
-import { Router, Request } from 'express';
+import { Router } from 'express';
 import { sql } from '../db.js';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, type AuthRequest } from '../middleware/auth.js';
 import { generateBonusChests, pickChest, BonusState } from '../services/bonus-service.js';
 
 const router = Router();
 
-type AuthRequest = Request & { sessionId: string };
-
-router.post('/start', authMiddleware, async (req: Request, res) => {
+router.post('/start', authMiddleware, async (req, res) => {
     const sessionId = (req as AuthRequest).sessionId;
 
     try {
@@ -45,7 +43,7 @@ router.post('/start', authMiddleware, async (req: Request, res) => {
     }
 });
 
-router.post('/pick', authMiddleware, async (req: Request, res) => {
+router.post('/pick', authMiddleware, async (req, res) => {
     const sessionId = (req as AuthRequest).sessionId;
     const { chestIndex } = req.body;
 

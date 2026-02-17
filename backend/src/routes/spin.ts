@@ -1,12 +1,12 @@
-import { Router, Request } from 'express';
+import { Router } from 'express';
 import { sql } from '../db.js';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, type AuthRequest } from '../middleware/auth.js';
 import { generateSpin } from '../services/spin-service.js';
 
 const router = Router();
 
-router.post('/', authMiddleware, async (req: Request, res) => {
-    const sessionId = (req as Request & { sessionId: string }).sessionId;
+router.post('/', authMiddleware, async (req, res) => {
+    const sessionId = (req as AuthRequest).sessionId;
     const { betAmount } = req.body;
 
     if (typeof betAmount !== 'number' || betAmount <= 0) {

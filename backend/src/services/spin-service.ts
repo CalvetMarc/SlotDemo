@@ -1,15 +1,7 @@
-const SYMBOL_IDS = [
-    '1.png', '2.png', '3.png',
-    'J.png', 'K.png', 'Q.png', 'A.png',
-    'Wild_01.png',
-] as const;
-
-type SymbolId = (typeof SYMBOL_IDS)[number];
+import { SYMBOL_IDS, REEL_COUNT, VISIBLE_ROWS } from '@shared/types.js';
+import type { SymbolId, LineWin } from '@shared/types.js';
 
 const WILD: SymbolId = 'Wild_01.png';
-
-const REEL_COUNT = 5;
-const VISIBLE_ROWS = 3;
 
 /** Virtual reel strips — indices into SYMBOL_IDS. Server-only.
  *  Wild (7) appears once per reel. */
@@ -71,13 +63,6 @@ const BONUS_AVG_PRIZE_PER_PICK = 20;
 const BONUS_EXPECTED_PICKS: readonly [number, number, number] = [1.0, 2.0, 5.0];
 
 // ── Types ───────────────────────────────────────────────────
-
-export interface LineWin {
-    lineIndex: number;
-    symbol: SymbolId;
-    count: number;
-    payout: number;
-}
 
 export interface SpinServiceResult {
     grid: SymbolId[][];
@@ -223,4 +208,4 @@ export function generateInitialGrid(): SymbolId[][] {
 // ── Exports for RTP calculator ──────────────────────────────
 
 export { REEL_STRIPS, REEL_COUNT, VISIBLE_ROWS, SYMBOL_IDS, PAYLINE_COUNT, PAYLINES, BONUS_AVG_PRIZE_PER_PICK, BONUS_EXPECTED_PICKS };
-export type { SymbolId };
+export type { SymbolId, LineWin };

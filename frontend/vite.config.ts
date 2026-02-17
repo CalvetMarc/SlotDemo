@@ -4,7 +4,7 @@ import path from 'path';
 export default defineConfig({
     resolve: {
         alias: {
-            '@shared': path.resolve(__dirname, 'src/shared'),
+            '@shared': path.resolve(__dirname, '../shared'),
         },
     },
     server: {

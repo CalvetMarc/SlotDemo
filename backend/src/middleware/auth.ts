@@ -7,6 +7,8 @@ export interface AuthPayload {
     sessionId: string;
 }
 
+export type AuthRequest = Request & { sessionId: string };
+
 export function signToken(sessionId: string): string {
     return jwt.sign({ sessionId }, JWT_SECRET, { expiresIn: '1h' });
 }
