@@ -18,16 +18,4 @@ export class AssetLoader {
             views.map(view => this.loadForView(view))
         );
     }
-
-    /** Checks if a bundle is already loaded in cache. */
-    isBundleLoaded(bundleName: string): boolean {
-        return Assets.cache.has(bundleName);
-    }
-
-    /** Preloads bundles without requiring view instances. */
-    async preloadBundles(bundleNames: string[]): Promise<void> {
-        await Promise.all(
-            bundleNames.map(bundle => Assets.loadBundle(bundle))
-        );
-    }
 }

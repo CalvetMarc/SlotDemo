@@ -8,8 +8,6 @@ const FADE_IN_SPEED = 0.75;
 const FADE_OUT_SPEED = 0.8;
 const HOLD_DELAY_MS = 1000;
 
-export type TransitionType = 'fadeIn' | 'fadeOut';
-
 export class TransitionMask extends Container {
     private _sprite: Sprite | null = null;
     private _filter: VideoAlphaFilter;
@@ -75,17 +73,6 @@ export class TransitionMask extends Container {
         await this._showVideo(fadeOutVideo, width, height, FADE_OUT_SPEED);
         console.log('[TransitionMask] Phase 2 – fadeOut done');
 
-        this.visible = false;
-    }
-
-    async play(type: TransitionType, width: number, height: number): Promise<void> {
-        this.visible = true;
-        const video = this._createVideoElement(
-            type === 'fadeIn' ? FADE_IN_PATH : FADE_OUT_PATH,
-        );
-        const speed = type === 'fadeIn' ? FADE_IN_SPEED : FADE_OUT_SPEED;
-        await this._waitCanPlay(video);
-        await this._showVideo(video, width, height, speed);
         this.visible = false;
     }
 
