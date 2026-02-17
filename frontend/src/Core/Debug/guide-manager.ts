@@ -119,8 +119,6 @@ export class GuideManager extends SingletonBase {
         this.setupDrag(guide, guideContainer);
         this._guides.push(guide);
         this._container.addChild(guideContainer);
-
-        console.log(`[GuideManager] Added horizontal guide at y=${y}`);
     }
 
     private addVerticalGuide(x: number): void {
@@ -146,8 +144,6 @@ export class GuideManager extends SingletonBase {
         this.setupDrag(guide, guideContainer);
         this._guides.push(guide);
         this._container.addChild(guideContainer);
-
-        console.log(`[GuideManager] Added vertical guide at x=${x}`);
     }
 
     private setupDrag(guide: Guide, guideContainer: Container): void {
@@ -190,11 +186,6 @@ export class GuideManager extends SingletonBase {
                 isDragging = false;
                 guideContainer.alpha = 1;
                 guideContainer.children[0].alpha = this._guideAlpha;
-                if (guide.type === 'horizontal') {
-                    console.log(`[GuideManager] Horizontal guide moved to y=${guide.position.toFixed(1)}`);
-                } else {
-                    console.log(`[GuideManager] Vertical guide moved to x=${guide.position.toFixed(1)}`);
-                }
             }
         };
 
@@ -237,7 +228,6 @@ export class GuideManager extends SingletonBase {
         if (guide) {
             this._container.removeChild(guide.graphic);
             guide.graphic.destroy({ children: true });
-            console.log(`[GuideManager] Removed last guide`);
         }
     }
 
@@ -247,7 +237,6 @@ export class GuideManager extends SingletonBase {
             guide.graphic.destroy({ children: true });
         });
         this._guides = [];
-        console.log(`[GuideManager] Removed all guides`);
     }
 
     // Utility: Get current guides info

@@ -548,16 +548,6 @@ export class LayoutResolver {
             shouldReduceScale = true;
           }
 
-          // Debug: log for character_bats to diagnose minMargin issue
-          const isDebugView = constraint.scale &&
-            String(constraint.scale.x).includes('50h%') &&
-            String(constraint.offset?.x ?? '').includes('80h%');
-          if (isDebugView) {
-            console.log(`[minMargin DEBUG] marginX=${marginX}, availableWidth=${availableWidth.toFixed(0)}, ` +
-              `scaledWidth=${scaledWidth.toFixed(0)}, shouldReduceScale=${shouldReduceScale}, ` +
-              `uniformScale before=${uniformScale.toFixed(4)}`);
-          }
-
           if (shouldReduceScale) {
             // Element too large, reduce scale to fit
             let maxScaleFit = uniformScale;
@@ -568,11 +558,6 @@ export class LayoutResolver {
               maxScaleFit = Math.min(maxScaleFit, availableHeight / viewHeight);
             }
             uniformScale = Math.max(0, maxScaleFit);
-
-            if (isDebugView) {
-              console.log(`[minMargin DEBUG] scale reduced to ${uniformScale.toFixed(4)}, ` +
-                `maxScaleFit=${maxScaleFit.toFixed(4)}`);
-            }
           }
 
           // Recalculate bounds with (possibly reduced) scale
@@ -620,15 +605,6 @@ export class LayoutResolver {
           if (pushX !== 0 || pushY !== 0) {
             position.x += pushX;
             position.y += pushY;
-          }
-
-          // Debug: final position for character_bats (recalculate bounds AFTER push)
-          if (isDebugView) {
-            const finalLeft = position.x - (finalScaledWidth * originX);
-            const finalRight = position.x + (finalScaledWidth * (1 - originX));
-            console.log(`[minMargin DEBUG] final pos=(${position.x.toFixed(0)}, ${position.y.toFixed(0)}), ` +
-              `pushX=${pushX.toFixed(1)}, FINAL bounds: L=${finalLeft.toFixed(0)} R=${finalRight.toFixed(0)}, ` +
-              `canvas=${canvas.width.toFixed(0)}, gap=${(canvas.width - finalRight).toFixed(1)}px`);
           }
 
           // Apply minScale limit

@@ -33,45 +33,35 @@ export class TransitionMask extends Container {
     ): Promise<void> {
         this.visible = true;
 
-        console.log('[TransitionMask] Loading both videos…');
         const fadeInVideo = this._createVideoElement(FADE_IN_PATH);
         const fadeOutVideo = this._createVideoElement(FADE_OUT_PATH);
         await Promise.all([
             this._waitCanPlay(fadeInVideo),
             this._waitCanPlay(fadeOutVideo),
         ]);
-        console.log('[TransitionMask] Both videos ready');
 
         // Phase 1 – cover
-        console.log('[TransitionMask] Phase 1 – fadeIn start');
         await this._showVideo(fadeInVideo, width, height, FADE_IN_SPEED);
-        console.log('[TransitionMask] Phase 1 – fadeIn done');
 
         // Hold
         this._solidCover.scale.set(width, height);
         this._solidCover.visible = true;
 
         try {
-            console.log('[TransitionMask] onCovered() start');
             await Promise.race([
                 onCovered(),
                 this._delay(8000).then(() =>
                     console.warn('[TransitionMask] onCovered() timed out after 8 s')),
             ]);
-            console.log('[TransitionMask] onCovered() done');
         } catch (err) {
             console.error('[TransitionMask] onCovered() threw:', err);
         }
 
-        console.log(`[TransitionMask] Waiting ${HOLD_DELAY_MS} ms…`);
         await this._delay(HOLD_DELAY_MS);
-        console.log('[TransitionMask] Delay done');
 
         // Phase 2 – reveal
-        console.log('[TransitionMask] Phase 2 – fadeOut start');
         this._solidCover.visible = false;
         await this._showVideo(fadeOutVideo, width, height, FADE_OUT_SPEED);
-        console.log('[TransitionMask] Phase 2 – fadeOut done');
 
         this.visible = false;
     }
@@ -115,12 +105,6 @@ export class TransitionMask extends Container {
         h: number,
         speed = 1,
     ): Promise<void> {
-        console.log(
-            `[TransitionMask] _showVideo src=${video.src.split('/').pop()}`
-            + ` readyState=${video.readyState}`
-            + ` videoW=${video.videoWidth} videoH=${video.videoHeight}`,
-        );
-
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth || 1;
         canvas.height = video.videoHeight || 1;
@@ -147,18 +131,14 @@ export class TransitionMask extends Container {
         Ticker.shared.add(drawFrame);
 
         video.playbackRate = speed;
-        console.log(`[TransitionMask] calling video.play() (speed=${speed})…`);
         await new Promise<void>((resolve) => {
             video.addEventListener('ended', () => {
-                console.log('[TransitionMask] video ended');
                 drawFrame();
                 Ticker.shared.remove(drawFrame);
                 resolve();
             }, { once: true });
 
-            video.play().then(() => {
-                console.log('[TransitionMask] video.play() resolved ok');
-            }).catch((err) => {
+            video.play().catch((err) => {
                 console.warn('[TransitionMask] video.play() REJECTED:', err);
                 Ticker.shared.remove(drawFrame);
                 resolve();

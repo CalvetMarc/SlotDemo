@@ -150,33 +150,25 @@ export class ScreenManager extends SingletonBase {
   ): Promise<void> {
     let pool: Map<string, View> | undefined;
 
-    console.log(`[SwapScene] ${transitionFrom} → ${transitionTo} (destroy=${destroyCurrent})`);
-
     if (this._currentScreen) {
-      console.log('[SwapScene] onExit…');
       await this._currentScreen.onExit();
       if (destroyCurrent) {
         pool = this._currentScreen.releaseViews();
       } else {
         this._sceneMap[transitionFrom] = this._currentScreen;
       }
-      console.log('[SwapScene] onExit done');
     }
 
     this._currentScreen = this._sceneMap[transitionTo] ?? this.screenFactory(transitionTo);
     if (!this._currentScreen.loaded) {
-      console.log('[SwapScene] loading screen…');
       await this._currentScreen.load();
-      console.log('[SwapScene] load done');
     }
 
     if (pool) {
       this._currentScreen.viewPool = pool;
     }
 
-    console.log('[SwapScene] onEnter…');
     await this._currentScreen.onEnter();
-    console.log('[SwapScene] onEnter done');
   }
 
   private async _onSessionExpired(): Promise<void> {

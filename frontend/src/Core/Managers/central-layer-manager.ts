@@ -343,7 +343,6 @@ export class CentralLayerManager extends SingletonBase {
         this.drawLayerBorder(border, layerId, canvas.width, canvas.height);
       }
     }
-    console.log('🔲 Debug borders: ON');
   }
 
   /**
@@ -353,7 +352,6 @@ export class CentralLayerManager extends SingletonBase {
     for (const [layerId, border] of this._debugBorders) {
       border.clear();
     }
-    console.log('🔲 Debug borders: OFF');
   }
 
   /**
@@ -425,7 +423,6 @@ export class CentralLayerManager extends SingletonBase {
     if (this._currentCanvas) {
       this.updateLayoutDebug(this._currentCanvas);
     }
-    console.log('📐 Layout debug: ON');
   }
 
   /**
@@ -438,7 +435,6 @@ export class CentralLayerManager extends SingletonBase {
     if (this._layoutDebugBg) {
       this._layoutDebugBg.visible = false;
     }
-    console.log('📐 Layout debug: OFF');
   }
 
   /**
