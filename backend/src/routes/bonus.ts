@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { sql } from '../db.js';
 import { authMiddleware, type AuthRequest } from '../middleware/auth.js';
 import { generateBonusChests, pickChest, BonusState } from '../services/bonus-service.js';
+import { getSession } from '../services/session-helpers.js';
 
 const router = Router();
 
@@ -9,21 +10,19 @@ router.post('/start', authMiddleware, async (req, res) => {
     const sessionId = (req as AuthRequest).sessionId;
 
     try {
-        const rows = await sql`
-            SELECT game_phase, bonus_data, balance FROM sessions WHERE id = ${sessionId}
-        `;
+        const session = await getSession(sessionId);
 
-        if (rows.length === 0) {
+        if (!session) {
             res.status(404).json({ error: 'Session not found' });
             return;
         }
 
-        if (rows[0].game_phase !== 'bonus') {
+        if (session.game_phase !== 'bonus') {
             res.status(400).json({ error: 'Not in bonus phase' });
             return;
         }
 
-        const bonusData = rows[0].bonus_data;
+        const bonusData = session.bonus_data as { wildCount?: number; totalBet?: number } | null;
         if (!bonusData || !bonusData.wildCount || !bonusData.totalBet) {
             res.status(400).json({ error: 'Missing bonus trigger data' });
             return;
@@ -53,21 +52,19 @@ router.post('/pick', authMiddleware, async (req, res) => {
     }
 
     try {
-        const rows = await sql`
-            SELECT game_phase, bonus_data, balance FROM sessions WHERE id = ${sessionId}
-        `;
+        const session = await getSession(sessionId);
 
-        if (rows.length === 0) {
+        if (!session) {
             res.status(404).json({ error: 'Session not found' });
             return;
         }
 
-        if (rows[0].game_phase !== 'bonus') {
+        if (session.game_phase !== 'bonus') {
             res.status(400).json({ error: 'Not in bonus phase' });
             return;
         }
 
-        const state: BonusState = rows[0].bonus_data;
+        const state: BonusState = session.bonus_data as unknown as BonusState;
         if (!state || !state.chests) {
             res.status(400).json({ error: 'No active bonus' });
             return;
@@ -82,7 +79,7 @@ router.post('/pick', authMiddleware, async (req, res) => {
 
         if (result.isGameOver) {
             // Bonus over: add winnings to balance, return to base phase
-            const newBalance = parseFloat(rows[0].balance) + result.totalBonusWin;
+            const newBalance = parseFloat(session.balance) + result.totalBonusWin;
             await sql`
                 UPDATE sessions
                 SET balance = ${newBalance}, game_phase = 'base', bonus_data = NULL, last_seen = now()
