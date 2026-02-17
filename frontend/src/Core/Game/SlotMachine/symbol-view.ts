@@ -290,7 +290,7 @@ export class SymbolView {
             this._dimFilter = undefined;
         }
 
-        // VFX sprite is destroyed by the vfxLayer nuke in SlotMachineView,
+        // VFX sprite is removed from vfxLayer via removeChildren(),
         // so we just drop the reference here
         this._vfxSprite = undefined;
     }

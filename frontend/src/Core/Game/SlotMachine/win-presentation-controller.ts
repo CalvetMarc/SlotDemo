@@ -178,9 +178,7 @@ export class WinPresentationController {
         for (const reel of this._reels) {
             reel.clearCelebration();
         }
-        this._vfxLayer.destroy({ children: true });
-        this._vfxLayer = new Container();
-        this._reelContainer.addChild(this._vfxLayer);
+        this._vfxLayer.removeChildren();
     }
 
     private _onBonusDismiss = (): void => {
