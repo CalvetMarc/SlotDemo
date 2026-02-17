@@ -15,6 +15,12 @@ import { TransitionMask } from '../Transitions/transition-mask';
 import { gameSignals } from '../Signals/game-signals';
 import { SessionManager } from '../Game/SlotMachine/session-manager';
 
+const SCREEN_REGISTRY: Record<ScreenTypes, () => GameScreen> = {
+  SPLASH: () => new SplashScreen(),
+  BASE: () => new BaseScreen(),
+  BONUS: () => new BonusScreen(),
+};
+
 export class ScreenManager extends SingletonBase {
   private _app!: Application;
   private _currentScreen?: GameScreen;
@@ -191,17 +197,9 @@ export class ScreenManager extends SingletonBase {
     await this.start();
   }
 
-  private screenFactory(screenKey: ScreenTypes): GameScreen{
-    switch(screenKey){
-        case "SPLASH":
-          return new SplashScreen();
-        case "BASE":
-          return new BaseScreen();
-        case "BONUS":
-          return new BonusScreen();
-        default:
-          throw new Error(`Scene ${screenKey} does not exist`);
-    }
+  private screenFactory(screenKey: ScreenTypes): GameScreen {
+    const factory = SCREEN_REGISTRY[screenKey];
+    return factory();
   }
 }
 
