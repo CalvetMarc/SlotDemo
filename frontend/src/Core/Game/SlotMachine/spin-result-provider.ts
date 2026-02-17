@@ -2,6 +2,7 @@ import type { SpinResult, SpinResponse, SymbolId, LineWin } from '@shared/types'
 import { SYMBOL_IDS, REEL_COUNT, VISIBLE_ROWS } from '@shared/types';
 import { gameSignals } from '../../Signals/game-signals';
 import { SessionManager } from './session-manager';
+import { GameModel } from './game-model';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -39,7 +40,7 @@ export class RemoteSpinResultProvider implements ISpinResultProvider {
         }
 
         const data: SpinResponse = await res.json();
-        gameSignals.balanceUpdated.emit({ value: data.balance });
+        GameModel.setBalance(data.balance);
 
         return {
             grid: data.grid,

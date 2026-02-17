@@ -1,7 +1,7 @@
 import { View, bundle } from "../../Abstractions/view";
 import { Text, TextStyle, Graphics } from "pixi.js";
 import { ArrowButtonView } from "./arrow-button-view";
-import { gameSignals } from "../../Signals/game-signals";
+import { GameModel, BET_STEPS } from "../SlotMachine/game-model";
 
 export class BetDisplayView extends View {
     private background!: Graphics;
@@ -11,15 +11,7 @@ export class BetDisplayView extends View {
     private progressFill!: Graphics;
     private upArrow!: ArrowButtonView;
     private downArrow!: ArrowButtonView;
-
-    // Bet steps: 0.1, 0.2, then every 0.2 until 2, then every 1 until 10, then every 5 until 50, then every 25 until 100
-    private _betSteps: number[] = [
-        0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0,
-        3, 4, 5, 6, 7, 8, 9, 10,
-        15, 20, 25, 30, 35, 40, 45, 50,
-        75, 100
-    ];
-    private _currentBetIndex: number = 10; // Default to 2€ (index 10)
+    private _unsubscribeBet?: () => void;
 
     bundleNeeded(): bundle {
         return "base";
@@ -67,66 +59,46 @@ export class BetDisplayView extends View {
         // Progress bar fill
         this.progressFill = new Graphics();
         this.addChild(this.progressFill);
-        this.updateProgressBar();
 
         // Up arrow button (hitArea extends upward, sprite at position)
-        this.upArrow = new ArrowButtonView('up', () => this.increaseBet());
+        this.upArrow = new ArrowButtonView('up', () => GameModel.increaseBet());
         this.upArrow.appear();
         this.upArrow.position.set(155, 60);
         this.addChild(this.upArrow);
 
         // Down arrow button (hitArea extends downward, sprite at position)
-        this.downArrow = new ArrowButtonView('down', () => this.decreaseBet());
+        this.downArrow = new ArrowButtonView('down', () => GameModel.decreaseBet());
         this.downArrow.appear();
         this.downArrow.position.set(155, 60);
         this.addChild(this.downArrow);
 
-        // Update display
-        this.updateDisplay();
+        // Subscribe to model changes
+        this._unsubscribeBet = GameModel.betChanged.connect(({ amount, index }) => {
+            this._updateDisplay(amount, index);
+        });
+
+        // Initial display from model
+        this._updateDisplay(GameModel.betAmount, GameModel.betIndex);
     }
 
-    private updateProgressBar(): void {
+    protected dispose(): void {
+        this._unsubscribeBet?.();
+    }
+
+    private _updateProgressBar(index: number): void {
         this.progressFill.clear();
-        const progress = this._currentBetIndex / (this._betSteps.length - 1);
+        const progress = index / (BET_STEPS.length - 1);
         const width = Math.max(8, progress * 120);
         this.progressFill.roundRect(15, 93, width, 8, 4);
         this.progressFill.fill({ color: 0x00d4aa });  // Magical cyan accent
     }
 
-    private updateDisplay(): void {
-        const bet = this._betSteps[this._currentBetIndex];
-        this.valueText.text = `€${bet.toFixed(2)}`;
-        this.updateProgressBar();
+    private _updateDisplay(amount: number, index: number): void {
+        this.valueText.text = `€${amount.toFixed(2)}`;
+        this._updateProgressBar(index);
 
         // Update arrow states based on limits
-        this.upArrow.setDisabled(this._currentBetIndex >= this._betSteps.length - 1);
-        this.downArrow.setDisabled(this._currentBetIndex <= 0);
-
-        gameSignals.betChanged.emit({ amount: bet });
-    }
-
-    private increaseBet(): void {
-        if (this._currentBetIndex < this._betSteps.length - 1) {
-            this._currentBetIndex++;
-            this.updateDisplay();
-        }
-    }
-
-    private decreaseBet(): void {
-        if (this._currentBetIndex > 0) {
-            this._currentBetIndex--;
-            this.updateDisplay();
-        }
-    }
-
-    public getBet(): number {
-        return this._betSteps[this._currentBetIndex];
-    }
-
-    public setBetIndex(index: number): void {
-        if (index >= 0 && index < this._betSteps.length) {
-            this._currentBetIndex = index;
-            this.updateDisplay();
-        }
+        this.upArrow.setDisabled(index >= BET_STEPS.length - 1);
+        this.downArrow.setDisabled(index <= 0);
     }
 }

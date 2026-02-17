@@ -1,10 +1,10 @@
 import { ButtonView } from "../../Abstractions/button-view";
 import { bundle } from "../../Abstractions/view";
 import { Sprite, Assets } from "pixi.js";
+import { GameModel } from "../SlotMachine/game-model";
 
 export class AutoSpinButtonView extends ButtonView {
     private iconSprite!: Sprite;
-    private _isActive: boolean = false;
 
     // Debug mode - set to true to see hit bounds
     public static DEBUG_BOUNDS: boolean = false;
@@ -27,15 +27,15 @@ export class AutoSpinButtonView extends ButtonView {
     }
 
     onMouseClick(): void {
-        this.setActive(!this._isActive);
+        this.setActive(!GameModel.isAutoSpin);
     }
 
     public setActive(active: boolean): void {
-        this._isActive = active;
+        GameModel.setAutoSpin(active);
         this.iconSprite.tint = active ? 0x00d4aa : 0xc8cdd8;  // Magical cyan when active
     }
 
     public getActive(): boolean {
-        return this._isActive;
+        return GameModel.isAutoSpin;
     }
 }

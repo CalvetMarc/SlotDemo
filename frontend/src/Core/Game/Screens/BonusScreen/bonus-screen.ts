@@ -5,6 +5,7 @@ import { ChestView } from './views/chest-view';
 import { BonusWinCounterView } from './views/bonus-win-counter-view';
 import { SessionManager } from '../../SlotMachine/session-manager';
 import { gameSignals } from '../../../Signals/game-signals';
+import { GameModel } from '../../SlotMachine/game-model';
 import { ScreenManager } from '../../../Managers/screen-manager';
 import type { BonusStartResponse, BonusPickResponse } from '@shared/types';
 
@@ -126,7 +127,7 @@ export class BonusScreen extends GameScreen {
 
                 // Update balance if provided
                 if (data.balance !== undefined) {
-                    gameSignals.balanceUpdated.emit({ value: data.balance });
+                    GameModel.setBalance(data.balance);
                 }
 
                 gameSignals.bonusComplete.emit({ totalWin: data.totalBonusWin });

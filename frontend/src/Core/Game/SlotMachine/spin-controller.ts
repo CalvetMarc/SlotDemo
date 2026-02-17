@@ -8,6 +8,7 @@ import {
     WILD_TENSION_MULTIPLIERS,
 } from './slot-config';
 import { countWilds } from './debug-spins';
+import { GameModel } from './game-model';
 
 export interface SpinControllerConfig {
     reels: readonly Reel[];
@@ -17,8 +18,6 @@ export interface SpinControllerConfig {
 export class SpinController {
     private _reels: readonly Reel[];
     private _resultProvider: ISpinResultProvider;
-    private _isSpinning = false;
-    private _currentBetAmount = 2;
     private _stopTimeouts: ReturnType<typeof setTimeout>[] = [];
     private _isTensionSpin = false;
     private _forcedResult?: SpinResultWithWins;
@@ -34,19 +33,11 @@ export class SpinController {
     }
 
     get isSpinning(): boolean {
-        return this._isSpinning;
-    }
-
-    set isSpinning(value: boolean) {
-        this._isSpinning = value;
-    }
-
-    setBetAmount(amount: number): void {
-        this._currentBetAmount = amount;
+        return GameModel.isSpinning;
     }
 
     getBetAmount(): number {
-        return this._currentBetAmount;
+        return GameModel.betAmount;
     }
 
     setForcedResult(result: SpinResultWithWins): void {
@@ -54,8 +45,8 @@ export class SpinController {
     }
 
     async startSpin(): Promise<void> {
-        if (this._isSpinning) return;
-        this._isSpinning = true;
+        if (GameModel.isSpinning) return;
+        GameModel.setSpinning(true);
 
         this.onSpinStarting?.();
 
@@ -72,7 +63,7 @@ export class SpinController {
             this._forcedResult = undefined;
         } else {
             try {
-                result = await this._resultProvider.generateResult(this._currentBetAmount);
+                result = await this._resultProvider.generateResult(GameModel.betAmount);
             } catch (error) {
                 console.error('Spin request failed:', error);
                 result = this._generateLocalFallback();

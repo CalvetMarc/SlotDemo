@@ -16,6 +16,7 @@ import { WinPresentationController } from '../../../SlotMachine/win-presentation
 import { TensionController } from '../../../SlotMachine/tension-controller';
 import { SpinController } from '../../../SlotMachine/spin-controller';
 import { TweenManager } from '../../../../Animation/tween';
+import { GameModel } from '../../../SlotMachine/game-model';
 
 export class SlotMachineView extends View {
     private _frameBackground!: Sprite;
@@ -27,7 +28,6 @@ export class SlotMachineView extends View {
     private _debugWinTimeout?: ReturnType<typeof setTimeout>;
     private _winPresentationTimeout?: ReturnType<typeof setTimeout>;
     private _unsubscribeSpin?: () => void;
-    private _unsubscribeBet?: () => void;
     private _debugCleanup?: () => void;
 
     private _spinController!: SpinController;
@@ -130,10 +130,8 @@ export class SlotMachineView extends View {
 
         // ── Signals ──────────────────────────────────────────────────
         this._unsubscribeSpin = gameSignals.spinPressed.connect(() => {
+            GameModel.setLastResult(null);
             this._spinController.startSpin().catch(err => console.error('Spin failed:', err));
-        });
-        this._unsubscribeBet = gameSignals.betChanged.connect(({ amount }) => {
-            this._spinController.setBetAmount(amount);
         });
 
         this._debugCleanup = createDebugKeyHandler({
@@ -151,7 +149,6 @@ export class SlotMachineView extends View {
     protected dispose(): void {
         Ticker.shared.remove(this._onTick, this);
         this._unsubscribeSpin?.();
-        this._unsubscribeBet?.();
         this._debugCleanup?.();
         this._clearAll();
         this._spinController.dispose();
@@ -177,6 +174,7 @@ export class SlotMachineView extends View {
     // ── Junction ─────────────────────────────────────────────────
 
     private _onAllReelsStopped(result: SpinResultWithWins, isTension: boolean): void {
+        GameModel.setLastResult(result);
         const shouldCelebrate = result.winAmount > 0 || result.bonusTriggered;
 
         if (isTension) {
@@ -212,7 +210,7 @@ export class SlotMachineView extends View {
         }
 
         if (!result.bonusTriggered) {
-            this._spinController.isSpinning = false;
+            GameModel.setSpinning(false);
         }
     }
 

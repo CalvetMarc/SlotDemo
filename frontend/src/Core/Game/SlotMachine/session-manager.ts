@@ -1,5 +1,5 @@
 import type { StartResponse, SymbolId } from '@shared/types';
-import { gameSignals } from '../../Signals/game-signals';
+import { GameModel } from './game-model';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 const STORAGE_KEY = 'slot_jwt';
@@ -27,7 +27,7 @@ class SessionManagerClass {
         this._initialGrid = data.initialGrid;
 
         localStorage.setItem(STORAGE_KEY, data.token);
-        gameSignals.balanceUpdated.emit({ value: data.balance });
+        GameModel.setBalance(data.balance);
     }
 
     getToken(): string {
