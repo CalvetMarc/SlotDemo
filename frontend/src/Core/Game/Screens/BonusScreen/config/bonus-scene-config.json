@@ -15,6 +15,19 @@
       }
     },
     {
+      "id": "bonus_logo",
+      "type": "BonusLogoView",
+      "layer": "game",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "offset": { "x": 0, "y": "-25h%" },
+          "scale": { "x": 0.5, "y": 0.5 }
+        }
+      }
+    },
+    {
       "id": "bonus_chest_0",
       "type": "ChestView",
       "layer": "game",

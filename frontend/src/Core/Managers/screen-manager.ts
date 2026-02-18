@@ -123,7 +123,6 @@ export class ScreenManager extends SingletonBase {
 
       const { width, height } = this._app.screen;
       await this._transitionMask.playTransition(width, height, async () => {
-        // By the time fadeIn finishes the load is likely done; if not, wait here.
         await loadPromise;
         await this._swapScene(transitionFrom, transitionTo, destroyCurrent);
       });
@@ -155,6 +154,7 @@ export class ScreenManager extends SingletonBase {
       if (destroyCurrent) {
         pool = this._currentScreen.releaseViews();
       } else {
+        this._currentScreen.detachViews();
         this._sceneMap[transitionFrom] = this._currentScreen;
       }
     }
@@ -169,6 +169,14 @@ export class ScreenManager extends SingletonBase {
     }
 
     await this._currentScreen.onEnter();
+
+    // Destroy unclaimed pooled views (reattachViews skips the pool cleanup that addViewsToLayers does)
+    if (this._currentScreen.viewPool.size > 0) {
+      for (const view of this._currentScreen.viewPool.values()) {
+        view.destroy({ children: true });
+      }
+      this._currentScreen.viewPool.clear();
+    }
   }
 
   private async _onSessionExpired(): Promise<void> {
@@ -178,8 +186,12 @@ export class ScreenManager extends SingletonBase {
       this._currentScreen.unload();
     }
 
-    // Clear cached scenes so they are recreated fresh
+    // Unload cached scenes (disposes detached views) and clear for fresh recreation
     for (const key of Object.keys(this._sceneMap) as ScreenTypes[]) {
+      const cached = this._sceneMap[key];
+      if (cached && cached !== this._currentScreen) {
+        cached.unload();
+      }
       this._sceneMap[key] = null;
     }
     this._currentScreen = undefined;

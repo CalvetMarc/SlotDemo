@@ -13,7 +13,11 @@ export class BaseScreen extends GameScreen{
     }
 
     async onEnter(): Promise<void> {
-        this.addViewsToLayers();
+        if (this.isDetached) {
+            this.reattachViews();
+        } else {
+            this.addViewsToLayers();
+        }
     }
 
     onUpdate(deltaMS: number): void {

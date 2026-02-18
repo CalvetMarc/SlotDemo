@@ -24,6 +24,7 @@ export abstract class GameScreen implements IGameScreen {
     private _loaded: boolean;
     private _viewLayerMap: Map<string, string> = new Map();
     private _preparedViews: { view: View; config: ViewConfig }[] = [];
+    private _detachedViews: Map<string, View> = new Map();
     public viewPool: Map<string, View> = new Map();
 
     private readonly assetLoader: AssetLoader;
@@ -42,6 +43,7 @@ export abstract class GameScreen implements IGameScreen {
     }
 
     public get loaded(): boolean { return this._loaded; }
+    public get isDetached(): boolean { return this._detachedViews.size > 0; }
 
     /** Removes all views added by this screen from centralized layers. */
     public unload(){
@@ -50,6 +52,11 @@ export abstract class GameScreen implements IGameScreen {
         }
         this._viewLayerMap.clear();
         this._preparedViews = [];
+
+        for (const view of this._detachedViews.values()) {
+            view.destroy({ children: true });
+        }
+        this._detachedViews.clear();
     }
 
     /** Detaches all views from layers WITHOUT destroying them. Returns pool for reuse. */
@@ -62,6 +69,25 @@ export abstract class GameScreen implements IGameScreen {
         this._viewLayerMap.clear();
         this._preparedViews = [];
         return pool;
+    }
+
+    /** Detaches views from layers, keeping internal tracking intact for reattach. */
+    public detachViews(): void {
+        for (const [viewId, layerId] of this._viewLayerMap) {
+            const view = this.layerManager.getLayer(layerId).detachView(viewId);
+            if (view) this._detachedViews.set(viewId, view);
+        }
+    }
+
+    /** Re-adds previously detached views back to their layers. */
+    public reattachViews(): void {
+        for (const [viewId, layerId] of this._viewLayerMap) {
+            const view = this._detachedViews.get(viewId);
+            if (!view) continue;
+            const config = this._preparedViews.find(pv => pv.config.id === viewId)?.config;
+            this.layerManager.getLayer(layerId).addView(viewId, view, config);
+        }
+        this._detachedViews.clear();
     }
 
     /** Called when canvas changes. Centralized layers handle their own layout updates. */

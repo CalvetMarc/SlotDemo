@@ -1,7 +1,7 @@
 import { Sprite } from 'pixi.js';
 import { bundle, View } from '../../../../Abstractions/view';
 
-export class BonusBackgroundView extends View {
+export class BonusLogoView extends View {
     private _sprite!: Sprite;
 
     bundleNeeded(): bundle {
@@ -9,7 +9,7 @@ export class BonusBackgroundView extends View {
     }
 
     appear(): void {
-        this._sprite = Sprite.from('bonus_bg_back');
+        this._sprite = Sprite.from('bonus_bg');
         this.addChild(this._sprite);
     }
 }

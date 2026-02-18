@@ -106,7 +106,6 @@
 	"format": "RGBA8888",
 	"size": {"w":1845,"h":1774},
 	"scale": "1",
-	"related_multi_packs": [ "chest_animated-1.json" ],
 	"smartupdate": "$TexturePacker:SmartUpdate:1c16e032b708cb27b393a858671051d2:3a3f94a16e6946ef87187bf86f81daed:f4c750ac5cdaf5b3b2a4df0b6148ebb0$"
 }
 }

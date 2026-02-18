@@ -15,9 +15,11 @@ export class ChestView extends View {
     appear(): void {
         const sheet0 = Assets.get('chest_animated_0');
         const sheet1 = Assets.get('chest_animated_1');
+        const getTexture = (name: string): Texture =>
+            sheet0.textures[name] ?? sheet1.textures[name];
 
         // Closed state: first frame of the animation
-        this._closedSprite = new Sprite(sheet0.textures['chest_01.png']);
+        this._closedSprite = new Sprite(getTexture('chest_01.png'));
         this._closedSprite.anchor.set(0.5);
         this.addChild(this._closedSprite);
 
@@ -25,7 +27,7 @@ export class ChestView extends View {
         const frames: Texture[] = [];
         for (let i = 1; i <= 23; i++) {
             const name = `chest_${i.toString().padStart(2, '0')}.png`;
-            const tex = sheet0.textures[name] ?? sheet1.textures[name];
+            const tex = getTexture(name);
             if (tex) frames.push(tex);
         }
 
