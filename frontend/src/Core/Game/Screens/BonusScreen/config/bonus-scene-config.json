@@ -47,7 +47,7 @@
         "default": {
           "anchor": "center",
           "origin": { "x": 0.5, "y": 0.9 },
-          "offset": { "x": "-14w%", "y": "11h%" },
+          "offset": { "x": "-11.3w%", "y": "10.5h%" },
           "scale": { "x": 0.7, "y": 0.7 }
         }
       }
@@ -60,7 +60,7 @@
         "default": {
           "anchor": "center",
           "origin": { "x": 0.5, "y": 0.9 },
-          "offset": { "x": "14w%", "y": "11h%" },
+          "offset": { "x": "11.3w%", "y": "10.5h%" },
           "scale": { "x": 0.7, "y": 0.7 }
         }
       }
@@ -86,7 +86,7 @@
         "default": {
           "anchor": "center",
           "origin": { "x": 0.5, "y": 0.9 },
-          "offset": { "x": "-28w%", "y": "36h%" },
+          "offset": { "x": "-25w%", "y": "36h%" },
           "scale": { "x": 0.8, "y": 0.8 }
         }
       }
@@ -99,7 +99,7 @@
         "default": {
           "anchor": "center",
           "origin": { "x": 0.5, "y": 0.9 },
-          "offset": { "x": "28w%", "y": "36h%" },
+          "offset": { "x": "25w%", "y": "36h%" },
           "scale": { "x": 0.8, "y": 0.8 }
         }
       }
