@@ -63,10 +63,11 @@ export class BonusScreen extends GameScreen {
         this._isPicking = true;
 
         try {
-            const data = await ApiClient.post<BonusPickResponse>('/api/bonus/pick', { chestIndex: index });
-
-            // Play chest open animation
-            await this._chests[index].playOpen();
+            // Fire API call and open animation in parallel
+            const [data] = await Promise.all([
+                ApiClient.post<BonusPickResponse>('/api/bonus/pick', { chestIndex: index }),
+                this._chests[index].playOpen(),
+            ]);
 
             if (data.prize !== null) {
                 // Prize found — update counter
