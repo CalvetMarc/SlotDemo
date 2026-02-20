@@ -1,5 +1,10 @@
-import { AnimatedSprite, Assets, Sprite, Texture } from 'pixi.js';
+import { AnimatedSprite, Assets, ColorMatrixFilter, Rectangle, Sprite, Texture, Ticker } from 'pixi.js';
 import { bundle, View } from '../../../../Abstractions/view';
+
+const SHIMMER_INTERVAL = 3000;
+const SHIMMER_DURATION = 600;
+const HOVER_SCALE = 1.08;
+const HOVER_TWEEN_SPEED = 0.12;
 
 export class ChestView extends View {
     private _closedSprite!: Sprite;
@@ -7,6 +12,18 @@ export class ChestView extends View {
     private _isOpened = false;
     private _chestIndex = -1;
     private _onPick?: (index: number) => void;
+
+    // Hover scale — stored as multiplier over the layout-assigned base scale
+    private _isHovered = false;
+    private _currentHoverMul = 1;
+    private _baseScaleX = 1;
+    private _baseScaleY = 1;
+
+    // Glow / shimmer
+    private _glowFilter!: ColorMatrixFilter;
+    private _shimmerTimer = 0;
+    private _shimmerActive = false;
+    private _shimmerElapsed = 0;
 
     bundleNeeded(): bundle {
         return 'bonus';
@@ -38,10 +55,35 @@ export class ChestView extends View {
         this._openAnim.visible = false;
         this.addChild(this._openAnim);
 
+        // Glow filter for hover/shimmer
+        this._glowFilter = new ColorMatrixFilter();
+        this._glowFilter.enabled = false;
+        this.filters = [this._glowFilter];
+
+        // Hit area: shrink from full texture bounds by 138px sides, 155px top, 50px bottom
+        const tw = this._closedSprite.texture.width;
+        const th = this._closedSprite.texture.height;
+        const insetX = 138;
+        const insetTop = 155;
+        const insetBottom = 50;
+        this.hitArea = new Rectangle(
+            -tw / 2 + insetX,
+            -th / 2 + insetTop,
+            tw - insetX * 2,
+            th - insetTop - insetBottom,
+        );
+
         // Interactive
         this.eventMode = 'static';
         this.cursor = 'pointer';
         this.on('pointertap', this._handleTap, this);
+        this.on('pointerover', this._onPointerOver, this);
+        this.on('pointerout', this._onPointerOut, this);
+
+        // Stagger shimmer timer so they don't all flash at once
+        this._shimmerTimer = Math.random() * SHIMMER_INTERVAL;
+
+        Ticker.shared.add(this._onTick, this);
     }
 
     setup(chestIndex: number, onPick: (index: number) => void): void {
@@ -54,9 +96,18 @@ export class ChestView extends View {
         this.eventMode = 'static';
         this.cursor = 'pointer';
         this.alpha = 1;
+
+        this._baseScaleX = this.scale.x;
+        this._baseScaleY = this.scale.y;
+        this._currentHoverMul = 1;
+        this._isHovered = false;
+        this._glowFilter.enabled = false;
+        this._glowFilter.reset();
     }
 
     playOpen(): Promise<void> {
+        this._stopIdleEffects();
+
         return new Promise((resolve) => {
             this._isOpened = true;
             this.eventMode = 'none';
@@ -69,9 +120,77 @@ export class ChestView extends View {
     }
 
     disable(): void {
+        this._stopIdleEffects();
         this.eventMode = 'none';
         this.cursor = 'default';
         this.alpha = 0.5;
+    }
+
+    private _stopIdleEffects(): void {
+        this.scale.set(this._baseScaleX, this._baseScaleY);
+        this._currentHoverMul = 1;
+        this._glowFilter.enabled = false;
+        this._glowFilter.reset();
+        this._shimmerActive = false;
+    }
+
+    private _onTick(ticker: Ticker): void {
+        if (this._isOpened) return;
+
+        const dt = ticker.deltaMS;
+
+        // Hover scale — lerp towards target multiplier
+        const targetMul = this._isHovered ? HOVER_SCALE : 1;
+        this._currentHoverMul += (targetMul - this._currentHoverMul) * HOVER_TWEEN_SPEED;
+        this.scale.set(
+            this._baseScaleX * this._currentHoverMul,
+            this._baseScaleY * this._currentHoverMul,
+        );
+
+        // Shimmer pulse (periodic brightness flash)
+        this._shimmerTimer += dt;
+        if (!this._shimmerActive && this._shimmerTimer >= SHIMMER_INTERVAL) {
+            this._shimmerActive = true;
+            this._shimmerElapsed = 0;
+            this._shimmerTimer = 0;
+        }
+
+        if (this._shimmerActive) {
+            this._shimmerElapsed += dt;
+            const progress = this._shimmerElapsed / SHIMMER_DURATION;
+            if (progress >= 1) {
+                this._shimmerActive = false;
+                if (!this._isHovered) {
+                    this._glowFilter.enabled = false;
+                    this._glowFilter.reset();
+                }
+            } else {
+                const brightness = 1 + 0.25 * Math.sin(progress * Math.PI);
+                this._glowFilter.enabled = true;
+                this._glowFilter.reset();
+                this._glowFilter.brightness(brightness, false);
+            }
+        }
+
+        // Hover glow (steady brightness boost while hovered)
+        if (this._isHovered && !this._shimmerActive) {
+            this._glowFilter.enabled = true;
+            this._glowFilter.reset();
+            this._glowFilter.brightness(1.2, false);
+        }
+    }
+
+    private _onPointerOver(): void {
+        if (this._isOpened) return;
+        this._isHovered = true;
+    }
+
+    private _onPointerOut(): void {
+        this._isHovered = false;
+        if (!this._shimmerActive) {
+            this._glowFilter.enabled = false;
+            this._glowFilter.reset();
+        }
     }
 
     private _handleTap(): void {
@@ -80,6 +199,9 @@ export class ChestView extends View {
     }
 
     protected dispose(): void {
+        Ticker.shared.remove(this._onTick, this);
         this.off('pointertap', this._handleTap, this);
+        this.off('pointerover', this._onPointerOver, this);
+        this.off('pointerout', this._onPointerOut, this);
     }
 }
