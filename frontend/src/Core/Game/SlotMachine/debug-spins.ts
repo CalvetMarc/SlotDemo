@@ -39,6 +39,7 @@ export function createDebugLineWin(
         lineWins: [{ lineIndex, symbol, count: 5, payout }],
         wildCount,
         bonusTriggered: wildCount >= 3,
+        wildPay: 0,
     };
 }
 
@@ -62,6 +63,7 @@ export function createDebugBonusTrigger(): SpinResultWithWins {
         lineWins: [],
         wildCount,
         bonusTriggered: wildCount >= 3,
+        wildPay: 0,
     };
 }
 
@@ -74,7 +76,7 @@ export function createDebugTensionTest(): SpinResultWithWins {
         ['K.png', 'Q.png', 'J.png'],
     ];
     const wildCount = countWilds(grid);
-    return { grid, winAmount: 0, lineWins: [], wildCount, bonusTriggered: wildCount >= 3 };
+    return { grid, winAmount: 0, lineWins: [], wildCount, bonusTriggered: wildCount >= 3, wildPay: 0 };
 }
 
 export function createDebugWildLineWin(betAmount: number): SpinResultWithWins {
@@ -94,6 +96,7 @@ export function createDebugWildLineWin(betAmount: number): SpinResultWithWins {
         lineWins: [{ lineIndex: 0, symbol: '1.png', count: 5, payout }],
         wildCount,
         bonusTriggered: wildCount >= 3,
+        wildPay: 0,
     };
 }
 

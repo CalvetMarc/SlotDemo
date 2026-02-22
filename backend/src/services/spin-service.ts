@@ -39,28 +39,23 @@ const PAYLINES: readonly (readonly number[])[] = [
 
 const PAYLINE_COUNT = PAYLINES.length;
 
-/** Paytable: symbol → [x3, x4, x5] multipliers of betPerLine */
+/** Paytable: symbol → [x3, x4, x5] multipliers of totalBet */
 const PAYTABLE: ReadonlyMap<SymbolId, readonly [number, number, number]> = new Map([
-    ['Wild_01.png', [10, 34, 250]],
-    ['1.png', [9, 33, 168]],
-    ['2.png', [8, 25, 85]],
-    ['3.png', [7, 17, 51]],
-    ['A.png', [4, 9, 34]],
-    ['K.png', [3, 7, 25]],
-    ['Q.png', [2, 5, 17]],
-    ['J.png', [2, 4, 14]],
+    ['Wild_01.png', [0.50, 1.70, 12.50]],
+    ['1.png', [0.45, 1.65, 8.40]],
+    ['2.png', [0.40, 1.25, 4.25]],
+    ['3.png', [0.35, 0.85, 2.55]],
+    ['A.png', [0.20, 0.45, 1.70]],
+    ['K.png', [0.15, 0.35, 1.25]],
+    ['Q.png', [0.10, 0.25, 0.85]],
+    ['J.png', [0.10, 0.20, 0.70]],
 ]);
 
-/**
- * Bonus expected payout per trigger (multipliers of totalBet).
- * Based on pick-me mechanic: 5 chests, pick until empty.
- *   3 wilds: 2 empty, 3 prizes → E[picks]=1.0
- *   4 wilds: 1 empty, 4 prizes → E[picks]=2.0
- *   5 wilds: 0 empty, 5 prizes → E[picks]=5.0
- * Average prize per pick = BONUS_AVG_PRIZE_PER_PICK × totalBet
- */
-const BONUS_AVG_PRIZE_PER_PICK = 20;
-const BONUS_EXPECTED_PICKS: readonly [number, number, number] = [1.0, 2.0, 5.0];
+/** Wild pays: wildCount → multiplier of totalBet */
+const WILD_PAYS: Readonly<Record<number, number>> = { 3: 2, 4: 5, 5: 20 };
+
+/** Expected bonus chest payout per trigger (multipliers of totalBet) */
+const BONUS_EXPECTED_CHEST_EV: readonly [number, number, number] = [18, 35, 80];
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -70,6 +65,7 @@ export interface SpinServiceResult {
     lineWins: LineWin[];
     wildCount: number;
     bonusTriggered: boolean;
+    wildPay: number;
 }
 
 // ── Win evaluation ──────────────────────────────────────────
@@ -77,7 +73,7 @@ export interface SpinServiceResult {
 function evaluatePayline(
     grid: SymbolId[][],
     payline: readonly number[],
-    betPerLine: number,
+    totalBet: number,
 ): { symbol: SymbolId; count: number; payout: number } | null {
     const symbols: SymbolId[] = [];
     for (let reel = 0; reel < REEL_COUNT; reel++) {
@@ -113,7 +109,7 @@ function evaluatePayline(
     const pays = PAYTABLE.get(baseSymbol);
     if (!pays) return null;
 
-    const payout = pays[count - 3] * betPerLine;
+    const payout = Math.round(pays[count - 3] * totalBet * 100) / 100;
     return { symbol: baseSymbol, count, payout };
 }
 
@@ -129,23 +125,28 @@ function countWilds(grid: SymbolId[][]): number {
     return count;
 }
 
-/** Expected bonus payout for RTP calculation purposes */
+function evaluateWildPay(wildCount: number, totalBet: number): number {
+    const mult = WILD_PAYS[wildCount];
+    if (!mult) return 0;
+    return Math.round(mult * totalBet * 100) / 100;
+}
+
+/** Expected bonus chest payout for RTP calculation (wild pay tracked separately) */
 export function bonusExpectedPayout(wildCount: number, totalBet: number): number {
     if (wildCount < 3) return 0;
     const tier = Math.min(wildCount - 3, 2);
-    return BONUS_EXPECTED_PICKS[tier] * BONUS_AVG_PRIZE_PER_PICK * totalBet;
+    return BONUS_EXPECTED_CHEST_EV[tier] * totalBet;
 }
 
 export function evaluateWin(
     grid: SymbolId[][],
-    betPerLine: number,
-): { lineWins: LineWin[]; wildCount: number; bonusTriggered: boolean; totalWin: number; bonusExpected: number } {
-    const totalBet = betPerLine * PAYLINE_COUNT;
+    totalBet: number,
+): { lineWins: LineWin[]; wildCount: number; bonusTriggered: boolean; totalWin: number; wildPay: number } {
     const lineWins: LineWin[] = [];
 
     // Evaluate paylines
     for (let i = 0; i < PAYLINE_COUNT; i++) {
-        const result = evaluatePayline(grid, PAYLINES[i], betPerLine);
+        const result = evaluatePayline(grid, PAYLINES[i], totalBet);
         if (result) {
             lineWins.push({
                 lineIndex: i,
@@ -156,20 +157,20 @@ export function evaluateWin(
         }
     }
 
-    // Evaluate wilds (bonus trigger)
+    // Evaluate wilds (bonus trigger + wild pay)
     const wildCount = countWilds(grid);
     const bonusTriggered = wildCount >= 3;
+    const wildPay = evaluateWildPay(wildCount, totalBet);
 
-    // Line wins are immediate; bonus payout comes later from pick-me game
     const lineTotalWin = lineWins.reduce((sum, lw) => sum + lw.payout, 0);
-    const bonusExpected = bonusExpectedPayout(wildCount, totalBet);
+    const totalWin = lineTotalWin + wildPay;
 
-    return { lineWins, wildCount, bonusTriggered, totalWin: lineTotalWin, bonusExpected };
+    return { lineWins, wildCount, bonusTriggered, totalWin, wildPay };
 }
 
 // ── Spin generation ─────────────────────────────────────────
 
-export function generateSpin(betPerLine: number): SpinServiceResult {
+export function generateSpin(totalBet: number): SpinServiceResult {
     const grid: SymbolId[][] = [];
 
     for (let r = 0; r < REEL_COUNT; r++) {
@@ -184,9 +185,9 @@ export function generateSpin(betPerLine: number): SpinServiceResult {
         grid.push(column);
     }
 
-    const { lineWins, wildCount, bonusTriggered, totalWin } = evaluateWin(grid, betPerLine);
+    const { lineWins, wildCount, bonusTriggered, totalWin, wildPay } = evaluateWin(grid, totalBet);
 
-    return { grid, winAmount: totalWin, lineWins, wildCount, bonusTriggered };
+    return { grid, winAmount: totalWin, lineWins, wildCount, bonusTriggered, wildPay };
 }
 
 /**
@@ -207,5 +208,5 @@ export function generateInitialGrid(): SymbolId[][] {
 
 // ── Exports for RTP calculator ──────────────────────────────
 
-export { REEL_STRIPS, REEL_COUNT, VISIBLE_ROWS, SYMBOL_IDS, PAYLINE_COUNT, PAYLINES, BONUS_AVG_PRIZE_PER_PICK, BONUS_EXPECTED_PICKS };
+export { REEL_STRIPS, REEL_COUNT, VISIBLE_ROWS, SYMBOL_IDS, PAYLINE_COUNT, PAYLINES, WILD_PAYS };
 export type { SymbolId, LineWin };

@@ -1,5 +1,3 @@
-import { BONUS_AVG_PRIZE_PER_PICK, BONUS_EXPECTED_PICKS } from './spin-service.js';
-
 export interface ChestData {
     prize: number | null; // null = empty (skull)
 }
@@ -14,9 +12,9 @@ export interface BonusState {
 }
 
 const PRIZE_POOLS: readonly (readonly number[])[] = [
-    [10, 20, 30],           // 3 wilds — 3 prizes (avg=20)
-    [10, 15, 25, 30],       // 4 wilds — 4 prizes (avg=20)
-    [10, 15, 20, 25, 30],   // 5 wilds — 5 prizes (avg=20)
+    [8, 18, 28],            // 3 wilds — 3 prizes
+    [8, 15, 20, 27],        // 4 wilds — 4 prizes
+    [8, 10, 15, 20, 27],    // 5 wilds — 5 prizes
 ];
 
 const EMPTY_COUNTS = [2, 1, 0]; // skulls per tier

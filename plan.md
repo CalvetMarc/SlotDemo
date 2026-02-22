@@ -13,8 +13,7 @@ Add 20 paylines, paytable, and win evaluation to achieve ~96% RTP with medium vo
 | K.png | Low 2 | 2-3 |
 | Q.png | Low 3 | 3 |
 | J.png | Low 4 (lowest) | 2-3 |
-| Scatter | Special (reels 1,3,5) | 1 |
-| Wild | Substitutes all except Scatter (reels 2,4) | 1 |
+| Wild | Substitutes all + triggers bonus (3+) | 1 |
 
 ## 20 Payline Patterns (row: 0=top, 1=mid, 2=bottom)
 ```
@@ -53,10 +52,10 @@ Pays for matching N consecutive symbols left-to-right:
 | Q.png | 6 | 15 | 50 |
 | J.png | 5 | 10 | 40 |
 
-Scatter (pays on total bet, not per line, 3+ anywhere):
+Wild Pay (pays on total bet, not per line, 3+ wilds anywhere):
 | x3 | x4 | x5 |
 |-----|-----|------|
-| 5x | 20x | 100x |
+| 2x | 5x | 20x |
 
 *These are starting values — will be tuned by the RTP calculator.*
 
@@ -68,23 +67,23 @@ Scatter (pays on total bet, not per line, 3+ anywhere):
 - Add `PAYTABLE` map (symbol → [x3, x4, x5] multipliers)
 - Add `evaluateWin(grid, betPerLine)` function:
   - For each payline: get 5 symbols, count consecutive matching (left-to-right, wild substitutes)
-  - For scatter: count total scatters in grid, lookup scatter pay
-  - Return `{ totalWin, lineWins: [{lineIndex, symbolId, count, payout}], scatterWin }`
+  - For wild pay: count total wilds in grid, lookup wild pay
+  - Return `{ totalWin, lineWins: [{lineIndex, symbolId, count, payout}], wildPay }`
 - Update `generateSpin()` to call `evaluateWin()` and return win details
 
 ### Step 2: Backend — RTP calculator script
 **New file: `backend/src/scripts/rtp-calculator.ts`**
 - Brute-force all 20^5 = 3,200,000 stop combinations
-- For each: build grid, evaluate all paylines + scatter
+- For each: build grid, evaluate all paylines + wild pay
 - Calculate RTP = totalPayouts / (totalCombinations × 20)
-- Print RTP breakdown per symbol and scatter
+- Print RTP breakdown per symbol and wild pay
 - Run with: `npx tsx backend/src/scripts/rtp-calculator.ts`
 - Iterate paytable values until ~96% RTP
 
 ### Step 3: Update API response types
 **Files: `frontend/src/shared/types.ts` + `shared/types.ts`**
 - Add `LineWin` type: `{ lineIndex, symbol, count, payout }`
-- Update `SpinResponse` to include `lineWins` and `scatterWin`
+- Update `SpinResponse` to include `lineWins` and `wildPay`
 
 ### Step 4: Backend — Update spin route
 **File: `backend/src/routes/spin.ts`**
@@ -104,4 +103,4 @@ Scatter (pays on total bet, not per line, 3+ anywhere):
 - Payline highlight animations
 - Win celebration effects
 - Info/paytable screen UI
-- Free spins bonus on scatter
+- Free spins bonus on wild trigger

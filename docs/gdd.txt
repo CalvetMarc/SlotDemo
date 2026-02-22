@@ -1,0 +1,280 @@
+================================================================================
+  SLOT DEMO — GAME DESIGN DOCUMENT (GDD)
+  Diseno matematico del juego
+================================================================================
+
+INDICE
+------
+  1. Parametros del motor
+  2. Paytable de lineas (x totalBet)
+  3. Wild Pay (pago por aparicion en grid)
+  4. Bonus: cofres con multiplicadores
+  5. Buy Bonus
+  6. Desglose completo del RTP
+  7. Ejemplo completo (totalBet = 1.00 EUR)
+
+
+================================================================================
+1. PARAMETROS DEL MOTOR
+================================================================================
+
+  Parametro                 Valor
+  ---------                 -----
+  Reels                     5
+  Filas visibles            3
+  Posiciones por tira       20
+  Paylines activas          20 (fijas, siempre activas)
+  Total combinaciones       20^5 = 3,200,000
+  RTP objetivo              96.12%
+  Hit Rate                  46.64%
+
+  Simbolos (8 en total):
+    Premium:  King (1.png), Queen (2.png), Wolf (3.png)
+    Low:      A, K, Q, J
+    Especial: Wild (Wild_01.png) — sustituye a todos en lineas,
+              3+ en grid activan Wild Pay + Bonus
+
+  Wild aparece 1x por reel → P(wild visible en reel) = 3/20
+
+  Probabilidades de wilds en el grid (distribucion binomial, n=5, p=3/20):
+
+  Wilds   Combinaciones (de 3,200,000)   Probabilidad
+  -----   ---------------------------   ------------
+  3       78,030                         2.4384%
+  4        6,885                         0.2152%
+  5          243                         0.0076%
+
+
+================================================================================
+2. PAYTABLE DE LINEAS (x totalBet)
+================================================================================
+
+  Todos los multiplicadores son sobre totalBet (apuesta total del giro).
+  Se requieren 3+ simbolos consecutivos de izquierda a derecha en una payline.
+  Wild sustituye a cualquier simbolo en las lineas.
+
+  Simbolo         x3      x4      x5
+  -----------     -----   -----   ------
+  Wild            0.50    1.70    12.50
+  1.png (King)    0.45    1.65     8.40
+  2.png (Queen)   0.40    1.25     4.25
+  3.png (Wolf)    0.35    0.85     2.55
+  A.png           0.20    0.45     1.70
+  K.png           0.15    0.35     1.25
+  Q.png           0.10    0.25     0.85
+  J.png           0.10    0.20     0.70
+
+  Nota: si todos los simbolos de la cadena son Wild, paga como Wild.
+  El pago de Wild en linea es independiente del Wild Pay (seccion 3).
+
+  Desglose Line RTP por simbolo (brute-force 3.2M combinaciones):
+
+  Combinacion          Hits        RTP
+  -----------          ----        ----
+  1.png x3             403,200     5.6700%
+  1.png x5              20,460     5.3708%
+  1.png x4              81,600     4.2075%
+  2.png x3             300,800     3.7600%
+  3.png x3             319,600     3.4956%
+  2.png x4              61,120     2.3875%
+  2.png x5              15,340     2.0373%
+  A.png x3             238,000     1.4875%
+  J.png x3             403,200     1.2600%
+  Q.png x3             403,200     1.2600%
+  3.png x4              45,760     1.2155%
+  K.png x3             224,000     1.0500%
+  3.png x5              11,500     0.9164%
+  Q.png x4              81,600     0.6375%
+  Q.png x5              20,460     0.5435%
+  J.png x4              86,700     0.5419%
+  A.png x4              36,380     0.5116%
+  K.png x4              45,760     0.5005%
+  K.png x5              11,500     0.4492%
+  A.png x5               6,460     0.3432%
+  J.png x5              15,340     0.3356%
+  Wild x5                   20     0.0078%
+  -------------------------------------------
+  TOTAL LINE RTP                  37.9888%
+
+
+================================================================================
+3. WILD PAY (pago por aparicion en grid)
+================================================================================
+
+  Cuando aparecen 3+ Wilds en cualquier posicion del grid, se cobra un
+  pago adicional (independiente de las lineas) antes de entrar al bonus.
+
+  Wilds en grid   Wild Pay (x totalBet)
+  -------------   ---------------------
+  3               2x
+  4               5x
+  5               20x
+
+  Wild Pay RTP:
+    = (78,030 x 2 + 6,885 x 5 + 243 x 20) / 3,200,000
+    = (156,060 + 34,425 + 4,860) / 3,200,000
+    = 195,345 / 3,200,000
+    = 6.1045%
+
+  Desglose:
+    3 wilds:  78,030 x 2  / 3,200,000 = 4.8769%
+    4 wilds:   6,885 x 5  / 3,200,000 = 1.0758%
+    5 wilds:     243 x 20 / 3,200,000 = 0.1519%
+
+
+================================================================================
+4. BONUS: COFRES CON MULTIPLICADORES
+================================================================================
+
+  Se activa con 3+ Wilds en el grid. El tier del bonus depende del
+  numero de Wilds que activaron el trigger.
+
+  Estructura: siempre 5 cofres. Calavera = fin del bonus.
+  5 Wilds = premio garantizado (sin calaveras).
+
+  Tier  Wilds  Cofres premio  Calaveras  Multiplicadores (x totalBet)
+  ----  -----  -------------  ---------  ----------------------------
+  0     3      3              2          8x, 18x, 28x
+  1     4      4              1          8x, 15x, 20x, 27x
+  2     5      5              0          8x, 10x, 15x, 20x, 27x
+
+  Mecanica: el jugador elige cofres uno a uno. Si abre una calavera,
+  el bonus termina. Si abre todos los premios, el bonus termina.
+  Los cofres se barajan aleatoriamente al inicio.
+
+  Calculo de E[picks] y EV por tier:
+
+  TIER 0 (3 premios, 2 calaveras):
+    Distribucion de resultados:
+      P(0 premios) = 2/5 = 40%
+      P(1 premio)  = 3/10 = 30%
+      P(2 premios) = 2/10 = 20%
+      P(3 premios) = 1/10 = 10%
+    E[picks] = 0x0.4 + 1x0.3 + 2x0.2 + 3x0.1 = 1.0
+    P(premio_i cobrado) = 1/3
+    EV = pool/3 = 54/3 = 18x totalBet
+
+  TIER 1 (4 premios, 1 calavera):
+    Distribucion de resultados:
+      P(0 premios) = 1/5 = 20%
+      P(1 premio)  = 1/5 = 20%
+      P(2 premios) = 1/5 = 20%
+      P(3 premios) = 1/5 = 20%
+      P(4 premios) = 1/5 = 20%
+    E[picks] = (0+1+2+3+4)/5 = 2.0
+    P(premio_i cobrado) = 1/2
+    EV = pool/2 = 70/2 = 35x totalBet
+
+  TIER 2 (5 premios, 0 calaveras):
+    100% cobra todos los premios
+    E[picks] = 5.0
+    EV = pool = 80x totalBet
+
+  Bonus RTP:
+    = (78,030 x 18 + 6,885 x 35 + 243 x 80) / 3,200,000
+    = (1,404,540 + 240,975 + 19,440) / 3,200,000
+    = 1,664,955 / 3,200,000
+    = 52.0298%
+
+  Desglose:
+    Bonus 3 wilds:  78,030 x 18 / 3,200,000 = 43.8919%
+    Bonus 4 wilds:   6,885 x 35 / 3,200,000 =  7.5305%
+    Bonus 5 wilds:     243 x 80 / 3,200,000 =  0.6075%
+
+
+================================================================================
+5. BUY BONUS
+================================================================================
+
+  El Buy Bonus permite acceder directamente al wild pay + bonus sin
+  necesidad de hacer un giro base. El precio incluye una prima sobre
+  el EV esperado (RTP del buy = 95.24%).
+
+  Opcion   Simula    EV total (wild pay+bonus)  Precio (x totalBet)  RTP Buy
+  ------   ------    -------------------------  -------------------  -------
+  Tier 1   3 Wilds   2 + 18 = 20x               21x                  95.24%
+  Tier 2   4 Wilds   5 + 35 = 40x               42x                  95.24%
+  Tier 3   5 Wilds   20 + 80 = 100x             105x                 95.24%
+
+  Formula precio: EV / 0.9524
+  RTP Buy Bonus: 95.24% — ligeramente inferior al RTP base (96.12%)
+  como prima por conveniencia de acceso directo al bonus.
+
+
+================================================================================
+6. DESGLOSE COMPLETO DEL RTP
+================================================================================
+
+  Componente          Calculo                             RTP
+  ----------------    ---------------------------------   ---------
+  Lineas              (brute-force 3.2M combos)           37.9888%
+  Wild Pay 3W         78,030 x 2  / 3,200,000             4.8769%
+  Wild Pay 4W          6,885 x 5  / 3,200,000             1.0758%
+  Wild Pay 5W            243 x 20 / 3,200,000             0.1519%
+  WILD PAY SUBTOTAL                                        6.1045%
+  Bonus 3W            78,030 x 18 / 3,200,000            43.8919%
+  Bonus 4W             6,885 x 35 / 3,200,000             7.5305%
+  Bonus 5W               243 x 80 / 3,200,000             0.6075%
+  BONUS SUBTOTAL                                          52.0298%
+  ---------------------------------------------------------------
+  TOTAL               37.9888 + 6.1045 + 52.0298       = 96.1232%
+
+  Hit Rate:           46.64% (calculado por brute-force exacto)
+
+
+================================================================================
+7. EJEMPLO COMPLETO — totalBet = 1.00 EUR
+================================================================================
+
+  Grid resultante del giro:
+
+    Reel     1        2        3        4        5
+    Top:     Queen    Wolf     King     Ace      Jack
+    Mid:     King     King     WILD     King     Queen
+    Bot:     Wolf     WILD     Ace      WILD     King
+
+  3 Wilds en el grid (Reel2-Bot, Reel3-Mid, Reel4-Bot).
+
+  --- Paso 1: Lineas ---
+
+  Payline 1 [1,1,1,1,1] (fila central): King, King, Wild, King, Queen
+    Base: King (primer no-wild)
+    Consecutivos: King, King, Wild(=King), King = 4 consecutivos
+    Queen rompe la cadena
+    Pago: King x4 = 1.65 x 1.00 = 1.65 EUR
+
+  (Resto de paylines: sin mas coincidencias de x3+ en este ejemplo)
+
+  Total lineas = 1.65 EUR
+
+  --- Paso 2: Wild Pay ---
+
+  3 Wilds en grid -> wild pay: 2 x 1.00 = 2.00 EUR
+
+  --- Paso 3: Bonus (Tier 0) ---
+
+  Se activa por 3 Wilds.
+  Cofres (mezclados al azar): [8x, 18x, 28x, skull, skull]
+
+  Pick   Cofre    Resultado        Acumulado
+  ----   -----    ---------        ---------
+  1      #3       18x = 18.00 EUR  18.00 EUR
+  2      #5       SKULL            GAME OVER
+
+  Total bonus = 18.00 EUR
+
+  --- Resumen ---
+
+  Concepto                 Importe
+  --------                 -------
+  Lineas                    1.65 EUR
+  Wild Pay (3 Wilds)        2.00 EUR
+  Bonus (1 cofre abierto)  18.00 EUR
+  TOTAL GANADO             21.65 EUR
+  Apuesta (totalBet)        1.00 EUR
+  MULTIPLICADOR TIRADA     21.65x
+
+
+================================================================================
+  FIN DEL DOCUMENTO
+================================================================================

@@ -1,6 +1,7 @@
 import { ButtonView } from "../../Abstractions/button-view";
 import { bundle } from "../../Abstractions/view";
 import { Text, TextStyle, Graphics, Ticker } from "pixi.js";
+import { gameSignals } from "../../Signals/game-signals";
 
 export class BuyBonusButtonView extends ButtonView {
     private background!: Graphics;
@@ -66,7 +67,7 @@ export class BuyBonusButtonView extends ButtonView {
     }
 
     onMouseClick(): void {
-        // TODO: Open buy bonus modal
+        gameSignals.buyBonusPressed.emit();
     }
 
     private updateRainbow(): void {

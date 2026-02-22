@@ -10,7 +10,7 @@ These keyboard shortcuts are handled in `src/Core/Game/Screens/BaseScreen/views/
 - `6`: Force line 6 win with symbol `K.png`
 - `7`: Force line 7 win with symbol `A.png`
 - `8`: Force line 1 win with symbol `Wild_01.png`
-- `9`: Force bonus trigger (3 scatters, no line win)
+- `9`: Force bonus trigger (3 wilds, no line win)
 
 Notes:
 - Shortcuts are ignored while reels are spinning.

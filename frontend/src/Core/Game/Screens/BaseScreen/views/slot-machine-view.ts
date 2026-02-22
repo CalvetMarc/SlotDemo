@@ -6,8 +6,9 @@ import {
     SpinResultWithWins,
 } from '../../../SlotMachine/spin-result-provider';
 import { gameSignals } from '../../../../Signals/game-signals';
-import type { SymbolId } from '@shared/types';
+import type { SymbolId, BuyBonusResponse } from '@shared/types';
 import { SYMBOL_IDS, REEL_COUNT, VISIBLE_ROWS } from '@shared/types';
+import { ApiClient } from '../../../../Services/api-client';
 import { CELL_SIZE, GRID_WIDTH, GRID_HEIGHT, REEL_STOP_INTERVAL } from '../../../SlotMachine/slot-config';
 import { SessionManager } from '../../../SlotMachine/session-manager';
 import { createDebugKeyHandler } from '../../../SlotMachine/debug-spins';
@@ -27,6 +28,7 @@ export class SlotMachineView extends View {
     private _debugWinTimeout?: ReturnType<typeof setTimeout>;
     private _winPresentationTimeout?: ReturnType<typeof setTimeout>;
     private _unsubscribeSpin?: () => void;
+    private _unsubscribeBuyBonus?: () => void;
     private _debugCleanup?: () => void;
 
     private _spinController!: SpinController;
@@ -132,6 +134,10 @@ export class SlotMachineView extends View {
             this._spinController.startSpin().catch(err => console.error('Spin failed:', err));
         });
 
+        this._unsubscribeBuyBonus = gameSignals.buyBonusConfirmed.connect(({ tier }) => {
+            this._handleBuyBonus(tier).catch(err => console.error('Buy bonus failed:', err));
+        });
+
         this._debugCleanup = createDebugKeyHandler({
             getIsSpinning: () => this._spinController.isSpinning,
             getBetAmount: () => this._spinController.getBetAmount(),
@@ -147,6 +153,7 @@ export class SlotMachineView extends View {
     protected dispose(): void {
         Ticker.shared.remove(this._onTick, this);
         this._unsubscribeSpin?.();
+        this._unsubscribeBuyBonus?.();
         this._debugCleanup?.();
         this._clearAll();
         this._spinController.dispose();
@@ -186,7 +193,8 @@ export class SlotMachineView extends View {
         if (result.bonusTriggered) {
             this._winController.setupBonus(result);
             if (!isTension) {
-                this._showDebugWin(`BONUS! ${result.wildCount} wilds`);
+                const wildPayMsg = result.wildPay > 0 ? ` +${result.wildPay.toFixed(2)}€ wild pay` : '';
+                this._showDebugWin(`BONUS! ${result.wildCount} wilds${wildPayMsg}`);
             }
         }
 
@@ -210,11 +218,38 @@ export class SlotMachineView extends View {
         }
     }
 
+    // ── Buy Bonus ─────────────────────────────────────────────────
+
+    private async _handleBuyBonus(tier: number): Promise<void> {
+        if (GameModel.isSpinning) return;
+
+        try {
+            const data = await ApiClient.post<BuyBonusResponse>('/api/bonus/buy', {
+                betAmount: GameModel.betAmount,
+                tier,
+            });
+
+            GameModel.setBalance(data.balance);
+            const wildPayMsg = data.wildPay > 0 ? ` +${data.wildPay.toFixed(2)}€ wild pay` : '';
+            this._showDebugWin(`BUY BONUS T${data.tier}! ${data.wildCount} wilds${wildPayMsg}`);
+            gameSignals.requestBonusTransition.emit();
+        } catch (err) {
+            console.error('Buy bonus request failed:', err);
+        }
+    }
+
     // ── Helpers ──────────────────────────────────────────────────
 
     private _emitResultSignals(result: SpinResultWithWins): void {
         if (result.winAmount > 0) {
-            this._showDebugWin(`WIN ${result.winAmount.toFixed(2)}€`);
+            const lineWin = result.winAmount - result.wildPay;
+            if (lineWin > 0 && result.wildPay > 0) {
+                this._showDebugWin(`WIN ${result.winAmount.toFixed(2)}€ (wild pay +${result.wildPay.toFixed(2)})`);
+            } else if (result.wildPay > 0) {
+                this._showDebugWin(`WILD PAY ${result.wildPay.toFixed(2)}€`);
+            } else {
+                this._showDebugWin(`WIN ${result.winAmount.toFixed(2)}€`);
+            }
         } else if (result.bonusTriggered) {
             this._showDebugWin(`BONUS! ${result.wildCount} wilds`);
         }

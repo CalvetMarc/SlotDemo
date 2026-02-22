@@ -151,6 +151,6 @@ export class SpinController {
             grid.push(column);
         }
         const wildCount = countWilds(grid);
-        return { grid, winAmount: 0, lineWins: [], wildCount, bonusTriggered: wildCount >= 3 };
+        return { grid, winAmount: 0, lineWins: [], wildCount, bonusTriggered: wildCount >= 3, wildPay: 0 };
     }
 }

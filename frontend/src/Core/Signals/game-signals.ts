@@ -8,6 +8,12 @@ export const gameSignals = {
     /** Fired when the player presses the spin button. */
     spinPressed: new Signal<void>(),
 
+    /** Fired when the player presses the buy bonus button. */
+    buyBonusPressed: new Signal<void>(),
+
+    /** Fired when the player confirms a buy bonus tier. */
+    buyBonusConfirmed: new Signal<{ tier: number }>(),
+
     // ── Screen transitions ────────────────────────────────────────
 
     /** Fired when a view requests transition to the bonus screen. */

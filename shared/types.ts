@@ -37,6 +37,19 @@ export interface SpinResponse {
     lineWins: LineWin[];
     wildCount: number;
     bonusTriggered: boolean;
+    wildPay: number;
+}
+
+export interface BuyBonusRequest {
+    betAmount: number;
+    tier: number; // 1, 2, or 3
+}
+
+export interface BuyBonusResponse {
+    balance: number;
+    tier: number;
+    wildPay: number;
+    wildCount: number;
 }
 
 export interface BonusStartResponse {

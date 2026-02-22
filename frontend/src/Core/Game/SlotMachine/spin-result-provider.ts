@@ -8,6 +8,7 @@ export interface SpinResultWithWins extends SpinResult {
     lineWins: LineWin[];
     wildCount: number;
     bonusTriggered: boolean;
+    wildPay: number;
 }
 
 export interface ISpinResultProvider {
@@ -25,6 +26,7 @@ export class RemoteSpinResultProvider implements ISpinResultProvider {
             lineWins: data.lineWins,
             wildCount: data.wildCount,
             bonusTriggered: data.bonusTriggered,
+            wildPay: data.wildPay ?? 0,
         };
     }
 }
@@ -39,6 +41,6 @@ export class LocalSpinResultProvider implements ISpinResultProvider {
             }
             grid.push(column);
         }
-        return { grid, winAmount: 0, lineWins: [], wildCount: 0, bonusTriggered: false };
+        return { grid, winAmount: 0, lineWins: [], wildCount: 0, bonusTriggered: false, wildPay: 0 };
     }
 }

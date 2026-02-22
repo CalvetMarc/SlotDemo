@@ -42,9 +42,7 @@ router.post('/', authMiddleware, async (req, res) => {
 
         const balanceAfterBet = parseFloat(deducted[0].balance);
 
-        // Generate spin result (betPerLine = betAmount / 20 paylines)
-        const betPerLine = betAmount / 20;
-        const { grid, winAmount, lineWins, wildCount, bonusTriggered } = generateSpin(betPerLine);
+        const { grid, winAmount, lineWins, wildCount, bonusTriggered, wildPay } = generateSpin(betAmount);
         const newBalance = balanceAfterBet + winAmount;
 
         if (bonusTriggered) {
@@ -61,7 +59,7 @@ router.post('/', authMiddleware, async (req, res) => {
             `;
         }
 
-        res.json({ grid, balance: newBalance, winAmount, lineWins, wildCount, bonusTriggered });
+        res.json({ grid, balance: newBalance, winAmount, lineWins, wildCount, bonusTriggered, wildPay });
     } catch (err) {
         console.error('Spin failed:', err);
         res.status(500).json({ error: 'Spin request failed' });
