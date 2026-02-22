@@ -1,7 +1,8 @@
 import { AnimatedSprite, Assets, ColorMatrixFilter, Rectangle, Sprite, Texture, Ticker } from 'pixi.js';
 import { bundle, View } from '../../../../Abstractions/view';
 
-const SHIMMER_INTERVAL = 3000;
+const SHIMMER_INTERVAL_MIN = 2000;
+const SHIMMER_INTERVAL_MAX = 5000;
 const SHIMMER_DURATION = 600;
 const HOVER_SCALE = 1.08;
 const HOVER_TWEEN_SPEED = 0.25;
@@ -22,6 +23,7 @@ export class ChestView extends View {
     // Glow / shimmer
     private _glowFilter!: ColorMatrixFilter;
     private _shimmerTimer = 0;
+    private _shimmerNextInterval = 0;
     private _shimmerActive = false;
     private _shimmerElapsed = 0;
 
@@ -81,7 +83,8 @@ export class ChestView extends View {
         this.on('pointerout', this._onPointerOut, this);
 
         // Stagger shimmer timer so they don't all flash at once
-        this._shimmerTimer = Math.random() * SHIMMER_INTERVAL;
+        this._shimmerNextInterval = this._randomShimmerInterval();
+        this._shimmerTimer = Math.random() * this._shimmerNextInterval;
 
         Ticker.shared.add(this._onTick, this);
     }
@@ -149,10 +152,11 @@ export class ChestView extends View {
 
         // Shimmer pulse (periodic brightness flash)
         this._shimmerTimer += dt;
-        if (!this._shimmerActive && this._shimmerTimer >= SHIMMER_INTERVAL) {
+        if (!this._shimmerActive && this._shimmerTimer >= this._shimmerNextInterval) {
             this._shimmerActive = true;
             this._shimmerElapsed = 0;
             this._shimmerTimer = 0;
+            this._shimmerNextInterval = this._randomShimmerInterval();
         }
 
         if (this._shimmerActive) {
@@ -178,6 +182,10 @@ export class ChestView extends View {
             this._glowFilter.reset();
             this._glowFilter.brightness(1.2, false);
         }
+    }
+
+    private _randomShimmerInterval(): number {
+        return SHIMMER_INTERVAL_MIN + Math.random() * (SHIMMER_INTERVAL_MAX - SHIMMER_INTERVAL_MIN);
     }
 
     private _onPointerOver(): void {
