@@ -12,9 +12,9 @@ export interface BonusState {
 }
 
 const PRIZE_POOLS: readonly (readonly number[])[] = [
-    [8, 18, 28],            // 3 wilds — 3 prizes
-    [8, 15, 20, 27],        // 4 wilds — 4 prizes
-    [8, 10, 15, 20, 27],    // 5 wilds — 5 prizes
+    [25, 75, 125],           // 3 wilds — 3 prizes, pool=225, EV=75x
+    [30, 60, 90, 120],       // 4 wilds — 4 prizes, pool=300, EV=150x
+    [20, 40, 60, 80, 100],   // 5 wilds — 5 prizes, pool=300, EV=300x
 ];
 
 const EMPTY_COUNTS = [2, 1, 0]; // skulls per tier

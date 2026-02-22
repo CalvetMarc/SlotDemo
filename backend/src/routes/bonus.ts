@@ -100,10 +100,11 @@ router.post('/pick', authMiddleware, async (req, res) => {
     }
 });
 
-/** Buy bonus: skip base game, go straight to bonus for a fixed price */
-const BUY_BONUS_PRICES: readonly [number, number, number] = [21, 42, 105]; // × totalBet
-const BUY_BONUS_WILDS: readonly [number, number, number] = [3, 4, 5];
-const BUY_BONUS_WILD_PAY: readonly [number, number, number] = [2, 5, 20]; // × totalBet
+/** Buy bonus: skip base game, go straight to bonus for a fixed price.
+ *  Tier 3 (5 wilds) is not offered — 0 skulls makes it deterministic (always 383x for 403x cost). */
+const BUY_BONUS_PRICES: readonly [number, number] = [88, 180]; // × totalBet
+const BUY_BONUS_WILDS: readonly [number, number] = [3, 4];
+const BUY_BONUS_WILD_PAY: readonly [number, number] = [8, 21]; // × totalBet
 
 router.post('/buy', authMiddleware, async (req, res) => {
     const sessionId = (req as AuthRequest).sessionId;
@@ -113,8 +114,8 @@ router.post('/buy', authMiddleware, async (req, res) => {
         res.status(400).json({ error: 'betAmount must be a positive number' });
         return;
     }
-    if (typeof tier !== 'number' || tier < 1 || tier > 3) {
-        res.status(400).json({ error: 'tier must be 1, 2, or 3' });
+    if (typeof tier !== 'number' || tier < 1 || tier > 2) {
+        res.status(400).json({ error: 'tier must be 1 or 2' });
         return;
     }
 

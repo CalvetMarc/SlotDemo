@@ -42,7 +42,7 @@ export interface SpinResponse {
 
 export interface BuyBonusRequest {
     betAmount: number;
-    tier: number; // 1, 2, or 3
+    tier: number; // 1 or 2
 }
 
 export interface BuyBonusResponse {

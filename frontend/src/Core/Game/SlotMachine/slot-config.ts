@@ -24,16 +24,6 @@ export const PAYLINES: readonly (readonly number[])[] = [
     [1, 2, 2, 2, 1], // 8: U shape
     [1, 0, 0, 0, 1], // 9: inverted U
     [0, 1, 1, 1, 0], // 10: flat dip
-    [2, 1, 1, 1, 2], // 11: flat rise
-    [1, 0, 1, 0, 1], // 12: zigzag up
-    [1, 2, 1, 2, 1], // 13: zigzag down
-    [0, 1, 0, 1, 0], // 14: small zigzag top
-    [2, 1, 2, 1, 2], // 15: small zigzag bottom
-    [0, 0, 1, 2, 2], // 16: descending
-    [2, 2, 1, 0, 0], // 17: ascending
-    [1, 0, 0, 1, 2], // 18: step down
-    [1, 2, 2, 1, 0], // 19: step up
-    [0, 1, 2, 2, 1], // 20: slide down
 ];
 
 /** Returns a set of "reel,row" keys for all winning cell positions. */
