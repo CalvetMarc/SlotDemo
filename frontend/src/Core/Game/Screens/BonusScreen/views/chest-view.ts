@@ -4,7 +4,7 @@ import { bundle, View } from '../../../../Abstractions/view';
 const SHIMMER_INTERVAL = 3000;
 const SHIMMER_DURATION = 600;
 const HOVER_SCALE = 1.08;
-const HOVER_TWEEN_SPEED = 0.12;
+const HOVER_TWEEN_SPEED = 0.25;
 
 export class ChestView extends View {
     private _closedSprite!: Sprite;
