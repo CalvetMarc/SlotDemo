@@ -4,16 +4,16 @@ import type { SymbolId, LineWin } from '../../../shared/types.js';
 const WILD: SymbolId = 'Wild_01.png';
 
 /** Virtual reel strips — indices into SYMBOL_IDS. Server-only.
- *  Wild (7) appears once per reel. */
+ *  S32: King:3, Queen:4, Wolf:4, J:6, K:5, Q:5, A:4, Wild:1 per reel. */
 const REEL_STRIPS: readonly (readonly number[])[] = [
-    [0, 3, 1, 4, 2, 5, 0, 6, 3, 1, 5, 2, 4, 6, 0, 3, 1, 7, 5, 2],
-    [1, 4, 0, 5, 3, 6, 2, 0, 4, 1, 3, 5, 6, 2, 0, 4, 5, 1, 3, 7],
-    [2, 5, 3, 0, 6, 1, 4, 2, 5, 3, 0, 6, 1, 4, 7, 2, 5, 3, 0, 6],
-    [3, 0, 4, 1, 5, 2, 6, 3, 0, 4, 1, 5, 2, 6, 3, 0, 5, 4, 1, 7],
-    [4, 1, 5, 2, 0, 3, 6, 4, 1, 5, 2, 0, 3, 6, 4, 7, 1, 5, 2, 0],
+    [3, 7, 5, 0, 3, 4, 6, 0, 1, 4, 6, 2, 5, 1, 5, 0, 3, 2, 3, 4, 3, 2, 6, 1, 5, 1, 5, 6, 4, 2, 3, 4],
+    [6, 3, 0, 7, 6, 5, 3, 5, 4, 6, 4, 1, 2, 4, 0, 3, 0, 5, 3, 2, 5, 6, 5, 3, 4, 2, 1, 4, 2, 1, 3, 1],
+    [7, 3, 0, 3, 4, 6, 3, 2, 1, 2, 6, 2, 5, 3, 1, 4, 2, 5, 1, 4, 5, 3, 0, 4, 3, 6, 5, 1, 0, 6, 5, 4],
+    [4, 3, 2, 6, 5, 2, 6, 5, 2, 5, 0, 3, 4, 3, 0, 1, 4, 6, 1, 0, 7, 1, 2, 1, 3, 4, 5, 3, 5, 3, 4, 6],
+    [4, 5, 4, 5, 2, 3, 1, 2, 4, 2, 3, 1, 3, 6, 5, 0, 7, 6, 1, 5, 1, 6, 5, 3, 6, 3, 0, 4, 2, 4, 3, 0],
 ];
 
-/** 20 payline patterns — each array has 5 row indices (0=top, 1=mid, 2=bottom) */
+/** 10 payline patterns — each array has 5 row indices (0=top, 1=mid, 2=bottom) */
 const PAYLINES: readonly (readonly number[])[] = [
     [1, 1, 1, 1, 1], // 1: straight middle
     [0, 0, 0, 0, 0], // 2: straight top
@@ -25,37 +25,27 @@ const PAYLINES: readonly (readonly number[])[] = [
     [1, 2, 2, 2, 1], // 8: U shape
     [1, 0, 0, 0, 1], // 9: inverted U
     [0, 1, 1, 1, 0], // 10: flat dip
-    [2, 1, 1, 1, 2], // 11: flat rise
-    [1, 0, 1, 0, 1], // 12: zigzag up
-    [1, 2, 1, 2, 1], // 13: zigzag down
-    [0, 1, 0, 1, 0], // 14: small zigzag top
-    [2, 1, 2, 1, 2], // 15: small zigzag bottom
-    [0, 0, 1, 2, 2], // 16: descending
-    [2, 2, 1, 0, 0], // 17: ascending
-    [1, 0, 0, 1, 2], // 18: step down
-    [1, 2, 2, 1, 0], // 19: step up
-    [0, 1, 2, 2, 1], // 20: slide down
 ];
 
 const PAYLINE_COUNT = PAYLINES.length;
 
-/** Paytable: symbol → [x3, x4, x5] multipliers of totalBet */
+/** Paytable: symbol → [x3, x4, x5] multipliers of totalBet. */
 const PAYTABLE: ReadonlyMap<SymbolId, readonly [number, number, number]> = new Map([
-    ['Wild_01.png', [0.50, 1.70, 12.50]],
-    ['1.png', [0.45, 1.65, 8.40]],
-    ['2.png', [0.40, 1.25, 4.25]],
-    ['3.png', [0.35, 0.85, 2.55]],
-    ['A.png', [0.20, 0.45, 1.70]],
-    ['K.png', [0.15, 0.35, 1.25]],
-    ['Q.png', [0.10, 0.25, 0.85]],
-    ['J.png', [0.10, 0.20, 0.70]],
+    ['Wild_01.png', [2.85,  9.98, 71.27]],
+    ['1.png',       [1.71,  6.41, 42.76]],
+    ['2.png',       [1.14,  4.28, 28.51]],
+    ['3.png',       [0.71,  2.85, 18.53]],
+    ['A.png',       [0.43,  1.57, 11.40]],
+    ['K.png',       [0.29,  1.14,  7.13]],
+    ['Q.png',       [0.23,  0.86,  4.56]],
+    ['J.png',       [0.14,  0.57,  2.85]],
 ]);
 
 /** Wild pays: wildCount → multiplier of totalBet */
-const WILD_PAYS: Readonly<Record<number, number>> = { 3: 2, 4: 5, 5: 20 };
+const WILD_PAYS: Readonly<Record<number, number>> = { 3: 8, 4: 21, 5: 83 };
 
 /** Expected bonus chest payout per trigger (multipliers of totalBet) */
-const BONUS_EXPECTED_CHEST_EV: readonly [number, number, number] = [18, 35, 80];
+const BONUS_EXPECTED_CHEST_EV: readonly [number, number, number] = [75, 150, 300];
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -132,7 +122,7 @@ function evaluateWildPay(wildCount: number, totalBet: number): number {
 }
 
 /** Expected bonus chest payout for RTP calculation (wild pay tracked separately) */
-export function bonusExpectedPayout(wildCount: number, totalBet: number): number {
+function bonusExpectedPayout(wildCount: number, totalBet: number): number {
     if (wildCount < 3) return 0;
     const tier = Math.min(wildCount - 3, 2);
     return BONUS_EXPECTED_CHEST_EV[tier] * totalBet;
@@ -206,7 +196,3 @@ export function generateInitialGrid(): SymbolId[][] {
     return INITIAL_GRID;
 }
 
-// ── Exports for RTP calculator ──────────────────────────────
-
-export { REEL_STRIPS, REEL_COUNT, VISIBLE_ROWS, SYMBOL_IDS, PAYLINE_COUNT, PAYLINES, WILD_PAYS };
-export type { SymbolId, LineWin };
