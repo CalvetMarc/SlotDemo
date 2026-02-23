@@ -9,7 +9,7 @@ const HOVER_TWEEN_SPEED = 0.25;
 
 // Prize reveal
 const PRIZE_START_Y = 50;
-const PRIZE_END_Y = -220;
+const PRIZE_END_Y = -280;
 const PRIZE_RISE_DURATION = 600;
 const PRIZE_START_SCALE = 0.6;
 const PRIZE_END_SCALE = 1.3;
@@ -34,6 +34,7 @@ export class ChestView extends View {
     private _shimmerNextInterval = 0;
     private _shimmerActive = false;
     private _shimmerElapsed = 0;
+    private _isDisabled = false;
 
     // Prize reveal
     private _prizeSprite!: Sprite;
@@ -124,6 +125,7 @@ export class ChestView extends View {
         this._baseScaleY = this.scale.y;
         this._currentHoverMul = 1;
         this._isHovered = false;
+        this._isDisabled = false;
         this._glowFilter.enabled = false;
         this._glowFilter.reset();
 
@@ -150,14 +152,26 @@ export class ChestView extends View {
 
     showPrize(multiplier: number): Promise<void> {
         const sheet = Assets.get('prizes_static');
-        console.log('[ChestView] showPrize called, multiplier:', multiplier, 'sheet:', !!sheet);
         if (!sheet) return Promise.resolve();
 
         const textureName = `x${multiplier}.png`;
         const texture = sheet.textures?.[textureName];
-        console.log('[ChestView] textureName:', textureName, 'texture:', !!texture);
         if (!texture) return Promise.resolve();
 
+        return this._animatePrizeSprite(texture);
+    }
+
+    showSkull(): Promise<void> {
+        const sheet = Assets.get('prizes_static');
+        if (!sheet) return Promise.resolve();
+
+        const texture = sheet.textures?.['skull.png'];
+        if (!texture) return Promise.resolve();
+
+        return this._animatePrizeSprite(texture);
+    }
+
+    private _animatePrizeSprite(texture: Texture): Promise<void> {
         this._prizeSprite.texture = texture;
         this._prizeSprite.y = PRIZE_START_Y;
         this._prizeSprite.scale.set(PRIZE_START_SCALE);
@@ -171,10 +185,15 @@ export class ChestView extends View {
     }
 
     disable(): void {
+        this._isDisabled = true;
         this._stopIdleEffects();
         this.eventMode = 'none';
         this.cursor = 'default';
-        this.alpha = 0.5;
+        if (!this._isOpened) {
+            this._glowFilter.enabled = true;
+            this._glowFilter.reset();
+            this._glowFilter.brightness(0.4, false);
+        }
     }
 
     private _stopIdleEffects(): void {
@@ -204,7 +223,7 @@ export class ChestView extends View {
             }
         }
 
-        if (this._isOpened) return;
+        if (this._isOpened || this._isDisabled) return;
 
         // Hover scale — lerp towards target multiplier
         const targetMul = this._isHovered ? HOVER_SCALE : 1;
@@ -228,23 +247,14 @@ export class ChestView extends View {
             const progress = this._shimmerElapsed / SHIMMER_DURATION;
             if (progress >= 1) {
                 this._shimmerActive = false;
-                if (!this._isHovered) {
-                    this._glowFilter.enabled = false;
-                    this._glowFilter.reset();
-                }
+                this._glowFilter.enabled = false;
+                this._glowFilter.reset();
             } else {
                 const brightness = 1 + 0.25 * Math.sin(progress * Math.PI);
                 this._glowFilter.enabled = true;
                 this._glowFilter.reset();
                 this._glowFilter.brightness(brightness, false);
             }
-        }
-
-        // Hover glow (steady brightness boost while hovered)
-        if (this._isHovered && !this._shimmerActive) {
-            this._glowFilter.enabled = true;
-            this._glowFilter.reset();
-            this._glowFilter.brightness(1.2, false);
         }
     }
 
@@ -259,10 +269,6 @@ export class ChestView extends View {
 
     private _onPointerOut(): void {
         this._isHovered = false;
-        if (!this._shimmerActive) {
-            this._glowFilter.enabled = false;
-            this._glowFilter.reset();
-        }
     }
 
     private _handleTap(): void {

@@ -80,6 +80,9 @@ export class BonusScreen extends GameScreen {
 
                 this._totalBonusWin += prize;
                 this._winCounter?.updateWin(this._totalBonusWin);
+            } else {
+                // Show skull (no need to await — game ends immediately after)
+                this._chests[index].showSkull();
             }
 
             // Game over if skull (null) or all chests opened
