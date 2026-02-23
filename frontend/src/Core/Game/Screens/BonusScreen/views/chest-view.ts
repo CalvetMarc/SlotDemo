@@ -7,10 +7,18 @@ const SHIMMER_DURATION = 600;
 const HOVER_SCALE = 1.08;
 const HOVER_TWEEN_SPEED = 0.25;
 
+// Prize reveal
+const PRIZE_START_Y = 50;
+const PRIZE_END_Y = -220;
+const PRIZE_RISE_DURATION = 600;
+const PRIZE_START_SCALE = 0.6;
+const PRIZE_END_SCALE = 1.3;
+
 export class ChestView extends View {
     private _closedSprite!: Sprite;
     private _openAnim!: AnimatedSprite;
     private _isOpened = false;
+    get isOpened(): boolean { return this._isOpened; }
     private _chestIndex = -1;
     private _onPick?: (index: number) => void;
 
@@ -26,6 +34,12 @@ export class ChestView extends View {
     private _shimmerNextInterval = 0;
     private _shimmerActive = false;
     private _shimmerElapsed = 0;
+
+    // Prize reveal
+    private _prizeSprite!: Sprite;
+    private _prizeAnimating = false;
+    private _prizeProgress = 0;
+    private _prizeResolve?: () => void;
 
     bundleNeeded(): bundle {
         return 'bonus';
@@ -56,6 +70,12 @@ export class ChestView extends View {
         this._openAnim.loop = false;
         this._openAnim.visible = false;
         this.addChild(this._openAnim);
+
+        // Prize sprite (no mask for now — debugging)
+        this._prizeSprite = new Sprite();
+        this._prizeSprite.anchor.set(0.5);
+        this._prizeSprite.visible = false;
+        this.addChild(this._prizeSprite);
 
         // Glow filter for hover/shimmer
         this._glowFilter = new ColorMatrixFilter();
@@ -106,6 +126,12 @@ export class ChestView extends View {
         this._isHovered = false;
         this._glowFilter.enabled = false;
         this._glowFilter.reset();
+
+        // Reset prize
+        this._prizeSprite.visible = false;
+        this._prizeAnimating = false;
+        this._prizeProgress = 0;
+        this._prizeResolve = undefined;
     }
 
     playOpen(): Promise<void> {
@@ -119,6 +145,28 @@ export class ChestView extends View {
             this._openAnim.visible = true;
             this._openAnim.gotoAndPlay(0);
             this._openAnim.onComplete = () => resolve();
+        });
+    }
+
+    showPrize(multiplier: number): Promise<void> {
+        const sheet = Assets.get('prizes_static');
+        console.log('[ChestView] showPrize called, multiplier:', multiplier, 'sheet:', !!sheet);
+        if (!sheet) return Promise.resolve();
+
+        const textureName = `x${multiplier}.png`;
+        const texture = sheet.textures?.[textureName];
+        console.log('[ChestView] textureName:', textureName, 'texture:', !!texture);
+        if (!texture) return Promise.resolve();
+
+        this._prizeSprite.texture = texture;
+        this._prizeSprite.y = PRIZE_START_Y;
+        this._prizeSprite.scale.set(PRIZE_START_SCALE);
+        this._prizeSprite.visible = true;
+        this._prizeAnimating = true;
+        this._prizeProgress = 0;
+
+        return new Promise<void>((resolve) => {
+            this._prizeResolve = resolve;
         });
     }
 
@@ -138,9 +186,25 @@ export class ChestView extends View {
     }
 
     private _onTick(ticker: Ticker): void {
-        if (this._isOpened) return;
-
         const dt = ticker.deltaMS;
+
+        // Prize rise animation (runs after chest is opened)
+        if (this._prizeAnimating) {
+            this._prizeProgress = Math.min(1, this._prizeProgress + dt / PRIZE_RISE_DURATION);
+            const eased = 1 - Math.pow(1 - this._prizeProgress, 3); // ease-out cubic
+
+            this._prizeSprite.y = PRIZE_START_Y + (PRIZE_END_Y - PRIZE_START_Y) * eased;
+            const s = PRIZE_START_SCALE + (PRIZE_END_SCALE - PRIZE_START_SCALE) * eased;
+            this._prizeSprite.scale.set(s);
+
+            if (this._prizeProgress >= 1) {
+                this._prizeAnimating = false;
+                this._prizeResolve?.();
+                this._prizeResolve = undefined;
+            }
+        }
+
+        if (this._isOpened) return;
 
         // Hover scale — lerp towards target multiplier
         const targetMul = this._isHovered ? HOVER_SCALE : 1;

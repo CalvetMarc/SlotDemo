@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { sql } from '../db.js';
 import { authMiddleware, type AuthRequest } from '../middleware/auth.js';
-import { generateBonusChests, pickChest, BonusState } from '../services/bonus-service.js';
+import { generateBonusChests, BonusState } from '../services/bonus-service.js';
 import { getSession } from '../services/session-helpers.js';
 
 const router = Router();
@@ -17,6 +17,7 @@ router.post('/start', authMiddleware, async (req, res) => {
             return;
         }
 
+        console.log('[bonus/start] sessionId:', sessionId, 'game_phase:', session.game_phase, 'bonus_data:', session.bonus_data);
         if (session.game_phase !== 'bonus') {
             res.status(400).json({ error: 'Not in bonus phase' });
             return;
@@ -35,19 +36,21 @@ router.post('/start', authMiddleware, async (req, res) => {
             WHERE id = ${sessionId}
         `;
 
-        res.json({ chestCount: 5, tier: state.tier });
+        // Send all chest prizes upfront so the client doesn't need per-pick calls
+        const chests = state.chests.map((c) => c.prize);
+        res.json({ chests, tier: state.tier });
     } catch (err) {
         console.error('Bonus start failed:', err);
         res.status(500).json({ error: 'Bonus start failed' });
     }
 });
 
-router.post('/pick', authMiddleware, async (req, res) => {
+router.post('/collect', authMiddleware, async (req, res) => {
     const sessionId = (req as AuthRequest).sessionId;
-    const { chestIndex } = req.body;
+    const { totalBonusWin } = req.body;
 
-    if (typeof chestIndex !== 'number' || chestIndex < 0 || chestIndex > 4) {
-        res.status(400).json({ error: 'chestIndex must be 0-4' });
+    if (typeof totalBonusWin !== 'number' || totalBonusWin < 0) {
+        res.status(400).json({ error: 'Invalid totalBonusWin' });
         return;
     }
 
@@ -70,33 +73,28 @@ router.post('/pick', authMiddleware, async (req, res) => {
             return;
         }
 
-        if (state.picked[chestIndex]) {
-            res.status(400).json({ error: 'Chest already picked' });
+        // Validate the claimed win against the generated chests
+        const maxPossibleWin = state.chests
+            .filter((c) => c.prize !== null)
+            .reduce((sum, c) => sum + c.prize!, 0);
+
+        if (totalBonusWin > maxPossibleWin + 0.01) {
+            res.status(400).json({ error: 'Invalid win amount' });
             return;
         }
 
-        const result = pickChest(state, chestIndex);
+        const newBalance = parseFloat(session.balance) + totalBonusWin;
 
-        if (result.isGameOver) {
-            // Bonus over: add winnings to balance, return to base phase
-            const newBalance = parseFloat(session.balance) + result.totalBonusWin;
-            await sql`
-                UPDATE sessions
-                SET balance = ${newBalance}, game_phase = 'base', bonus_data = NULL, last_seen = now()
-                WHERE id = ${sessionId}
-            `;
-            res.json({ ...result, balance: newBalance });
-        } else {
-            // Save updated state
-            await sql`
-                UPDATE sessions SET bonus_data = ${JSON.stringify(state)}, last_seen = now()
-                WHERE id = ${sessionId}
-            `;
-            res.json(result);
-        }
+        await sql`
+            UPDATE sessions
+            SET balance = ${newBalance}, game_phase = 'base', bonus_data = NULL, last_seen = now()
+            WHERE id = ${sessionId}
+        `;
+
+        res.json({ balance: newBalance });
     } catch (err) {
-        console.error('Bonus pick failed:', err);
-        res.status(500).json({ error: 'Bonus pick failed' });
+        console.error('Bonus collect failed:', err);
+        res.status(500).json({ error: 'Bonus collect failed' });
     }
 });
 

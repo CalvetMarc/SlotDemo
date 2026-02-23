@@ -141,7 +141,14 @@ export class SlotMachineView extends View {
         this._debugCleanup = createDebugKeyHandler({
             getIsSpinning: () => this._spinController.isSpinning,
             getBetAmount: () => this._spinController.getBetAmount(),
-            triggerSpin: (forced) => {
+            triggerSpin: async (forced) => {
+                // Debug bonus spins bypass the server spin, so set up bonus on server via buy
+                if (forced.bonusTriggered) {
+                    try {
+                        const bet = this._spinController.getBetAmount();
+                        await ApiClient.post('/api/bonus/buy', { betAmount: bet, tier: 1 });
+                    } catch { /* balance may be insufficient — bonus screen will handle */ }
+                }
                 this._spinController.setForcedResult(forced);
                 this._spinController.startSpin().catch(err => console.error('[DebugSpin] failed:', err));
             },

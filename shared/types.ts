@@ -53,15 +53,12 @@ export interface BuyBonusResponse {
 }
 
 export interface BonusStartResponse {
-    chestCount: number;
+    chests: (number | null)[];
     tier: number;
 }
 
-export interface BonusPickResponse {
-    prize: number | null;
-    totalBonusWin: number;
-    isGameOver: boolean;
-    balance?: number;
+export interface BonusCollectResponse {
+    balance: number;
 }
 
 export interface StartResponse {
