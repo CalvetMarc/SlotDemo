@@ -103,17 +103,6 @@
           "scale": { "x": 0.8, "y": 0.8 }
         }
       }
-    },
-    {
-      "id": "bonus_win_counter",
-      "type": "BonusWinCounterView",
-      "layer": "ui",
-      "layout": {
-        "default": {
-          "anchor": "top-left",
-          "origin": { "x": 0.5, "y": 0.5 }
-        }
-      }
-    }
+    }    
   ]
 }
