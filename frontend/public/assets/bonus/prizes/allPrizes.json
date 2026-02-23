@@ -1,5 +1,13 @@
 {"frames": {
 
+"skull.png":
+{
+	"frame": {"x":794,"y":550,"w":180,"h":222},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":180,"h":222},
+	"sourceSize": {"w":180,"h":222}
+},
 "x20.png":
 {
 	"frame": {"x":0,"y":0,"w":215,"h":137},
@@ -157,8 +165,8 @@
 	"version": "1.1",
 	"image": "allPrizes.png",
 	"format": "RGBA8888",
-	"size": {"w":995,"h":688},
+	"size": {"w":995,"h":772},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:7f57136310d5ececcac4818e74ebdf6a:67b04f83d35c5a968c6e666760a84860:83710a107452236c58170509747cf9dc$"
+	"smartupdate": "$TexturePacker:SmartUpdate:dbe3d0d01f06940f54717eb890da303f:4711e1edefbb3c86ff8d85e53691c795:56017bd53d720dc5e81059ce62e2d85a$"
 }
 }
