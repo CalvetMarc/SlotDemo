@@ -34,7 +34,7 @@ export class ScreenManager extends SingletonBase {
   }
 
   public transitionMap: Record<ScreenTypes, () => Promise<void>> = {
-    SPLASH: () => this.changeScene("SPLASH", "BASE", true),
+    SPLASH: () => this.changeScene("SPLASH", "BONUS", true),
     BASE: () => this.changeScene("BASE", "BONUS", false, true),
     BONUS: () => this.changeScene("BONUS", "BASE", true, true)
   };
@@ -73,12 +73,10 @@ export class ScreenManager extends SingletonBase {
   }
 
   private scheduleTransitionToBase(): void {
-    const preloadPromise = this.preloadScene("BASE");
-    const winPreload = Assets.loadBundle('win');
-    const infoPreload = Assets.loadBundle('info');
+    const preloadPromise = this.preloadScene("BONUS");
     const minTimePromise = this.delay(2000);
 
-    Promise.all([preloadPromise, winPreload, infoPreload, minTimePromise]).then(() => {
+    Promise.all([preloadPromise, minTimePromise]).then(() => {
       this.transitionMap.SPLASH();
     });
   }
