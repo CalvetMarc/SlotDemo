@@ -276,6 +276,12 @@ export class ChestView extends View {
         this._onPick?.(this._chestIndex);
     }
 
+    onLayoutApplied(): void {
+        this._baseScaleX = this.scale.x;
+        this._baseScaleY = this.scale.y;
+        this._currentHoverMul = 1;
+    }
+
     protected dispose(): void {
         Ticker.shared.remove(this._onTick, this);
         this.off('pointertap', this._handleTap, this);

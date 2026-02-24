@@ -23,19 +23,13 @@
           "anchor": "bottom-center",
           "origin": { "x": 0.5, "y": 0.85 },
           "scale": { "x": 0.8, "y": 0.8 }
-        }
-      }
-    },
-    {
-      "id": "bonus_logo",
-      "type": "BonusLogoView",
-      "layer": "game",
-      "layout": {
-        "default": {
-          "anchor": "top-center",
-          "origin": { "x": 0.5, "y": 0 },
-          "offset": { "x": 0, "y": "5h%" },
-          "scale": { "x": 0.8, "y": 0.8}
+        },
+        "overrides": {
+          "4:3": {
+            "anchor": "bottom-center",
+            "origin": { "x": 0.5, "y": 0.85 },
+            "scale": { "x": 1, "y": 1 }
+          }
         }
       }
     },
@@ -49,6 +43,14 @@
           "origin": { "x": 0.5, "y": 0.9 },
           "offset": { "x": "-11.3w%", "y": "10.5h%" },
           "scale": { "x": 0.7, "y": 0.7 }
+        },
+        "overrides": {
+          "4:3": {
+            "anchor": "center",
+            "origin": { "x": 0.5, "y": 0.9 },
+            "offset": { "x": "-32.5w%", "y": "1.5h%" },
+            "scale": { "x": 0.9, "y": 0.9 }
+          }
         }
       }
     },
@@ -62,6 +64,14 @@
           "origin": { "x": 0.5, "y": 0.9 },
           "offset": { "x": "11.3w%", "y": "10.5h%" },
           "scale": { "x": 0.7, "y": 0.7 }
+        },
+        "overrides": {
+          "4:3": {
+            "anchor": "center",
+            "origin": { "x": 0.5, "y": 0.9 },
+            "offset": { "x": "32.5w%", "y": "1.5h%" },
+            "scale": { "x": 0.9, "y": 0.9 }
+          }
         }
       }
     },
@@ -75,6 +85,14 @@
           "origin": { "x": 0.5, "y": 0.9 },
           "offset": { "x": 0, "y": "37h%" },
           "scale": { "x": 0.8, "y": 0.8 }
+        },
+        "overrides": {
+          "4:3": {
+            "anchor": "center",
+            "origin": { "x": 0.5, "y": 0.9 },
+            "offset": { "x": 0, "y": "1.5h%" },
+            "scale": { "x": 0.9, "y": 0.9}
+          }
         }
       }
     },
@@ -88,6 +106,14 @@
           "origin": { "x": 0.5, "y": 0.9 },
           "offset": { "x": "-25w%", "y": "36h%" },
           "scale": { "x": 0.8, "y": 0.8 }
+        },
+        "overrides": {
+          "4:3": {
+            "anchor": "center",
+            "origin": { "x": 0.5, "y": 0.9 },
+            "offset": { "x": "-25w%", "y": "36h%" },
+            "scale": { "x": 1.2, "y": 1.2}
+          }
         }
       }
     },
@@ -101,8 +127,38 @@
           "origin": { "x": 0.5, "y": 0.9 },
           "offset": { "x": "25w%", "y": "36h%" },
           "scale": { "x": 0.8, "y": 0.8 }
+        },
+        "overrides": {
+          "4:3": {
+            "anchor": "center",
+            "origin": { "x": 0.5, "y": 0.9 },
+            "offset": { "x": "25w%", "y": "36h%" },
+            "scale": { "x": 1.2, "y": 1.2}
+          }
         }
       }
+    },
+    {
+      "id": "bonus_logo",
+      "type": "BonusLogoView",
+      "layer": "decoration",
+      "layout": {
+        "default": {
+          "anchor": "top-center",
+          "origin": { "x": 0.5, "y": 0 },
+          "offset": { "x": 0, "y": "5h%" },
+          "scale": { "x": "25h%", "y": "25h%"}
+        },
+        "overrides": {
+          "4:3": {
+            "anchor": "top-center",
+            "origin": { "x": 0.5, "y": 0 },
+            "offset": { "x": 0, "y": 10 },
+            "scale": { "x": "20h%", "y": "20h%"} ,          
+            "minMargin": {"y": "2h%"}
+          }
+        }
+      }      
     }    
   ]
 }

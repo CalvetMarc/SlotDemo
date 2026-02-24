@@ -33,6 +33,9 @@ export abstract class View extends Container {
         target._cachedIntrinsicSize = undefined;
     }
 
+    /** Called after the layout system applies position/scale to this view. */
+    onLayoutApplied(): void { /* override in subclasses */ }
+
     destroy(options?: DestroyOptions): void {
         this.dispose();
         super.destroy(options);

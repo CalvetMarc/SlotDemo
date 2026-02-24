@@ -20,6 +20,7 @@ export class ViewLayoutManager {
         }
 
         LayoutResolver.applyLayout(view, config.layout, canvas, viewLookup);
+        view.onLayoutApplied();
     }
 
     /** Applies layout to multiple views. */
@@ -40,6 +41,7 @@ export class ViewLayoutManager {
     updateLayout(view: View, config: ViewConfig, canvas: DesignCanvas, viewLookup?: ViewLookupFn): void {
         if (config.layout) {
             LayoutResolver.applyLayout(view, config.layout, canvas, viewLookup);
+            view.onLayoutApplied();
         }
     }
 
