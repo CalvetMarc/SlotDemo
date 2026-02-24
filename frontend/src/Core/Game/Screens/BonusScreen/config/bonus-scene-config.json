@@ -212,12 +212,32 @@
           "9:16": {
             "anchor": "center",
             "origin": { "x": 0.5, "y": 0 },
-            "offset": { "x": 0, "y": "-40h%" },
+            "offset": { "x": 0, "y": "-43h%" },
             "scale": { "x": "95w%", "y": "95w%"} ,          
             "minMargin": {"y": "2h%"}
           }
         }
       }      
-    }    
+    },
+    {
+      "id": "bonus_hint",
+      "type": "BonusHintView",
+      "layer": "game",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "scale": { "x": 0, "y": 0 }
+        },
+        "overrides": {
+          "9:16": {
+            "anchor": "center",
+            "origin": { "x": 0.5, "y": 0.5 },
+            "offset": { "x": 0, "y": "-18h%" },
+            "scale": { "x": 1, "y": 1 }
+          }
+        }
+      }
+    }
   ]
 }
