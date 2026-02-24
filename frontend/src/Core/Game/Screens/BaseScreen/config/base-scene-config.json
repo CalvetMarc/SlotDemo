@@ -174,7 +174,7 @@
             "relativeOffset": {"x": "4w%"},
             "anchor": "middle-left",
             "origin": { "x": 0, "y": 0.5 },
-            "offset": { "x": 0, "y": "22h%" },
+            "offset": { "x": 0, "y": "25h%" },
             "scale": { "x": "15h%", "y": "15h%" },
             "maxScale": 1.5
           },
@@ -274,7 +274,7 @@
             "relativeAxis": "x",
             "anchor": "middle-center",
             "origin": { "x": 0.5, "y": 0.5 },
-            "offset": { "x": 0, "y": "22h%" },
+            "offset": { "x": 0, "y": "25h%" },
             "scale": { "x": "12h%", "y": "12h%" },
             "minMargin": { "x": 190 }
           },
@@ -307,7 +307,7 @@
             "relativeOffset": {"x": "-4w%"},
             "anchor": "middle-center",
             "origin": { "x": 1, "y": 0.5 },
-            "offset": { "x": 0, "y": "22h%" },
+            "offset": { "x": 0, "y": "25h%" },
             "scale": { "x": "15h%", "y": "15h%" },
             "maxScale": 1.5
           },
