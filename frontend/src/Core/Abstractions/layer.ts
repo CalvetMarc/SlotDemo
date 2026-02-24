@@ -1,6 +1,7 @@
 import { Container } from "pixi.js";
 import { View, ViewConfig } from "./view";
 import { DesignCanvas } from "../Layout/design-canvas";
+import { LayoutResolver } from "../Layout/layout-constraints";
 import { ViewLayoutManager } from "../Managers/view-layout-manager";
 import { CentralLayerManager } from "../Managers/central-layer-manager";
 
@@ -10,6 +11,7 @@ export class Layer extends Container {
     private _viewConfigs: Map<string, ViewConfig> = new Map();
     private _layoutManager: ViewLayoutManager = new ViewLayoutManager();
     private currentCanvas?: DesignCanvas;
+    private _viewportLocal: { width: number; height: number } = { width: 0, height: 0 };
     public readonly layerId: string;
 
     constructor(layerId: string, zIndex: number = 0, layerViews?: Partial<Record<string, View>>){
@@ -23,6 +25,11 @@ export class Layer extends Container {
     /** Called when canvas changes. Stores canvas for view positioning. */
     onLayoutChanged(canvas: DesignCanvas): void {
         this.currentCanvas = canvas;
+    }
+
+    /** Store viewport dimensions in layer-local coordinates. */
+    setViewportLocal(vp: { width: number; height: number }): void {
+        this._viewportLocal = vp;
     }
 
     /** Returns the current canvas for this layer. */
@@ -42,7 +49,8 @@ export class Layer extends Container {
             this._viewConfigs.set(id, config);
 
             if (this.currentCanvas) {
-                // Pass layerId to convert relativeTo coordinates to this layer's local space
+                // Ensure viewport units resolve correctly for this layer
+                LayoutResolver.viewportLocal = this._viewportLocal;
                 const viewLookup = CentralLayerManager.I.createViewLookup(this.layerId);
                 this._layoutManager.applyLayout(view, config, this.currentCanvas, viewLookup);
             }
@@ -74,6 +82,7 @@ export class Layer extends Container {
 
     /** Updates layout for all views in this layer. Uses two-pass for relativeTo support. */
     updateViewLayouts(canvas: DesignCanvas): void {
+        LayoutResolver.viewportLocal = this._viewportLocal;
         const viewLookup = CentralLayerManager.I.createViewLookup(this.layerId);
 
         // Single pass: partition into independent and relativeTo-dependent views

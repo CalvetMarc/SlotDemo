@@ -28,6 +28,13 @@
           "4:3": {
             "anchor": "bottom-center",
             "origin": { "x": 0.5, "y": 0.85 },
+            "scale": { "x": 1, "y": 1 },
+            "offset": {"x": 0, "y": 100}
+          },
+          "9:16": {
+            "anchor": "center",
+            "origin": { "x": 0.5, "y": 1 },
+            "offset": { "x": 0, "y": "50vh%" },
             "scale": { "x": 1, "y": 1 }
           }
         }
@@ -48,8 +55,17 @@
           "4:3": {
             "anchor": "center",
             "origin": { "x": 0.5, "y": 0.9 },
-            "offset": { "x": "-32.5w%", "y": "1.5h%" },
+            "offset": { "x": "-32.5w%", "y": "11h%" },
             "scale": { "x": 0.9, "y": 0.9 }
+          },
+          "9:16": {
+            "anchor": "top-center",
+            "origin": { "x": 0.5, "y": 0.9 },
+            "scale": { "x": 0.8, "y": 0.8 },
+            "offset": { "x": 0, "y": 0 },
+            "relativeTo": "bonus_stairs",
+            "relativeAnchor": "top-center",
+            "relativeOffset": { "x": 0, "y": 820}
           }
         }
       }
@@ -69,8 +85,17 @@
           "4:3": {
             "anchor": "center",
             "origin": { "x": 0.5, "y": 0.9 },
-            "offset": { "x": "32.5w%", "y": "1.5h%" },
+            "offset": { "x": "32.5w%", "y": "11h%" },
             "scale": { "x": 0.9, "y": 0.9 }
+          },
+          "9:16": {
+            "anchor": "top-center",
+            "origin": { "x": 0.5, "y": 0.9 },
+            "scale": { "x": 0.8, "y": 0.8 },
+            "offset": { "x": 0, "y": 0 },
+            "relativeTo": "bonus_stairs",
+            "relativeAnchor": "top-center",
+            "relativeOffset": { "x": 380, "y": 820}
           }
         }
       }
@@ -90,8 +115,17 @@
           "4:3": {
             "anchor": "center",
             "origin": { "x": 0.5, "y": 0.9 },
-            "offset": { "x": 0, "y": "1.5h%" },
+            "offset": { "x": 0, "y": "11h%" },
             "scale": { "x": 0.9, "y": 0.9}
+          },
+          "9:16": {
+            "anchor": "top-center",
+            "origin": { "x": 0.5, "y": 0.9 },
+            "scale": { "x": 0.8, "y": 0.8 },
+            "offset": { "x": 0, "y": 0 },
+            "relativeTo": "bonus_stairs",
+            "relativeAnchor": "top-center",
+            "relativeOffset": { "x": -380, "y": 820}
           }
         }
       }
@@ -111,8 +145,17 @@
           "4:3": {
             "anchor": "center",
             "origin": { "x": 0.5, "y": 0.9 },
-            "offset": { "x": "-25w%", "y": "36h%" },
+            "offset": { "x": "-21w%", "y": "44h%" },
             "scale": { "x": 1.2, "y": 1.2}
+          },
+          "9:16": {
+            "anchor": "top-center",
+            "origin": { "x": 0.5, "y": 0.9 },
+            "scale": { "x": 1.1, "y": 1.1 },
+            "offset": { "x": 0, "y": 0 },
+            "relativeTo": "bonus_stairs",
+            "relativeAnchor": "top-center",
+            "relativeOffset": { "x": 260, "y": 1185}
           }
         }
       }
@@ -132,8 +175,17 @@
           "4:3": {
             "anchor": "center",
             "origin": { "x": 0.5, "y": 0.9 },
-            "offset": { "x": "25w%", "y": "36h%" },
+            "offset": { "x": "21w%", "y": "44h%" },
             "scale": { "x": 1.2, "y": 1.2}
+          },
+          "9:16": {
+            "anchor": "top-center",
+            "origin": { "x": 0.5, "y": 0.9 },
+            "scale": { "x": 1.1, "y": 1.1 },
+            "offset": { "x": 0, "y": 0 },
+            "relativeTo": "bonus_stairs",
+            "relativeAnchor": "top-center",
+            "relativeOffset": { "x": -260, "y": 1185}
           }
         }
       }
@@ -155,6 +207,13 @@
             "origin": { "x": 0.5, "y": 0 },
             "offset": { "x": 0, "y": 10 },
             "scale": { "x": "20h%", "y": "20h%"} ,          
+            "minMargin": {"y": "5h%"}
+          },
+          "9:16": {
+            "anchor": "center",
+            "origin": { "x": 0.5, "y": 0 },
+            "offset": { "x": 0, "y": "-40h%" },
+            "scale": { "x": "95w%", "y": "95w%"} ,          
             "minMargin": {"y": "2h%"}
           }
         }

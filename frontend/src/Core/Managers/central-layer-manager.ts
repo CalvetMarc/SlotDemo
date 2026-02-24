@@ -119,6 +119,9 @@ export class CentralLayerManager extends SingletonBase {
           height: viewportH,
           aspect: viewportW / viewportH
         };
+        const vp = { width: viewportW, height: viewportH };
+        LayoutResolver.viewportLocal = vp;
+        layer.setViewportLocal(vp);
         layer.onLayoutChanged(viewportCanvas);
         layer.updateViewLayouts(viewportCanvas);
       } else {
@@ -139,6 +142,9 @@ export class CentralLayerManager extends SingletonBase {
           (viewportH - scaledH) * 0.5
         );
 
+        const vp = { width: viewportW / scale, height: viewportH / scale };
+        LayoutResolver.viewportLocal = vp;
+        layer.setViewportLocal(vp);
         layer.onLayoutChanged(canvas);
         layer.updateViewLayouts(canvas);
       }

@@ -59,6 +59,9 @@ interface LayoutTarget {
 
 export class LayoutResolver {
 
+  /** Viewport dimensions in layer-local coordinates. Set by CentralLayerManager before each layer update. */
+  static viewportLocal: { width: number; height: number } = { width: 0, height: 0 };
+
   static getAspectKey(canvas: DesignCanvas): LayoutAspectKey {
     const aspect = canvas.aspect;
 
@@ -142,6 +145,20 @@ export class LayoutResolver {
       return (percentage / 100) * canvasHeight;
     }
 
+    // Parse vw% (viewport width percentage in layer-local units)
+    const vwMatch = value.match(/^(-?\d+(?:\.\d+)?)vw%$/);
+    if (vwMatch) {
+      const percentage = parseFloat(vwMatch[1]);
+      return (percentage / 100) * this.viewportLocal.width;
+    }
+
+    // Parse vh% (viewport height percentage in layer-local units)
+    const vhMatch = value.match(/^(-?\d+(?:\.\d+)?)vh%$/);
+    if (vhMatch) {
+      const percentage = parseFloat(vhMatch[1]);
+      return (percentage / 100) * this.viewportLocal.height;
+    }
+
     // Plain number (pixels)
     const num = parseFloat(value);
     return isNaN(num) ? 0 : num;
@@ -178,6 +195,22 @@ export class LayoutResolver {
     if (heightMatch) {
       const percentage = parseFloat(heightMatch[1]);
       const targetSize = (percentage / 100) * canvasHeight;
+      return viewDimension > 0 ? targetSize / viewDimension : 1;
+    }
+
+    // Parse vw% (viewport width percentage in layer-local units)
+    const vwMatch = value.match(/^(-?\d+(?:\.\d+)?)vw%$/);
+    if (vwMatch) {
+      const percentage = parseFloat(vwMatch[1]);
+      const targetSize = (percentage / 100) * this.viewportLocal.width;
+      return viewDimension > 0 ? targetSize / viewDimension : 1;
+    }
+
+    // Parse vh% (viewport height percentage in layer-local units)
+    const vhMatch = value.match(/^(-?\d+(?:\.\d+)?)vh%$/);
+    if (vhMatch) {
+      const percentage = parseFloat(vhMatch[1]);
+      const targetSize = (percentage / 100) * this.viewportLocal.height;
       return viewDimension > 0 ? targetSize / viewDimension : 1;
     }
 
