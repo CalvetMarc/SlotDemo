@@ -129,8 +129,14 @@ export class Reel extends Container {
      */
     /** Immediately place target symbols and snap to final positions. Skips all animation. */
     forceStop(symbols: SymbolId[]): void {
-        this.setSymbols(symbols);
         this._snapPositions();
+
+        const sorted = [...this._symbols].sort((a, b) => a.y - b.y);
+        this._setTexture(sorted[0], this._randomSymbol());
+        for (let i = 0; i < VISIBLE_ROWS; i++) {
+            this._setTexture(sorted[i + 1], symbols[i]);
+        }
+        this._setTexture(sorted[this._totalSlots - 1], this._randomSymbol());
 
         this._state = 'idle';
         this._speed = 0;
