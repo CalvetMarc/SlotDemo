@@ -62,6 +62,11 @@ export class Reel extends Container {
     // Wild landing pop
     private _wildPops: WildPop[] = [];
 
+    // Skip bounce (visual-only, state stays idle)
+    private _isSkipBouncing = false;
+    private _skipBounceElapsed = 0;
+    private _skipBounceSprites: Sprite[] = [];
+
     // Tension dim
     private _dimFilter: ColorMatrixFilter | null = null;
     private _dimTarget = 0;
@@ -127,7 +132,7 @@ export class Reel extends Container {
      *   queue[3] → visible row 0
      *   queue[4] → top buffer
      */
-    /** Place target symbols at overshoot position and enter bounce phase. */
+    /** Place target symbols and play a visual-only bounce. State stays idle. */
     forceStop(symbols: SymbolId[]): void {
         this._snapPositions();
 
@@ -138,20 +143,24 @@ export class Reel extends Container {
         }
         this._setTexture(sorted[this._totalSlots - 1], this._randomSymbol());
 
-        // Offset to overshoot position so the existing bounce phase animates back
+        // Offset to overshoot position for visual bounce
         for (const sprite of this._symbols) {
             sprite.y += OVERSHOOT_PX;
         }
 
-        this._sortedForLanding = [...this._symbols].sort((a, b) => a.y - b.y);
-        this._state = 'stopping';
-        this._isLanding = true;
-        this._isOvershooting = true;
-        this._phaseElapsed = 0;
+        this._skipBounceSprites = [...this._symbols].sort((a, b) => a.y - b.y);
+        this._isSkipBouncing = true;
+        this._skipBounceElapsed = 0;
+
+        this._state = 'idle';
         this._speed = 0;
         this._stopQueue = [];
         this._stopQueueIndex = 0;
+        this._isLanding = false;
+        this._isOvershooting = false;
+        this._phaseElapsed = 0;
         this._anticipationStartY = [];
+        this._sortedForLanding = [];
         this._landingFromY = [];
     }
 
@@ -172,6 +181,25 @@ export class Reel extends Container {
 
     update(dt: number): void {
         if (this._isDimAnimating) this._updateDim(dt * 16.67);
+
+        if (this._isSkipBouncing) {
+            const ms = dt * 16.67;
+            this._skipBounceElapsed += ms;
+            const t = Math.min(this._skipBounceElapsed / BOUNCE_DURATION, 1);
+            const ease = easeOutQuad(t);
+
+            for (let i = 0; i < this._skipBounceSprites.length; i++) {
+                const snapY = (i - 1) * CELL_SIZE + CELL_SIZE * 0.5;
+                const overshootY = snapY + OVERSHOOT_PX;
+                this._skipBounceSprites[i].y = overshootY + (snapY - overshootY) * ease;
+            }
+
+            if (t >= 1) {
+                this._snapPositions();
+                this._isSkipBouncing = false;
+                this._skipBounceSprites = [];
+            }
+        }
 
         if (this._state === 'idle') return;
 
