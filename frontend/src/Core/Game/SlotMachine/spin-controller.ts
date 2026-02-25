@@ -147,6 +147,12 @@ export class SpinController {
 
     private _scheduleStops(result: SpinResultWithWins): void {
         this._pendingResult = result;
+
+        if (GameModel.isTurbo) {
+            this._forceStopAll(result);
+            return;
+        }
+
         let settledCount = 0;
         let cumulativeDelay = SPIN_MIN_DURATION;
         let wildsSoFar = 0;
