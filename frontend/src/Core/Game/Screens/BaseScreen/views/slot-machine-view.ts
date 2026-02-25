@@ -30,6 +30,7 @@ export class SlotMachineView extends View {
     private _unsubscribeSpin?: () => void;
     private _unsubscribeBuyBonus?: () => void;
     private _debugCleanup?: () => void;
+    private _skipHandler?: () => void;
 
     private _spinController!: SpinController;
     private _winController!: WinPresentationController;
@@ -154,6 +155,9 @@ export class SlotMachineView extends View {
             },
         }).attach();
 
+        this._skipHandler = () => this._spinController.skipSpin();
+        window.addEventListener('pointerdown', this._skipHandler);
+
         Ticker.shared.add(this._onTick, this);
     }
 
@@ -162,6 +166,10 @@ export class SlotMachineView extends View {
         this._unsubscribeSpin?.();
         this._unsubscribeBuyBonus?.();
         this._debugCleanup?.();
+        if (this._skipHandler) {
+            window.removeEventListener('pointerdown', this._skipHandler);
+            this._skipHandler = undefined;
+        }
         this._clearAll();
         this._spinController.dispose();
         this._winController.dispose();
@@ -207,17 +215,14 @@ export class SlotMachineView extends View {
 
         if (shouldCelebrate && !isTension) {
             const hasWilds = this._reels.some(r => r.hasWildPops);
-            const delay = hasWilds ? REEL_STOP_INTERVAL * 2 + 300 : 0;
+            const WIN_REVEAL_PAUSE = 100;
+            const wildAnimDelay = hasWilds ? REEL_STOP_INTERVAL * 2 + 300 : 0;
+            const delay = wildAnimDelay + WIN_REVEAL_PAUSE;
 
-            if (delay > 0) {
-                this._winPresentationTimeout = setTimeout(() => {
-                    this._emitResultSignals(result);
-                    this._winController.show(result);
-                }, delay);
-            } else {
+            this._winPresentationTimeout = setTimeout(() => {
                 this._emitResultSignals(result);
                 this._winController.show(result);
-            }
+            }, delay);
         }
 
         if (!result.bonusTriggered) {

@@ -5,7 +5,7 @@ import { WILD_POP_GROW_MS } from './reel';
 import type { ISpinResultProvider, SpinResultWithWins } from './spin-result-provider';
 import {
     SPIN_MIN_DURATION, REEL_START_INTERVAL, REEL_STOP_INTERVAL,
-    WILD_TENSION_MULTIPLIERS,
+    WILD_TENSION_MULTIPLIERS, BOUNCE_DURATION,
 } from './slot-config';
 import { countWilds } from './debug-spins';
 import { GameModel } from './game-model';
@@ -21,6 +21,13 @@ export class SpinController {
     private _stopTimeouts: ReturnType<typeof setTimeout>[] = [];
     private _isTensionSpin = false;
     private _forcedResult?: SpinResultWithWins;
+    private _pendingResult?: SpinResultWithWins;
+    private _spinStartTime = 0;
+    private _settledReels = new Set<number>();
+    private _unsubscribeTurbo?: () => void;
+
+    private static readonly _MIN_SKIP_DELAY = 300;
+    private static readonly _TURBO_SPIN_MS = 700;
 
     /** Called when all 5 reels have settled. */
     public onAllReelsStopped?: (result: SpinResultWithWins, isTension: boolean) => void;
@@ -30,6 +37,12 @@ export class SpinController {
     constructor(config: SpinControllerConfig) {
         this._reels = config.reels;
         this._resultProvider = config.resultProvider;
+
+        this._unsubscribeTurbo = GameModel.turboChanged.connect(({ active }) => {
+            if (active && this._pendingResult) {
+                this._forceStopAll(this._pendingResult);
+            }
+        });
     }
 
     get isSpinning(): boolean {
@@ -47,15 +60,26 @@ export class SpinController {
     async startSpin(): Promise<void> {
         if (GameModel.isSpinning) return;
         GameModel.setSpinning(true);
+        this._pendingResult = undefined;
+        this._settledReels.clear();
+        this._spinStartTime = Date.now();
 
         this.onSpinStarting?.();
 
-        for (let i = 0; i < REEL_COUNT; i++) {
-            const timeout = setTimeout(() => {
+        if (GameModel.isTurbo) {
+            for (let i = 0; i < REEL_COUNT; i++) {
                 this._reels[i].startSpin();
-            }, i * REEL_START_INTERVAL);
-            this._stopTimeouts.push(timeout);
+            }
+        } else {
+            for (let i = 0; i < REEL_COUNT; i++) {
+                const timeout = setTimeout(() => {
+                    this._reels[i].startSpin();
+                }, i * REEL_START_INTERVAL);
+                this._stopTimeouts.push(timeout);
+            }
         }
+
+        const isTurbo = GameModel.isTurbo;
 
         let result: SpinResultWithWins;
         if (this._forcedResult) {
@@ -70,7 +94,19 @@ export class SpinController {
             }
         }
 
-        this._scheduleStops(result);
+        if (isTurbo) {
+            this._pendingResult = result;
+            const elapsed = Date.now() - this._spinStartTime;
+            const remaining = Math.max(0, SpinController._TURBO_SPIN_MS - elapsed);
+            if (remaining > 0) {
+                await new Promise(resolve => setTimeout(resolve, remaining));
+            }
+            if (this._pendingResult) {
+                this._forceStopAll(result);
+            }
+        } else {
+            this._scheduleStops(result);
+        }
     }
 
     clearTimeouts(): void {
@@ -80,11 +116,46 @@ export class SpinController {
         this._stopTimeouts.length = 0;
     }
 
+    skipSpin(): void {
+        if (!GameModel.isSpinning) return;
+        if (!this._pendingResult) return;
+        if (Date.now() - this._spinStartTime < SpinController._MIN_SKIP_DELAY) return;
+
+        this._forceStopAll(this._pendingResult);
+    }
+
     dispose(): void {
         this.clearTimeouts();
+        this._unsubscribeTurbo?.();
+    }
+
+    private _forceStopAll(result: SpinResultWithWins): void {
+        this.clearTimeouts();
+
+        for (let i = 0; i < REEL_COUNT; i++) {
+            if (!this._settledReels.has(i)) {
+                this._reels[i].forceStop(result.grid[i]);
+            }
+            this._reels[i].onSettled = undefined;
+        }
+
+        this._isTensionSpin = false;
+        this._pendingResult = undefined;
+        this._settledReels.clear();
+        const bounceTimeout = setTimeout(() => {
+            this.onAllReelsStopped?.(result, false);
+        }, BOUNCE_DURATION);
+        this._stopTimeouts.push(bounceTimeout);
     }
 
     private _scheduleStops(result: SpinResultWithWins): void {
+        this._pendingResult = result;
+
+        if (GameModel.isTurbo) {
+            this._forceStopAll(result);
+            return;
+        }
+
         let settledCount = 0;
         let cumulativeDelay = SPIN_MIN_DURATION;
         let wildsSoFar = 0;
@@ -121,6 +192,7 @@ export class SpinController {
                         }
                     }
 
+                    this._settledReels.add(i);
                     settledCount++;
                     if (settledCount === REEL_COUNT) {
                         const isTension = this._isTensionSpin;

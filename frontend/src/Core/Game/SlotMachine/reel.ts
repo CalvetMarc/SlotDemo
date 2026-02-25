@@ -62,6 +62,11 @@ export class Reel extends Container {
     // Wild landing pop
     private _wildPops: WildPop[] = [];
 
+    // Skip bounce (visual-only via container Y, state stays idle)
+    private _isSkipBouncing = false;
+    private _skipBounceElapsed = 0;
+    private _skipBounceBaseY = 0;
+
     // Tension dim
     private _dimFilter: ColorMatrixFilter | null = null;
     private _dimTarget = 0;
@@ -127,6 +132,35 @@ export class Reel extends Container {
      *   queue[3] → visible row 0
      *   queue[4] → top buffer
      */
+    /** Place target symbols and play a visual-only bounce. State stays idle. */
+    forceStop(symbols: SymbolId[]): void {
+        this._snapPositions();
+
+        const sorted = [...this._symbols].sort((a, b) => a.y - b.y);
+        this._setTexture(sorted[0], this._randomSymbol());
+        for (let i = 0; i < VISIBLE_ROWS; i++) {
+            this._setTexture(sorted[i + 1], symbols[i]);
+        }
+        this._setTexture(sorted[this._totalSlots - 1], this._randomSymbol());
+
+        // Bounce via container Y — sprites stay at snap positions
+        this._skipBounceBaseY = this.y;
+        this.y += OVERSHOOT_PX;
+        this._isSkipBouncing = true;
+        this._skipBounceElapsed = 0;
+
+        this._state = 'idle';
+        this._speed = 0;
+        this._stopQueue = [];
+        this._stopQueueIndex = 0;
+        this._isLanding = false;
+        this._isOvershooting = false;
+        this._phaseElapsed = 0;
+        this._anticipationStartY = [];
+        this._sortedForLanding = [];
+        this._landingFromY = [];
+    }
+
     stopAt(symbols: SymbolId[]): void {
         this._state = 'stopping';
         this._stopQueue = [
@@ -144,6 +178,20 @@ export class Reel extends Container {
 
     update(dt: number): void {
         if (this._isDimAnimating) this._updateDim(dt * 16.67);
+
+        if (this._isSkipBouncing) {
+            const ms = dt * 16.67;
+            this._skipBounceElapsed += ms;
+            const t = Math.min(this._skipBounceElapsed / BOUNCE_DURATION, 1);
+            const ease = easeOutQuad(t);
+
+            this.y = this._skipBounceBaseY + OVERSHOOT_PX * (1 - ease);
+
+            if (t >= 1) {
+                this.y = this._skipBounceBaseY;
+                this._isSkipBouncing = false;
+            }
+        }
 
         if (this._state === 'idle') return;
 
