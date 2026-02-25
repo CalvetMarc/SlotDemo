@@ -23,6 +23,8 @@ export class SpinController {
     private _forcedResult?: SpinResultWithWins;
     private _pendingResult?: SpinResultWithWins;
     private _spinStartTime = 0;
+    private _settledReels = new Set<number>();
+    private _unsubscribeTurbo?: () => void;
 
     private static readonly _MIN_SKIP_DELAY = 300;
 
@@ -34,6 +36,12 @@ export class SpinController {
     constructor(config: SpinControllerConfig) {
         this._reels = config.reels;
         this._resultProvider = config.resultProvider;
+
+        this._unsubscribeTurbo = GameModel.turboChanged.connect(({ active }) => {
+            if (active && this._pendingResult) {
+                this._forceStopAll(this._pendingResult);
+            }
+        });
     }
 
     get isSpinning(): boolean {
@@ -52,6 +60,7 @@ export class SpinController {
         if (GameModel.isSpinning) return;
         GameModel.setSpinning(true);
         this._pendingResult = undefined;
+        this._settledReels.clear();
         this._spinStartTime = Date.now();
 
         this.onSpinStarting?.();
@@ -96,13 +105,14 @@ export class SpinController {
 
     dispose(): void {
         this.clearTimeouts();
+        this._unsubscribeTurbo?.();
     }
 
     private _forceStopAll(result: SpinResultWithWins): void {
         this.clearTimeouts();
 
         for (let i = 0; i < REEL_COUNT; i++) {
-            if (!this._reels[i].isIdle) {
+            if (!this._settledReels.has(i)) {
                 this._reels[i].forceStop(result.grid[i]);
             }
             this._reels[i].onSettled = undefined;
@@ -110,11 +120,18 @@ export class SpinController {
 
         this._isTensionSpin = false;
         this._pendingResult = undefined;
+        this._settledReels.clear();
         this.onAllReelsStopped?.(result, false);
     }
 
     private _scheduleStops(result: SpinResultWithWins): void {
         this._pendingResult = result;
+
+        if (GameModel.isTurbo) {
+            this._forceStopAll(result);
+            return;
+        }
+
         let settledCount = 0;
         let cumulativeDelay = SPIN_MIN_DURATION;
         let wildsSoFar = 0;
@@ -151,6 +168,7 @@ export class SpinController {
                         }
                     }
 
+                    this._settledReels.add(i);
                     settledCount++;
                     if (settledCount === REEL_COUNT) {
                         const isTension = this._isTensionSpin;
