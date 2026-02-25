@@ -62,10 +62,10 @@ export class Reel extends Container {
     // Wild landing pop
     private _wildPops: WildPop[] = [];
 
-    // Skip bounce (visual-only, state stays idle)
+    // Skip bounce (visual-only via container Y, state stays idle)
     private _isSkipBouncing = false;
     private _skipBounceElapsed = 0;
-    private _skipBounceSprites: Sprite[] = [];
+    private _skipBounceBaseY = 0;
 
     // Tension dim
     private _dimFilter: ColorMatrixFilter | null = null;
@@ -143,12 +143,9 @@ export class Reel extends Container {
         }
         this._setTexture(sorted[this._totalSlots - 1], this._randomSymbol());
 
-        // Offset to overshoot position for visual bounce
-        for (const sprite of this._symbols) {
-            sprite.y += OVERSHOOT_PX;
-        }
-
-        this._skipBounceSprites = [...this._symbols].sort((a, b) => a.y - b.y);
+        // Bounce via container Y — sprites stay at snap positions
+        this._skipBounceBaseY = this.y;
+        this.y += OVERSHOOT_PX;
         this._isSkipBouncing = true;
         this._skipBounceElapsed = 0;
 
@@ -188,16 +185,11 @@ export class Reel extends Container {
             const t = Math.min(this._skipBounceElapsed / BOUNCE_DURATION, 1);
             const ease = easeOutQuad(t);
 
-            for (let i = 0; i < this._skipBounceSprites.length; i++) {
-                const snapY = (i - 1) * CELL_SIZE + CELL_SIZE * 0.5;
-                const overshootY = snapY + OVERSHOOT_PX;
-                this._skipBounceSprites[i].y = overshootY + (snapY - overshootY) * ease;
-            }
+            this.y = this._skipBounceBaseY + OVERSHOOT_PX * (1 - ease);
 
             if (t >= 1) {
-                this._snapPositions();
+                this.y = this._skipBounceBaseY;
                 this._isSkipBouncing = false;
-                this._skipBounceSprites = [];
             }
         }
 
