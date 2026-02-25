@@ -30,6 +30,7 @@ export class SlotMachineView extends View {
     private _unsubscribeSpin?: () => void;
     private _unsubscribeBuyBonus?: () => void;
     private _debugCleanup?: () => void;
+    private _skipHandler?: () => void;
 
     private _spinController!: SpinController;
     private _winController!: WinPresentationController;
@@ -154,6 +155,9 @@ export class SlotMachineView extends View {
             },
         }).attach();
 
+        this._skipHandler = () => this._spinController.skipSpin();
+        window.addEventListener('pointerdown', this._skipHandler);
+
         Ticker.shared.add(this._onTick, this);
     }
 
@@ -162,6 +166,10 @@ export class SlotMachineView extends View {
         this._unsubscribeSpin?.();
         this._unsubscribeBuyBonus?.();
         this._debugCleanup?.();
+        if (this._skipHandler) {
+            window.removeEventListener('pointerdown', this._skipHandler);
+            this._skipHandler = undefined;
+        }
         this._clearAll();
         this._spinController.dispose();
         this._winController.dispose();

@@ -127,6 +127,23 @@ export class Reel extends Container {
      *   queue[3] → visible row 0
      *   queue[4] → top buffer
      */
+    /** Immediately place target symbols and snap to final positions. Skips all animation. */
+    forceStop(symbols: SymbolId[]): void {
+        this.setSymbols(symbols);
+        this._snapPositions();
+
+        this._state = 'idle';
+        this._speed = 0;
+        this._stopQueue = [];
+        this._stopQueueIndex = 0;
+        this._isLanding = false;
+        this._isOvershooting = false;
+        this._phaseElapsed = 0;
+        this._anticipationStartY = [];
+        this._sortedForLanding = [];
+        this._landingFromY = [];
+    }
+
     stopAt(symbols: SymbolId[]): void {
         this._state = 'stopping';
         this._stopQueue = [

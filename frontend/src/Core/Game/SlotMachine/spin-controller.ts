@@ -21,6 +21,10 @@ export class SpinController {
     private _stopTimeouts: ReturnType<typeof setTimeout>[] = [];
     private _isTensionSpin = false;
     private _forcedResult?: SpinResultWithWins;
+    private _pendingResult?: SpinResultWithWins;
+    private _spinStartTime = 0;
+
+    private static readonly _MIN_SKIP_DELAY = 300;
 
     /** Called when all 5 reels have settled. */
     public onAllReelsStopped?: (result: SpinResultWithWins, isTension: boolean) => void;
@@ -47,6 +51,8 @@ export class SpinController {
     async startSpin(): Promise<void> {
         if (GameModel.isSpinning) return;
         GameModel.setSpinning(true);
+        this._pendingResult = undefined;
+        this._spinStartTime = Date.now();
 
         this.onSpinStarting?.();
 
@@ -80,11 +86,32 @@ export class SpinController {
         this._stopTimeouts.length = 0;
     }
 
+    skipSpin(): void {
+        if (!GameModel.isSpinning) return;
+        if (!this._pendingResult) return;
+        if (Date.now() - this._spinStartTime < SpinController._MIN_SKIP_DELAY) return;
+
+        this._forceStopAll(this._pendingResult);
+    }
+
     dispose(): void {
         this.clearTimeouts();
     }
 
+    private _forceStopAll(result: SpinResultWithWins): void {
+        this.clearTimeouts();
+
+        for (let i = 0; i < REEL_COUNT; i++) {
+            this._reels[i].forceStop(result.grid[i]);
+        }
+
+        this._isTensionSpin = false;
+        this._pendingResult = undefined;
+        this.onAllReelsStopped?.(result, false);
+    }
+
     private _scheduleStops(result: SpinResultWithWins): void {
+        this._pendingResult = result;
         let settledCount = 0;
         let cumulativeDelay = SPIN_MIN_DURATION;
         let wildsSoFar = 0;
