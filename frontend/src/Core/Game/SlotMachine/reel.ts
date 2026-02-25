@@ -127,7 +127,7 @@ export class Reel extends Container {
      *   queue[3] → visible row 0
      *   queue[4] → top buffer
      */
-    /** Immediately place target symbols and snap to final positions. Skips all animation. */
+    /** Place target symbols at overshoot position and enter bounce phase. */
     forceStop(symbols: SymbolId[]): void {
         this._snapPositions();
 
@@ -138,15 +138,20 @@ export class Reel extends Container {
         }
         this._setTexture(sorted[this._totalSlots - 1], this._randomSymbol());
 
-        this._state = 'idle';
+        // Offset to overshoot position so the existing bounce phase animates back
+        for (const sprite of this._symbols) {
+            sprite.y += OVERSHOOT_PX;
+        }
+
+        this._sortedForLanding = [...this._symbols].sort((a, b) => a.y - b.y);
+        this._state = 'stopping';
+        this._isLanding = true;
+        this._isOvershooting = true;
+        this._phaseElapsed = 0;
         this._speed = 0;
         this._stopQueue = [];
         this._stopQueueIndex = 0;
-        this._isLanding = false;
-        this._isOvershooting = false;
-        this._phaseElapsed = 0;
         this._anticipationStartY = [];
-        this._sortedForLanding = [];
         this._landingFromY = [];
     }
 

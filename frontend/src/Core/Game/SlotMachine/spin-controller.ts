@@ -103,6 +103,7 @@ export class SpinController {
 
         for (let i = 0; i < REEL_COUNT; i++) {
             this._reels[i].forceStop(result.grid[i]);
+            this._reels[i].onSettled = undefined;
         }
 
         this._isTensionSpin = false;
