@@ -5,7 +5,7 @@ import { WILD_POP_GROW_MS } from './reel';
 import type { ISpinResultProvider, SpinResultWithWins } from './spin-result-provider';
 import {
     SPIN_MIN_DURATION, REEL_START_INTERVAL, REEL_STOP_INTERVAL,
-    WILD_TENSION_MULTIPLIERS, ANTICIPATION_MS,
+    WILD_TENSION_MULTIPLIERS,
 } from './slot-config';
 import { countWilds } from './debug-spins';
 import { GameModel } from './game-model';
@@ -27,6 +27,7 @@ export class SpinController {
     private _unsubscribeTurbo?: () => void;
 
     private static readonly _MIN_SKIP_DELAY = 300;
+    private static readonly _TURBO_SPIN_MS = 500;
 
     /** Called when all 5 reels have settled. */
     public onAllReelsStopped?: (result: SpinResultWithWins, isTension: boolean) => void;
@@ -78,6 +79,8 @@ export class SpinController {
             }
         }
 
+        const isTurbo = GameModel.isTurbo;
+
         let result: SpinResultWithWins;
         if (this._forcedResult) {
             result = this._forcedResult;
@@ -91,7 +94,19 @@ export class SpinController {
             }
         }
 
-        this._scheduleStops(result);
+        if (isTurbo) {
+            this._pendingResult = result;
+            const elapsed = Date.now() - this._spinStartTime;
+            const remaining = Math.max(0, SpinController._TURBO_SPIN_MS - elapsed);
+            if (remaining > 0) {
+                await new Promise(resolve => setTimeout(resolve, remaining));
+            }
+            if (this._pendingResult) {
+                this._forceStopAll(result);
+            }
+        } else {
+            this._scheduleStops(result);
+        }
     }
 
     clearTimeouts(): void {
@@ -132,17 +147,6 @@ export class SpinController {
 
     private _scheduleStops(result: SpinResultWithWins): void {
         this._pendingResult = result;
-
-        if (GameModel.isTurbo) {
-            const elapsed = Date.now() - this._spinStartTime;
-            const remaining = Math.max(0, ANTICIPATION_MS - elapsed);
-            const timeout = setTimeout(() => {
-                this._forceStopAll(result);
-            }, remaining);
-            this._stopTimeouts.push(timeout);
-            return;
-        }
-
         let settledCount = 0;
         let cumulativeDelay = SPIN_MIN_DURATION;
         let wildsSoFar = 0;
