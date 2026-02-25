@@ -14,6 +14,7 @@ import { DesignCanvas } from '../Layout/design-canvas';
 import { TransitionMask } from '../Transitions/transition-mask';
 import { gameSignals } from '../Signals/game-signals';
 import { SessionManager } from '../Game/SlotMachine/session-manager';
+import { GameModel } from '../Game/SlotMachine/game-model';
 
 const SCREEN_REGISTRY: Record<ScreenTypes, () => GameScreen> = {
   SPLASH: () => new SplashScreen(),
@@ -193,6 +194,9 @@ export class ScreenManager extends SingletonBase {
       this._sceneMap[key] = null;
     }
     this._currentScreen = undefined;
+
+    // Reset game state that persists across screens
+    GameModel.setSpinning(false);
 
     // Create a fresh session and restart from splash
     await SessionManager.init();
