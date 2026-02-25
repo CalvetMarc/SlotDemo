@@ -5,7 +5,7 @@ import { WILD_POP_GROW_MS } from './reel';
 import type { ISpinResultProvider, SpinResultWithWins } from './spin-result-provider';
 import {
     SPIN_MIN_DURATION, REEL_START_INTERVAL, REEL_STOP_INTERVAL,
-    WILD_TENSION_MULTIPLIERS,
+    WILD_TENSION_MULTIPLIERS, ANTICIPATION_MS,
 } from './slot-config';
 import { countWilds } from './debug-spins';
 import { GameModel } from './game-model';
@@ -65,11 +65,17 @@ export class SpinController {
 
         this.onSpinStarting?.();
 
-        for (let i = 0; i < REEL_COUNT; i++) {
-            const timeout = setTimeout(() => {
+        if (GameModel.isTurbo) {
+            for (let i = 0; i < REEL_COUNT; i++) {
                 this._reels[i].startSpin();
-            }, i * REEL_START_INTERVAL);
-            this._stopTimeouts.push(timeout);
+            }
+        } else {
+            for (let i = 0; i < REEL_COUNT; i++) {
+                const timeout = setTimeout(() => {
+                    this._reels[i].startSpin();
+                }, i * REEL_START_INTERVAL);
+                this._stopTimeouts.push(timeout);
+            }
         }
 
         let result: SpinResultWithWins;
@@ -128,7 +134,12 @@ export class SpinController {
         this._pendingResult = result;
 
         if (GameModel.isTurbo) {
-            this._forceStopAll(result);
+            const elapsed = Date.now() - this._spinStartTime;
+            const remaining = Math.max(0, ANTICIPATION_MS - elapsed);
+            const timeout = setTimeout(() => {
+                this._forceStopAll(result);
+            }, remaining);
+            this._stopTimeouts.push(timeout);
             return;
         }
 
