@@ -11,7 +11,7 @@ export class BonusWinCounterView extends View {
 
     appear(): void {
         const labelStyle = new TextStyle({
-            fontFamily: 'Arial',
+            fontFamily: 'Birch Std, Arial, sans-serif',
             fontSize: 32,
             fontWeight: 'bold',
             fill: 0xcccccc,
@@ -23,7 +23,7 @@ export class BonusWinCounterView extends View {
         this.addChild(this._label);
 
         const valueStyle = new TextStyle({
-            fontFamily: 'Arial',
+            fontFamily: 'Forte, Arial, sans-serif',
             fontSize: 56,
             fontWeight: 'bold',
             fill: 0xffd700,

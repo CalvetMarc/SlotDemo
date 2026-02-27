@@ -15,7 +15,7 @@ export class BonusHintView extends View {
 
     appear(): void {
         const style = new TextStyle({
-            fontFamily: 'Arial',
+            fontFamily: 'Birch Std, Arial, sans-serif',
             fontSize: 52,
             fontWeight: 'bold',
             fill: 0xc9a84c,

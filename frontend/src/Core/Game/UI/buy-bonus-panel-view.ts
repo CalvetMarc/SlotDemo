@@ -24,7 +24,8 @@ const COLORS = {
     white: 0xffffff,
 } as const;
 
-const FONT = 'Arial, sans-serif';
+const FONT_TITLE = 'Birch Std, Arial, sans-serif';
+const FONT_BODY = 'Forte, Arial, sans-serif';
 const ANIM_DURATION = 300;
 const BACKDROP_ALPHA = 0.8;
 const BLUR_STRENGTH = 4;
@@ -163,7 +164,7 @@ export class BuyBonusPanelView extends Container {
 
         // Title — centered in content area
         const contentCenterX = gutterW + contentW / 2;
-        this._titleText = this._createText('BUY BONUS', Math.round(32 * s), COLORS.titleText, 'bold');
+        this._titleText = this._createText('BUY BONUS', Math.round(40 * s), COLORS.titleText, 'bold');
         this._titleText.anchor.set(0.5, 0);
         this._titleText.position.set(contentCenterX, Math.round(40 * s));
         this._panelContainer.addChild(this._titleText);
@@ -204,7 +205,7 @@ export class BuyBonusPanelView extends Container {
         const gutterVisualH = chevronPadY + chevronSize + chevronPadY;
 
         // Equal gap between gutter→title and title→first card
-        const titleFs = Math.round(24 * s);
+        const titleFs = Math.round(30 * s);
         const titleLineH = Math.round(titleFs * 1.3);
         const sectionGap = Math.round(20 * s);
         const headerH = gutterVisualH + sectionGap + titleLineH + sectionGap;
@@ -379,7 +380,7 @@ export class BuyBonusPanelView extends Container {
     private _createText(content: string, fontSize: number, fill: number, fontWeight: string = 'normal'): Text {
         return new Text({
             text: content,
-            style: new TextStyle({ fontFamily: FONT, fontSize, fill, fontWeight: fontWeight as TextStyle['fontWeight'] }),
+            style: new TextStyle({ fontFamily: FONT_TITLE, fontSize, fill, fontWeight: fontWeight as TextStyle['fontWeight'] }),
         });
     }
 
@@ -481,15 +482,7 @@ class OptionCard extends Container {
     ) {
         super();
         this.multiplier = multiplier;
-
-        // Uniform scale to fit the allocated slot
-        const sc = Math.min(slotW / REF_CARD_W, slotH / REF_CARD_H);
-
-        // When slotW is wider than scaled content, stretch bg in ref-space
-        const bgW = slotW / sc;
-
-        this._buildAtRefSize(title, wildCount, onBuy, bgW);
-        this.scale.set(sc);
+        this._buildAtActualSize(title, wildCount, onBuy, slotW, slotH);
     }
 
     updatePrice(cost: number, isAffordable: boolean): void {
@@ -498,20 +491,19 @@ class OptionCard extends Container {
         this._refreshButton();
     }
 
-    /** Build all content at fixed reference dimensions, with bg stretched to bgW. */
-    private _buildAtRefSize(title: string, wildCount: number, onBuy: () => void, bgW: number): void {
-        const w = REF_CARD_W;
-        const h = REF_CARD_H;
-        const cx = bgW / 2; // center X (accounts for wider bg)
+    /** Build content at actual pixel size — no container scaling, so text stays crisp. */
+    private _buildAtActualSize(title: string, wildCount: number, onBuy: () => void, w: number, h: number): void {
+        const sc = h / REF_CARD_H;
+        const cx = w / 2;
 
-        // Fixed sizes — these are the pixel-perfect iPhone 7 values
-        const titleFs = 18;
-        const priceFs = 26;
-        const btnH = 36;
-        const btnW = 200;
-        const btnFs = 16;
-        const gap = 8;
-        const padY = 10;
+        const titleFs = Math.round(18 * sc);
+        const priceFs = Math.round(26 * sc);
+        const btnH = Math.round(36 * sc);
+        const btnW = Math.round(200 * sc);
+        const btnFs = Math.round(22 * sc);
+        const gap = Math.round(8 * sc);
+        const padY = Math.round(10 * sc);
+        const cornerR = Math.round(12 * sc);
 
         const titleLineH = Math.round(titleFs * 1.25);
         const priceLineH = Math.round(priceFs * 1.25);
@@ -520,40 +512,40 @@ class OptionCard extends Container {
 
         let y = padY;
 
-        // Card bg with border — stretched to bgW
+        // Card bg
         const bg = new Graphics();
-        bg.roundRect(0, 0, bgW, h, 12);
+        bg.roundRect(0, 0, w, h, cornerR);
         bg.fill({ color: COLORS.cardBg });
         bg.stroke({ color: COLORS.panelBorder, width: 2 });
         this.addChild(bg);
 
-        // Title — centered in bg
+        // Title
         const titleText = new Text({
             text: title,
-            style: new TextStyle({ fontFamily: FONT, fontSize: titleFs, fill: COLORS.titleText, fontWeight: 'bold' }),
+            style: new TextStyle({ fontFamily: FONT_TITLE, fontSize: titleFs, fill: COLORS.titleText, fontWeight: 'bold' }),
         });
         titleText.anchor.set(0.5, 0);
         titleText.position.set(cx, y);
         this.addChild(titleText);
         y += titleLineH + gap;
 
-        // Price — centered in bg
+        // Price
         this._priceText = new Text({
             text: '€0.00',
-            style: new TextStyle({ fontFamily: FONT, fontSize: priceFs, fill: COLORS.priceText, fontWeight: 'bold' }),
+            style: new TextStyle({ fontFamily: FONT_BODY, fontSize: priceFs, fill: COLORS.priceText, fontWeight: 'bold' }),
         });
         this._priceText.anchor.set(0.5, 0);
         this._priceText.position.set(cx, y);
         this.addChild(this._priceText);
         y += priceLineH + gap;
 
-        // Wild row — content-width centered in bg
+        // Wild row
         const wilds = createWildRow(wildCount, w * 0.9, wildRowH);
         wilds.position.set(cx - w * 0.45, y);
         this.addChild(wilds);
         y += wildRowH + gap;
 
-        // BUY button — centered pill
+        // BUY button
         this._buyButton = new Container();
 
         this._buyBg = new Graphics();
@@ -563,7 +555,7 @@ class OptionCard extends Container {
 
         const buyLabel = new Text({
             text: 'BUY',
-            style: new TextStyle({ fontFamily: FONT, fontSize: btnFs, fill: COLORS.white, fontWeight: 'bold', letterSpacing: 3 }),
+            style: new TextStyle({ fontFamily: FONT_TITLE, fontSize: btnFs, fill: COLORS.white, fontWeight: 'bold', letterSpacing: Math.round(3 * sc) }),
         });
         buyLabel.anchor.set(0.5);
         buyLabel.position.set(btnW / 2, btnH / 2);

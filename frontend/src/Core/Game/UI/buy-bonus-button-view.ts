@@ -35,7 +35,7 @@ export class BuyBonusButtonView extends ButtonView {
 
         // "BUY" text on top (white, tinted for rainbow)
         const buyStyle = new TextStyle({
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'Birch Std, Arial, sans-serif',
             fontSize: 38,
             fill: 0xffffff,
             fontWeight: 'bold',
@@ -48,7 +48,7 @@ export class BuyBonusButtonView extends ButtonView {
 
         // "BONUS" text on bottom (white, tinted for rainbow)
         const bonusStyle = new TextStyle({
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'Birch Std, Arial, sans-serif',
             fontSize: 44,
             fill: 0xffffff,
             fontWeight: 'bold',

@@ -12,6 +12,9 @@
     {
       "name": "base",
       "assets": {
+        "Birch Std": "assets/fonts/BirchStd.otf",
+        "Forte": "assets/fonts/FORTE.TTF",
+
         "bats": "assets/base/background/animated/bats/bats_animated.json",
         "flies_appear": "assets/base/background/animated/flies/appear/flies_appear.json",
         "flies_loop": "assets/base/background/animated/flies/loop/flies_loop-0.json",

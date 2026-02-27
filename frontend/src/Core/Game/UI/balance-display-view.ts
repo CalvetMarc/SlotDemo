@@ -22,12 +22,12 @@ export class BalanceDisplayView extends View {
 
         // Label "DEMO\nBALANCE" - muted blue-gray, two lines
         const labelStyle = new TextStyle({
-            fontFamily: 'Arial, sans-serif',
-            fontSize: 14,
+            fontFamily: 'Birch Std, Arial, sans-serif',
+            fontSize: 22,
             fill: 0x8892a8,  // Muted blue-gray
             fontWeight: '600',
             letterSpacing: 1,
-            lineHeight: 16
+            lineHeight: 24
         });
         this.labelText = new Text({ text: 'DEMO\nBALANCE', style: labelStyle });
         this.labelText.anchor.set(0, 0);
@@ -36,7 +36,7 @@ export class BalanceDisplayView extends View {
 
         // Value - soft white for readability
         const valueStyle = new TextStyle({
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'Forte, Arial, sans-serif',
             fontSize: 28,
             fill: 0xe8eaf0,  // Soft white
             fontWeight: 'bold'

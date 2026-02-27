@@ -27,8 +27,8 @@ export class BetDisplayView extends View {
 
         // Label "DEMO BET" - muted blue-gray (positioned to match BalanceDisplayView)
         const labelStyle = new TextStyle({
-            fontFamily: 'Arial, sans-serif',
-            fontSize: 14,
+            fontFamily: 'Birch Std, Arial, sans-serif',
+            fontSize: 22,
             fill: 0x8892a8,  // Muted blue-gray
             fontWeight: '600',
             letterSpacing: 1
@@ -40,7 +40,7 @@ export class BetDisplayView extends View {
 
         // Value text - soft white for readability (positioned to match BalanceDisplayView)
         const valueStyle = new TextStyle({
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'Forte, Arial, sans-serif',
             fontSize: 28,
             fill: 0xe8eaf0,  // Soft white
             fontWeight: 'bold'
