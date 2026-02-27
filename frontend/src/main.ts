@@ -28,6 +28,12 @@ async function main() {
     manifest: 'assets_manifest.json'
   });
 
+  // Ensure custom fonts are fully loaded before any Text object measures glyphs
+  await Promise.all([
+    document.fonts.load('bold 1em "Birch Std"'),
+    document.fonts.load('bold 1em "Forte"'),
+  ]);
+
   // Initialize canvas selection manager
   const layoutManager = new LayoutManager([
     CANVAS_16_9,
