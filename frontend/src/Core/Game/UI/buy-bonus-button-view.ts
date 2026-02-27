@@ -59,6 +59,13 @@ export class BuyBonusButtonView extends ButtonView {
         this.bonusText.position.set(0, 32);
         this.addChild(this.bonusText);
 
+        // Re-measure text after custom font finishes loading
+        document.fonts.ready.then(() => {
+            if (this.destroyed) return;
+            this.buyText.text = 'BUY';
+            this.bonusText.text = 'BONUS';
+        });
+
         this.setupInteractivity();
 
         // Start rainbow animation

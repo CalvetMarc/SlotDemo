@@ -196,3 +196,84 @@ export function generateInitialGrid(): SymbolId[][] {
     return INITIAL_GRID;
 }
 
+// ── Buy-bonus constrained grid ──────────────────────────────
+
+const NON_WILD_SYMBOLS: SymbolId[] = SYMBOL_IDS.filter((s): s is SymbolId => s !== WILD);
+
+/**
+ * Deterministic wild positions (one per reel) that guarantee no payline wins
+ * when placed on INITIAL_GRID. Reels 0-1 always mismatch, so the payline
+ * chain breaks at count ≤ 1 regardless of wild placement on reels 2+.
+ */
+const SAFE_WILD_POSITIONS: readonly [number, number][] = [
+    [0, 0], [1, 2], [2, 1], [3, 0], [4, 2],
+];
+
+function generateConstrainedGrid(wildCount: number): SymbolId[][] {
+    const grid: SymbolId[][] = [];
+    for (let r = 0; r < REEL_COUNT; r++) {
+        const column: SymbolId[] = [];
+        for (let row = 0; row < VISIBLE_ROWS; row++) {
+            column.push(NON_WILD_SYMBOLS[Math.floor(Math.random() * NON_WILD_SYMBOLS.length)]);
+        }
+        grid.push(column);
+    }
+
+    // Pick wildCount random reels (max 1 wild per reel, matching real strip rules)
+    const reels = [0, 1, 2, 3, 4];
+    for (let i = reels.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [reels[i], reels[j]] = [reels[j], reels[i]];
+    }
+
+    for (let i = 0; i < wildCount; i++) {
+        const r = reels[i];
+        const row = Math.floor(Math.random() * VISIBLE_ROWS);
+        grid[r][row] = WILD;
+    }
+
+    return grid;
+}
+
+function generateSafeGrid(wildCount: number): SymbolId[][] {
+    const grid = INITIAL_GRID.map(col => [...col]);
+    for (let i = 0; i < wildCount; i++) {
+        const [r, row] = SAFE_WILD_POSITIONS[i];
+        grid[r][row] = WILD;
+    }
+    return grid;
+}
+
+export function generateBuyBonusSpin(wildCount: number, totalBet: number): SpinServiceResult {
+    const MAX_ATTEMPTS = 100;
+
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        const grid = generateConstrainedGrid(wildCount);
+        const { lineWins, wildCount: wc, wildPay } = evaluateWin(grid, totalBet);
+
+        if (lineWins.length === 0) {
+            return {
+                grid,
+                winAmount: wildPay,
+                lineWins: [],
+                wildCount: wc,
+                bonusTriggered: true,
+                wildPay,
+            };
+        }
+    }
+
+    // Fallback: deterministic safe grid (INITIAL_GRID + wilds on reel 2/4)
+    const grid = generateSafeGrid(wildCount);
+    const wildPay = evaluateWildPay(wildCount, totalBet);
+
+    return {
+        grid,
+        winAmount: wildPay,
+        lineWins: [],
+        wildCount,
+        bonusTriggered: true,
+        wildPay,
+    };
+}
+

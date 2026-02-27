@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { sql } from '../db.js';
 import { authMiddleware, type AuthRequest } from '../middleware/auth.js';
 import { generateBonusChests, BonusState } from '../services/bonus-service.js';
+import { generateBuyBonusSpin } from '../services/spin-service.js';
 import { getSession } from '../services/session-helpers.js';
 
 const router = Router();
@@ -154,7 +155,18 @@ router.post('/buy', authMiddleware, async (req, res) => {
             WHERE id = ${sessionId}
         `;
 
-        res.json({ balance, tier, wildPay, wildCount });
+        const spinResult = generateBuyBonusSpin(wildCount, betAmount);
+
+        res.json({
+            grid: spinResult.grid,
+            balance,
+            winAmount: spinResult.winAmount,
+            lineWins: spinResult.lineWins,
+            wildCount: spinResult.wildCount,
+            bonusTriggered: spinResult.bonusTriggered,
+            wildPay: spinResult.wildPay,
+            tier,
+        });
     } catch (err) {
         console.error('Buy bonus failed:', err);
         res.status(500).json({ error: 'Buy bonus failed' });

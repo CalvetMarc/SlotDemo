@@ -234,6 +234,7 @@ export class SlotMachineView extends View {
 
     private async _handleBuyBonus(tier: number): Promise<void> {
         if (GameModel.isSpinning) return;
+        GameModel.setSpinning(true);
 
         try {
             const data = await ApiClient.post<BuyBonusResponse>('/api/bonus/buy', {
@@ -242,10 +243,22 @@ export class SlotMachineView extends View {
             });
 
             GameModel.setBalance(data.balance);
-            const wildPayMsg = data.wildPay > 0 ? ` +${data.wildPay.toFixed(2)}€ wild pay` : '';
-            this._showDebugWin(`BUY BONUS T${data.tier}! ${data.wildCount} wilds${wildPayMsg}`);
-            gameSignals.requestBonusTransition.emit();
+
+            const result: SpinResultWithWins = {
+                grid: data.grid,
+                winAmount: data.winAmount,
+                lineWins: data.lineWins,
+                wildCount: data.wildCount,
+                bonusTriggered: data.bonusTriggered,
+                wildPay: data.wildPay,
+            };
+
+            GameModel.setLastResult(null);
+            GameModel.setSpinning(false);
+            this._spinController.setForcedResult(result);
+            await this._spinController.startSpin();
         } catch (err) {
+            GameModel.setSpinning(false);
             console.error('Buy bonus request failed:', err);
         }
     }

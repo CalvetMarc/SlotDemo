@@ -195,6 +195,7 @@ export class SpinController {
                     this._settledReels.add(i);
                     settledCount++;
                     if (settledCount === REEL_COUNT) {
+                        this._pendingResult = undefined;
                         const isTension = this._isTensionSpin;
                         this._isTensionSpin = false;
                         this.onAllReelsStopped?.(result, isTension);

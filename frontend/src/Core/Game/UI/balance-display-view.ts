@@ -43,7 +43,7 @@ export class BalanceDisplayView extends View {
         });
         this.valueText = new Text({ text: '€99,999.00', style: valueStyle });
         this.valueText.anchor.set(0, 0.5);
-        this.valueText.position.set(15, 80);
+        this.valueText.position.set(15, 88);
         this.addChild(this.valueText);
 
         this._unsubscribeBalance = gameSignals.balanceUpdated.connect(({ value }) => {

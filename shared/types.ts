@@ -46,10 +46,14 @@ export interface BuyBonusRequest {
 }
 
 export interface BuyBonusResponse {
+    grid: SymbolId[][];
     balance: number;
-    tier: number;
-    wildPay: number;
+    winAmount: number;
+    lineWins: LineWin[];
     wildCount: number;
+    bonusTriggered: boolean;
+    wildPay: number;
+    tier: number;
 }
 
 export interface BonusStartResponse {
