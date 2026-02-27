@@ -36,20 +36,20 @@ export class BuyBonusButtonView extends ButtonView {
         // "BUY" text on top (white, tinted for rainbow)
         const buyStyle = new TextStyle({
             fontFamily: 'Birch Std, Arial, sans-serif',
-            fontSize: 38,
+            fontSize: 46,
             fill: 0xffffff,
             fontWeight: 'bold',
             letterSpacing: 4
         });
         this.buyText = new Text({ text: 'BUY', style: buyStyle });
         this.buyText.anchor.set(0.5, 0.5);
-        this.buyText.position.set(0, -28);
+        this.buyText.position.set(0, -32);
         this.addChild(this.buyText);
 
         // "BONUS" text on bottom (white, tinted for rainbow)
         const bonusStyle = new TextStyle({
             fontFamily: 'Birch Std, Arial, sans-serif',
-            fontSize: 44,
+            fontSize: 52,
             fill: 0xffffff,
             fontWeight: 'bold',
             letterSpacing: 5
