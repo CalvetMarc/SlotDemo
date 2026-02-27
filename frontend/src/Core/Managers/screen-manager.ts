@@ -152,6 +152,7 @@ export class ScreenManager extends SingletonBase {
       await this._currentScreen.onExit();
       if (destroyCurrent) {
         pool = this._currentScreen.releaseViews();
+        this._sceneMap[transitionFrom] = null;
       } else {
         this._currentScreen.detachViews();
         this._sceneMap[transitionFrom] = this._currentScreen;
