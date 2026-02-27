@@ -57,12 +57,12 @@ export const WILD_TENSION_MULTIPLIERS: Record<number, number> = {
     4: 6,
 };
 
-// ── Animation ────────────────────────────────────────────────────
-export const SPIN_SPEED = 85;           // px per frame at full speed
-export const SPIN_MIN_DURATION = 800;   // ms before first reel can stop
-export const REEL_START_INTERVAL = 100; // ms between each reel starting
-export const REEL_STOP_INTERVAL = 450;  // ms between each reel stopping
-export const ANTICIPATION_PX = 110;     // pull-up distance before spin
-export const ANTICIPATION_MS = 350;     // pull-up duration
-export const OVERSHOOT_PX = 60;         // bounce past target
-export const BOUNCE_DURATION = 170;     // ms to settle back
+// ── Animation (proportional to CELL_SIZE, calibrated at 1920×1080) ──
+export const SPIN_SPEED = 0.259 * CELL_SIZE;    // px/frame at full speed (~85 at 328)
+export const SPIN_MIN_DURATION = 800;            // ms before first reel can stop
+export const REEL_START_INTERVAL = 100;          // ms between each reel starting
+export const REEL_STOP_INTERVAL = 450;           // ms between each reel stopping
+export const ANTICIPATION_PX = 0.335 * CELL_SIZE; // pull-up distance before spin (~110 at 328)
+export const ANTICIPATION_MS = 350;              // pull-up duration
+export const OVERSHOOT_PX = 0.183 * CELL_SIZE;  // bounce past target (~60 at 328)
+export const BOUNCE_DURATION = 170;              // ms to settle back
