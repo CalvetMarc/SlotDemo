@@ -12,7 +12,7 @@
     {
       "name": "base",
       "assets": {
-        "Birch Std": "assets/fonts/BirchStd.otf",
+        "Birch Std": "assets/fonts/BirchStd.ttf",
         "Forte": "assets/fonts/FORTE.TTF",
 
         "bats": "assets/base/background/animated/bats/bats_animated.json",
