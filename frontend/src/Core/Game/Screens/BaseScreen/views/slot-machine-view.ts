@@ -215,17 +215,14 @@ export class SlotMachineView extends View {
 
         if (shouldCelebrate && !isTension) {
             const hasWilds = this._reels.some(r => r.hasWildPops);
-            const delay = hasWilds ? REEL_STOP_INTERVAL * 2 + 300 : 0;
+            const WIN_REVEAL_PAUSE = 100;
+            const wildAnimDelay = hasWilds ? REEL_STOP_INTERVAL * 2 + 300 : 0;
+            const delay = wildAnimDelay + WIN_REVEAL_PAUSE;
 
-            if (delay > 0) {
-                this._winPresentationTimeout = setTimeout(() => {
-                    this._emitResultSignals(result);
-                    this._winController.show(result);
-                }, delay);
-            } else {
+            this._winPresentationTimeout = setTimeout(() => {
                 this._emitResultSignals(result);
                 this._winController.show(result);
-            }
+            }, delay);
         }
 
         if (!result.bonusTriggered) {

@@ -5,7 +5,7 @@ import { WILD_POP_GROW_MS } from './reel';
 import type { ISpinResultProvider, SpinResultWithWins } from './spin-result-provider';
 import {
     SPIN_MIN_DURATION, REEL_START_INTERVAL, REEL_STOP_INTERVAL,
-    WILD_TENSION_MULTIPLIERS,
+    WILD_TENSION_MULTIPLIERS, BOUNCE_DURATION,
 } from './slot-config';
 import { countWilds } from './debug-spins';
 import { GameModel } from './game-model';
@@ -27,7 +27,7 @@ export class SpinController {
     private _unsubscribeTurbo?: () => void;
 
     private static readonly _MIN_SKIP_DELAY = 300;
-    private static readonly _TURBO_SPIN_MS = 500;
+    private static readonly _TURBO_SPIN_MS = 700;
 
     /** Called when all 5 reels have settled. */
     public onAllReelsStopped?: (result: SpinResultWithWins, isTension: boolean) => void;
@@ -142,7 +142,10 @@ export class SpinController {
         this._isTensionSpin = false;
         this._pendingResult = undefined;
         this._settledReels.clear();
-        this.onAllReelsStopped?.(result, false);
+        const bounceTimeout = setTimeout(() => {
+            this.onAllReelsStopped?.(result, false);
+        }, BOUNCE_DURATION);
+        this._stopTimeouts.push(bounceTimeout);
     }
 
     private _scheduleStops(result: SpinResultWithWins): void {
