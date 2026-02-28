@@ -54,10 +54,14 @@ export class Reel extends Container {
 
     private _symbols: Sprite[] = [];
     private _symbolIds: SymbolId[] = [];
+    private _sortedSymbols: Sprite[] = [];
+    private _symbolDimmed: boolean[] = [];
     private _state: ReelState = 'idle';
 
     // Celebration
     private _celebrationViews: SymbolView[] = [];
+    private _symbolViewPool: SymbolView[] = [];
+    private _celebrationDimFilter: ColorMatrixFilter;
 
     // Wild landing pop
     private _wildPops: WildPop[] = [];
@@ -102,6 +106,15 @@ export class Reel extends Container {
         this.index = index;
         this._sheet = Assets.get('symbols_static');
         this._createSymbols();
+
+        // Pre-allocate SymbolView pool for celebration reuse
+        const dummySprite = this._symbols[0];
+        for (let i = 0; i < VISIBLE_ROWS; i++) {
+            this._symbolViewPool.push(new SymbolView(this.index, i, 'J.png', dummySprite));
+        }
+        this._celebrationDimFilter = new ColorMatrixFilter();
+        this._celebrationDimFilter.brightness(0.35, false);
+        this._celebrationDimFilter.desaturate();
     }
 
     /** Place initial symbols on the reel. */
@@ -136,12 +149,11 @@ export class Reel extends Container {
     forceStop(symbols: SymbolId[]): void {
         this._snapPositions();
 
-        const sorted = [...this._symbols].sort((a, b) => a.y - b.y);
-        this._setTexture(sorted[0], this._randomSymbol());
+        this._setTexture(this._sortedSymbols[0], this._randomSymbol());
         for (let i = 0; i < VISIBLE_ROWS; i++) {
-            this._setTexture(sorted[i + 1], symbols[i]);
+            this._setTexture(this._sortedSymbols[i + 1], symbols[i]);
         }
-        this._setTexture(sorted[this._totalSlots - 1], this._randomSymbol());
+        this._setTexture(this._sortedSymbols[this._totalSlots - 1], this._randomSymbol());
 
         // Bounce via container Y — sprites stay at snap positions
         this._skipBounceBaseY = this.y;
@@ -291,8 +303,7 @@ export class Reel extends Container {
 
     /** Get the sprite at a visible row (0 = top, 2 = bottom). */
     getVisibleSymbol(row: number): Sprite {
-        const sorted = [...this._symbols].sort((a, b) => a.y - b.y);
-        return sorted[row + 1]; // +1 to skip top buffer
+        return this._sortedSymbols[row + 1]; // +1 to skip top buffer
     }
 
     /** Get the symbol ID at a visible row (0 = top, 2 = bottom). */
@@ -309,12 +320,13 @@ export class Reel extends Container {
         for (let row = 0; row < VISIBLE_ROWS; row++) {
             const sprite = this.getVisibleSymbol(row);
             const symbolId = this.getSymbolId(row);
-            const sv = new SymbolView(this.index, row, symbolId, sprite);
+            const sv = this._symbolViewPool[row];
+            sv.reset(this.index, row, symbolId, sprite);
 
             if (winRows.has(row)) {
                 sv.showWinAnimation(this);
             } else {
-                sv.dim();
+                sv.dim(this._celebrationDimFilter);
             }
 
             if (vfxRows.has(row)) {
@@ -390,13 +402,21 @@ export class Reel extends Container {
             this._dimFilter!.brightness(brightness, false);
             const exemptWilds = this._state === 'idle';
             for (let i = 0; i < this._symbols.length; i++) {
-                this._symbols[i].filters = (exemptWilds && this._symbolIds[i] === WILD_ID)
-                    ? []
-                    : [this._dimFilter!];
+                const shouldDim = !(exemptWilds && this._symbolIds[i] === WILD_ID);
+                if (shouldDim && !this._symbolDimmed[i]) {
+                    this._symbols[i].filters = [this._dimFilter!];
+                    this._symbolDimmed[i] = true;
+                } else if (!shouldDim && this._symbolDimmed[i]) {
+                    this._symbols[i].filters = [];
+                    this._symbolDimmed[i] = false;
+                }
             }
         } else {
-            for (const sprite of this._symbols) {
-                sprite.filters = [];
+            for (let i = 0; i < this._symbols.length; i++) {
+                if (this._symbolDimmed[i]) {
+                    this._symbols[i].filters = [];
+                    this._symbolDimmed[i] = false;
+                }
             }
         }
     }
@@ -479,8 +499,11 @@ export class Reel extends Container {
             this.addChild(sprite);
             this._symbols.push(sprite);
             this._symbolIds.push(id);
+            this._symbolDimmed.push(false);
             this._setTexture(sprite, id);
         }
+        // Created in sorted order
+        this._sortedSymbols = [...this._symbols];
     }
 
     /** Assign a new texture and scale uniformly to fit within SYMBOL_SIZE. */
@@ -503,17 +526,16 @@ export class Reel extends Container {
     private _moveDown(px: number): void {
         const bottomEdge = VISIBLE_ROWS * CELL_SIZE + CELL_SIZE * 0.5;
 
+        let minY = Infinity;
         for (const sprite of this._symbols) {
             sprite.y += px;
+            if (sprite.y < minY) minY = sprite.y;
         }
 
         for (const sprite of this._symbols) {
             if (sprite.y > bottomEdge) {
-                let minY = Infinity;
-                for (const s of this._symbols) {
-                    if (s.y < minY) minY = s.y;
-                }
                 sprite.y = minY - CELL_SIZE;
+                minY = sprite.y;
                 this._setTexture(sprite, this._nextRecycleSymbol());
             }
         }
@@ -521,9 +543,9 @@ export class Reel extends Container {
 
     /** Snap all sprites to exact grid positions. */
     private _snapPositions(): void {
-        const sorted = [...this._symbols].sort((a, b) => a.y - b.y);
+        this._sortedSymbols = [...this._symbols].sort((a, b) => a.y - b.y);
         for (let i = 0; i < this._totalSlots; i++) {
-            sorted[i].y = (i - 1) * CELL_SIZE + CELL_SIZE * 0.5;
+            this._sortedSymbols[i].y = (i - 1) * CELL_SIZE + CELL_SIZE * 0.5;
         }
     }
 

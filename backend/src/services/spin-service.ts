@@ -211,7 +211,27 @@ const SAFE_WILD_POSITIONS: readonly [number, number][] = [
 
 function generateConstrainedGrid(wildCount: number): SymbolId[][] {
     const grid: SymbolId[][] = [];
-    for (let r = 0; r < REEL_COUNT; r++) {
+
+    // Reel 0: random non-wild symbols
+    const col0: SymbolId[] = [];
+    for (let row = 0; row < VISIBLE_ROWS; row++) {
+        col0.push(NON_WILD_SYMBOLS[Math.floor(Math.random() * NON_WILD_SYMBOLS.length)]);
+    }
+    grid.push(col0);
+
+    // Reel 1: guaranteed different from reel 0 at every row
+    const col1: SymbolId[] = [];
+    for (let row = 0; row < VISIBLE_ROWS; row++) {
+        let sym: SymbolId;
+        do {
+            sym = NON_WILD_SYMBOLS[Math.floor(Math.random() * NON_WILD_SYMBOLS.length)];
+        } while (sym === col0[row]);
+        col1.push(sym);
+    }
+    grid.push(col1);
+
+    // Reels 2-4: random non-wild symbols
+    for (let r = 2; r < REEL_COUNT; r++) {
         const column: SymbolId[] = [];
         for (let row = 0; row < VISIBLE_ROWS; row++) {
             column.push(NON_WILD_SYMBOLS[Math.floor(Math.random() * NON_WILD_SYMBOLS.length)]);
@@ -219,7 +239,7 @@ function generateConstrainedGrid(wildCount: number): SymbolId[][] {
         grid.push(column);
     }
 
-    // Pick wildCount random reels (max 1 wild per reel, matching real strip rules)
+    // Place wilds (shuffled reels, max 1 per reel)
     const reels = [0, 1, 2, 3, 4];
     for (let i = reels.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));

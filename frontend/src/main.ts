@@ -89,23 +89,25 @@ async function main() {
     };
   };
 
-  // Use ResizeObserver
-  const resizeObserver = new ResizeObserver(() => {
-    const vp = getViewportSize();
-    if (vp.width > 0 && vp.height > 0) {
-      doResize(vp.width, vp.height);
-    }
-  });
-  resizeObserver.observe(app.canvas);
-
-  // Also listen to visualViewport resize if available
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', () => {
+  // Coalesce resize events into a single RAF to avoid double layout recalculation
+  let resizePending = false;
+  const scheduleResize = () => {
+    if (resizePending) return;
+    resizePending = true;
+    requestAnimationFrame(() => {
+      resizePending = false;
       const vp = getViewportSize();
       if (vp.width > 0 && vp.height > 0) {
         doResize(vp.width, vp.height);
       }
     });
+  };
+
+  const resizeObserver = new ResizeObserver(scheduleResize);
+  resizeObserver.observe(app.canvas);
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', scheduleResize);
   }
 
   // Initial resize

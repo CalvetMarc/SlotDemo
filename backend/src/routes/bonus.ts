@@ -80,7 +80,10 @@ router.post('/buy', async (req, res) => {
     try {
         const deducted = await sql`
             UPDATE sessions
-            SET balance = balance - ${netDeduction}, last_seen = now()
+            SET balance = balance - ${netDeduction},
+                game_phase = 'bonus',
+                bonus_data = ${JSON.stringify({ wildCount, totalBet: betAmount })},
+                last_seen = now()
             WHERE id = ${sessionId}
               AND balance >= ${netDeduction}
               AND game_phase = 'base'
@@ -100,13 +103,6 @@ router.post('/buy', async (req, res) => {
         }
 
         const balance = parseFloat(deducted[0].balance);
-
-        await sql`
-            UPDATE sessions
-            SET game_phase = 'bonus',
-                bonus_data = ${JSON.stringify({ wildCount, totalBet: betAmount })}
-            WHERE id = ${sessionId}
-        `;
 
         const spinResult = generateBuyBonusSpin(wildCount, betAmount);
 

@@ -87,10 +87,10 @@ export function getWinVfxFrames(): import('pixi.js').Texture[] {
  * and delegates all per-symbol visuals to it.
  */
 export class SymbolView {
-    readonly reel: number;
-    readonly row: number;
-    readonly symbolId: SymbolId;
-    readonly staticSprite: Sprite;
+    reel: number;
+    row: number;
+    symbolId: SymbolId;
+    staticSprite: Sprite;
 
     // Celebration phase
     private _phase: CelebrationPhase = 'vfx';
@@ -113,7 +113,7 @@ export class SymbolView {
     private _vfxPhase: VfxSubPhase = 'fadingIn';
     private _vfxElapsed = 0;
 
-    // Dim
+    // Dim (shared filter, not owned by this view)
     private _dimFilter?: ColorMatrixFilter;
 
     constructor(reel: number, row: number, symbolId: SymbolId, staticSprite: Sprite) {
@@ -123,6 +123,28 @@ export class SymbolView {
         this.staticSprite = staticSprite;
         this._staticBaseScaleX = staticSprite.scale.x;
         this._staticBaseScaleY = staticSprite.scale.y;
+    }
+
+    /** Reinitialize this view for reuse from a pool. */
+    reset(reel: number, row: number, symbolId: SymbolId, staticSprite: Sprite): void {
+        this.clear();
+        this.reel = reel;
+        this.row = row;
+        this.symbolId = symbolId;
+        this.staticSprite = staticSprite;
+        this._staticBaseScaleX = staticSprite.scale.x;
+        this._staticBaseScaleY = staticSprite.scale.y;
+        this._phase = 'vfx';
+        this._isWinning = false;
+        this._heartbeatElapsed = 0;
+        this._pulsePhase = 'growing';
+        this._pulseElapsed = 0;
+        this._animFinished = false;
+        this._animBaseScale = 0;
+        this._animRefFrameWidth = 0;
+        this._animRefFrameHeight = 0;
+        this._vfxPhase = 'fadingIn';
+        this._vfxElapsed = 0;
     }
 
     /** Spawn animated overlay on the reel container and start pulse cycle. */
@@ -207,14 +229,10 @@ export class SymbolView {
         this._vfxElapsed = 0;
     }
 
-    /** Apply dim filter to the static sprite. */
-    dim(): void {
-        const filter = new ColorMatrixFilter();
-        filter.brightness(0.35, false);
-        filter.desaturate();
-
-        this._dimFilter = filter;
-        this.staticSprite.filters = [filter];
+    /** Apply a shared dim filter to the static sprite. */
+    dim(sharedFilter: ColorMatrixFilter): void {
+        this._dimFilter = sharedFilter;
+        this.staticSprite.filters = [sharedFilter];
     }
 
     /**
@@ -284,7 +302,7 @@ export class SymbolView {
         this.staticSprite.visible = true;
         this.staticSprite.scale.set(this._staticBaseScaleX, this._staticBaseScaleY);
 
-        // Remove dim filter
+        // Remove dim filter reference (shared, not owned — don't destroy)
         if (this._dimFilter) {
             this.staticSprite.filters = [];
             this._dimFilter = undefined;

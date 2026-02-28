@@ -169,9 +169,11 @@ export class TweenManager {
     }
 
     static update(deltaMs: number): void {
-        for (let i = TweenManager._tweens.length - 1; i >= 0; i--) {
-            if (TweenManager._tweens[i].update(deltaMs)) {
-                TweenManager._tweens.splice(i, 1);
+        const tweens = TweenManager._tweens;
+        for (let i = tweens.length - 1; i >= 0; i--) {
+            if (tweens[i].update(deltaMs)) {
+                tweens[i] = tweens[tweens.length - 1];
+                tweens.pop();
             }
         }
     }
