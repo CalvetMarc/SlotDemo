@@ -1,5 +1,6 @@
 import { Container, Graphics, FederatedPointerEvent, Rectangle } from 'pixi.js';
 import { SingletonBase } from '../Abstractions/singleton-base';
+import { IS_DEBUG } from '../Utils/env';
 
 interface Guide {
     type: 'horizontal' | 'vertical';
@@ -24,7 +25,9 @@ export class GuideManager extends SingletonBase {
         this._container = new Container();
         this._container.zIndex = 9999; // Always on top
         this._container.sortableChildren = true;
-        this.setupKeyboardListeners();
+        if (IS_DEBUG) {
+            this.setupKeyboardListeners();
+        }
     }
 
     public static get I(): GuideManager {

@@ -17,6 +17,7 @@ import { TensionController } from '../../../SlotMachine/tension-controller';
 import { SpinController } from '../../../SlotMachine/spin-controller';
 import { TweenManager } from '../../../../Animation/tween';
 import { GameModel } from '../../../SlotMachine/game-model';
+import { IS_DEBUG } from '../../../../Utils/env';
 
 export class SlotMachineView extends View {
     private _frameBackground!: Sprite;
@@ -24,7 +25,7 @@ export class SlotMachineView extends View {
     private _reelContainer!: Container;
     private _reelMask!: Graphics;
     private _reels: Reel[] = [];
-    private _debugWinText!: Text;
+    private _debugWinText?: Text;
     private _debugWinTimeout?: ReturnType<typeof setTimeout>;
     private _winPresentationTimeout?: ReturnType<typeof setTimeout>;
     private _unsubscribeSpin?: () => void;
@@ -77,7 +78,9 @@ export class SlotMachineView extends View {
         this._spinController.onSpinStarting = () => {
             this._clearAll();
             for (const reel of this._reels) reel.setDim(false);
-            this._debugWinText.visible = false;
+            if (this._debugWinText) {
+                this._debugWinText.visible = false;
+            }
             if (this._debugWinTimeout) {
                 clearTimeout(this._debugWinTimeout);
                 this._debugWinTimeout = undefined;
@@ -113,21 +116,23 @@ export class SlotMachineView extends View {
         this.addChild(this._frame);
 
         // Debug win text
-        this._debugWinText = new Text({
-            text: '',
-            style: new TextStyle({
-                fontFamily: 'Arial',
-                fontSize: 48,
-                fontWeight: 'bold',
-                fill: 0xffd700,
-                stroke: { color: 0x000000, width: 5 },
-                align: 'center',
-            }),
-        });
-        this._debugWinText.anchor.set(0.5);
-        this._debugWinText.y = GRID_HEIGHT * 0.5 + 60;
-        this._debugWinText.visible = false;
-        this.addChild(this._debugWinText);
+        if (IS_DEBUG) {
+            this._debugWinText = new Text({
+                text: '',
+                style: new TextStyle({
+                    fontFamily: 'Arial',
+                    fontSize: 48,
+                    fontWeight: 'bold',
+                    fill: 0xffd700,
+                    stroke: { color: 0x000000, width: 5 },
+                    align: 'center',
+                }),
+            });
+            this._debugWinText.anchor.set(0.5);
+            this._debugWinText.y = GRID_HEIGHT * 0.5 + 60;
+            this._debugWinText.visible = false;
+            this.addChild(this._debugWinText);
+        }
 
         // ── Signals ──────────────────────────────────────────────────
         this._unsubscribeSpin = gameSignals.spinPressed.connect(() => {
@@ -139,21 +144,23 @@ export class SlotMachineView extends View {
             this._handleBuyBonus(tier).catch(err => console.error('Buy bonus failed:', err));
         });
 
-        this._debugCleanup = createDebugKeyHandler({
-            getIsSpinning: () => this._spinController.isSpinning,
-            getBetAmount: () => this._spinController.getBetAmount(),
-            triggerSpin: async (forced) => {
-                // Debug bonus spins bypass the server spin, so set up bonus on server via buy
-                if (forced.bonusTriggered) {
-                    try {
-                        const bet = this._spinController.getBetAmount();
-                        await ApiClient.post('/api/bonus/buy', { betAmount: bet, tier: 1 });
-                    } catch { /* balance may be insufficient — bonus screen will handle */ }
-                }
-                this._spinController.setForcedResult(forced);
-                this._spinController.startSpin().catch(err => console.error('[DebugSpin] failed:', err));
-            },
-        }).attach();
+        if (IS_DEBUG) {
+            this._debugCleanup = createDebugKeyHandler({
+                getIsSpinning: () => this._spinController.isSpinning,
+                getBetAmount: () => this._spinController.getBetAmount(),
+                triggerSpin: async (forced) => {
+                    // Debug bonus spins bypass the server spin, so set up bonus on server via buy
+                    if (forced.bonusTriggered) {
+                        try {
+                            const bet = this._spinController.getBetAmount();
+                            await ApiClient.post('/api/bonus/buy', { betAmount: bet, tier: 1 });
+                        } catch { /* balance may be insufficient — bonus screen will handle */ }
+                    }
+                    this._spinController.setForcedResult(forced);
+                    this._spinController.startSpin().catch(err => console.error('[DebugSpin] failed:', err));
+                },
+            }).attach();
+        }
 
         this._skipHandler = () => this._spinController.skipSpin();
         window.addEventListener('pointerdown', this._skipHandler);
@@ -281,6 +288,7 @@ export class SlotMachineView extends View {
     }
 
     private _showDebugWin(message: string): void {
+        if (!this._debugWinText) return;
         this._debugWinText.text = message;
         this._debugWinText.visible = true;
         if (this._debugWinTimeout) {

@@ -5,6 +5,7 @@ import { CentralLayerManager } from './Core/Managers/central-layer-manager';
 import { CANVAS_16_9, CANVAS_9_16, CANVAS_4_3 } from './Core/Layout/design-canvas';
 import { GuideManager } from './Core/Debug/guide-manager';
 import { SessionManager } from './Core/Game/SlotMachine/session-manager';
+import { IS_DEBUG } from './Core/Utils/env';
 
 async function main() {
 
@@ -112,23 +113,16 @@ async function main() {
   doResize(initialVp.width, initialVp.height);
   ScreenManager.I.onLayoutChanged(layoutManager.getCanvas());
 
-  // Debug shortcuts:
-  // - D: Toggle layer borders
-  // - L: Toggle layout debug info
-  // - G + ArrowUp: Add horizontal guide at y=0
-  // - G + ArrowLeft: Add vertical guide at x=0
-  // - G + ArrowDown: Add horizontal guide at center
-  // - G + ArrowRight: Add vertical guide at center
-  // - G + Delete: Remove last guide
-  // - G + Escape: Remove all guides
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'd' || e.key === 'D') {
-      layerManager.toggleDebugBorders();
-    }
-    if (e.key === 'l' || e.key === 'L') {
-      layerManager.toggleLayoutDebug();
-    }
-  });
+  if (IS_DEBUG) {
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'd' || e.key === 'D') {
+        layerManager.toggleDebugBorders();
+      }
+      if (e.key === 'l' || e.key === 'L') {
+        layerManager.toggleLayoutDebug();
+      }
+    });
+  }
 }
 
 main();
