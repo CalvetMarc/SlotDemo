@@ -3,6 +3,12 @@ import cors from 'cors';
 import startRouter from './routes/start.js';
 import spinRouter from './routes/spin.js';
 import bonusRouter from './routes/bonus.js';
+import { authMiddleware } from './middleware/auth.js';
+import { createRateLimiter, ipKey, sessionKey } from './middleware/rate-limiter.js';
+
+const startIpLimiter = createRateLimiter({ maxRequests: 3, windowMs: 10_000, keyExtractor: ipKey });
+const spinSessionLimiter = createRateLimiter({ maxRequests: 5, windowMs: 1_000, keyExtractor: sessionKey });
+const bonusSessionLimiter = createRateLimiter({ maxRequests: 2, windowMs: 1_000, keyExtractor: sessionKey });
 
 const app = express();
 const CORS_ORIGIN = process.env.CORS_ORIGIN ?? 'http://localhost:5173';
@@ -19,9 +25,9 @@ app.use(cors({
 }));
 app.use(express.json());
 
-app.use('/api/start', startRouter);
-app.use('/api/spin', spinRouter);
-app.use('/api/bonus', bonusRouter);
+app.use('/api/start', startIpLimiter, startRouter);
+app.use('/api/spin', authMiddleware, spinSessionLimiter, spinRouter);
+app.use('/api/bonus', authMiddleware, bonusSessionLimiter, bonusRouter);
 
 app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok' });

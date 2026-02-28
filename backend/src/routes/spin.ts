@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { sql } from '../db.js';
-import { authMiddleware, type AuthRequest } from '../middleware/auth.js';
+import type { AuthRequest } from '../middleware/auth.js';
 import { generateSpin } from '../services/spin-service.js';
 
 const router = Router();
 
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', async (req, res) => {
     const sessionId = (req as AuthRequest).sessionId;
     const { betAmount } = req.body;
 

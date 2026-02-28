@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { sql } from '../db.js';
-import { authMiddleware, type AuthRequest } from '../middleware/auth.js';
+import type { AuthRequest } from '../middleware/auth.js';
 import { generateBonusSequence } from '../services/bonus-service.js';
 import { generateBuyBonusSpin } from '../services/spin-service.js';
 import { getSession } from '../services/session-helpers.js';
 
 const router = Router();
 
-router.post('/start', authMiddleware, async (req, res) => {
+router.post('/start', async (req, res) => {
     const sessionId = (req as AuthRequest).sessionId;
 
     try {
@@ -58,7 +58,7 @@ const BUY_BONUS_PRICES: readonly [number, number] = [88, 180]; // × totalBet
 const BUY_BONUS_WILDS: readonly [number, number] = [3, 4];
 const BUY_BONUS_WILD_PAY: readonly [number, number] = [8, 21]; // × totalBet
 
-router.post('/buy', authMiddleware, async (req, res) => {
+router.post('/buy', async (req, res) => {
     const sessionId = (req as AuthRequest).sessionId;
     const { betAmount, tier } = req.body;
 
