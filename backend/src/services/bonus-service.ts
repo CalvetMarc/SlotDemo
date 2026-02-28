@@ -1,14 +1,7 @@
-export interface ChestData {
-    prize: number | null; // null = empty (skull)
-}
-
-export interface BonusState {
-    chests: ChestData[];
-    tier: number; // 0=3wilds, 1=4wilds, 2=5wilds
-    totalBet: number;
-    picked: boolean[];
+export interface BonusSequenceResult {
+    sequence: (number | null)[];
     totalBonusWin: number;
-    isOver: boolean;
+    tier: number;
 }
 
 const PRIZE_POOLS: readonly (readonly number[])[] = [
@@ -27,69 +20,30 @@ function shuffle<T>(arr: T[]): T[] {
     return arr;
 }
 
-export function generateBonusChests(wildCount: number, totalBet: number): BonusState {
+export function generateBonusSequence(wildCount: number, totalBet: number): BonusSequenceResult {
     const tier = Math.min(wildCount - 3, 2);
     const prizes = PRIZE_POOLS[tier];
     const emptyCount = EMPTY_COUNTS[tier];
 
-    const chests: ChestData[] = [];
+    const items: (number | null)[] = [];
 
-    // Add prize chests (multiplier × totalBet)
     for (const mult of prizes) {
-        chests.push({ prize: Math.round(mult * totalBet * 100) / 100 });
+        items.push(Math.round(mult * totalBet * 100) / 100);
     }
 
-    // Add empty (skull) chests
     for (let i = 0; i < emptyCount; i++) {
-        chests.push({ prize: null });
+        items.push(null);
     }
 
-    // Shuffle to randomize positions
-    shuffle(chests);
+    shuffle(items);
 
-    return {
-        chests,
-        tier,
-        totalBet,
-        picked: new Array(5).fill(false),
-        totalBonusWin: 0,
-        isOver: false,
-    };
-}
+    // Truncate at first null (inclusive) — nothing after the skull matters
+    const firstNullIndex = items.indexOf(null);
+    const sequence = firstNullIndex === -1 ? items : items.slice(0, firstNullIndex + 1);
 
-export function pickChest(state: BonusState, chestIndex: number): {
-    prize: number | null;
-    totalBonusWin: number;
-    isGameOver: boolean;
-} {
-    if (state.isOver || chestIndex < 0 || chestIndex >= 5 || state.picked[chestIndex]) {
-        throw new Error('Invalid pick');
-    }
+    const totalBonusWin = sequence
+        .filter((v): v is number => v !== null)
+        .reduce((sum, v) => sum + v, 0);
 
-    state.picked[chestIndex] = true;
-    const chest = state.chests[chestIndex];
-
-    if (chest.prize === null) {
-        // Hit a skull — bonus over
-        state.isOver = true;
-        return {
-            prize: null,
-            totalBonusWin: state.totalBonusWin,
-            isGameOver: true,
-        };
-    }
-
-    state.totalBonusWin += chest.prize;
-
-    // Check if all prize chests found (no more skulls to hit)
-    const allPicked = state.picked.every(Boolean);
-    if (allPicked) {
-        state.isOver = true;
-    }
-
-    return {
-        prize: chest.prize,
-        totalBonusWin: state.totalBonusWin,
-        isGameOver: state.isOver,
-    };
+    return { sequence, totalBonusWin, tier };
 }

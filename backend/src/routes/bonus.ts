@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { sql } from '../db.js';
 import { authMiddleware, type AuthRequest } from '../middleware/auth.js';
-import { generateBonusChests, BonusState } from '../services/bonus-service.js';
+import { generateBonusSequence } from '../services/bonus-service.js';
 import { generateBuyBonusSpin } from '../services/spin-service.js';
 import { getSession } from '../services/session-helpers.js';
 
@@ -30,72 +30,25 @@ router.post('/start', authMiddleware, async (req, res) => {
             return;
         }
 
-        const state = generateBonusChests(bonusData.wildCount, bonusData.totalBet);
+        const { sequence, totalBonusWin } = generateBonusSequence(bonusData.wildCount, bonusData.totalBet);
 
-        await sql`
-            UPDATE sessions SET bonus_data = ${JSON.stringify(state)}, last_seen = now()
+        // Atomic: credit winnings, reset phase, clear bonus data
+        const updated = await sql`
+            UPDATE sessions
+            SET balance = balance + ${totalBonusWin},
+                game_phase = 'base',
+                bonus_data = NULL,
+                last_seen = now()
             WHERE id = ${sessionId}
+            RETURNING balance
         `;
 
-        // Send all chest prizes upfront so the client doesn't need per-pick calls
-        const chests = state.chests.map((c) => c.prize);
-        res.json({ chests, tier: state.tier });
+        const balance = parseFloat(updated[0].balance);
+
+        res.json({ sequence, totalBonusWin, balance });
     } catch (err) {
         console.error('Bonus start failed:', err);
         res.status(500).json({ error: 'Bonus start failed' });
-    }
-});
-
-router.post('/collect', authMiddleware, async (req, res) => {
-    const sessionId = (req as AuthRequest).sessionId;
-    const { totalBonusWin } = req.body;
-
-    if (typeof totalBonusWin !== 'number' || totalBonusWin < 0) {
-        res.status(400).json({ error: 'Invalid totalBonusWin' });
-        return;
-    }
-
-    try {
-        const session = await getSession(sessionId);
-
-        if (!session) {
-            res.status(404).json({ error: 'Session not found' });
-            return;
-        }
-
-        if (session.game_phase !== 'bonus') {
-            res.status(400).json({ error: 'Not in bonus phase' });
-            return;
-        }
-
-        const state: BonusState = session.bonus_data as unknown as BonusState;
-        if (!state || !state.chests) {
-            res.status(400).json({ error: 'No active bonus' });
-            return;
-        }
-
-        // Validate the claimed win against the generated chests
-        const maxPossibleWin = state.chests
-            .filter((c) => c.prize !== null)
-            .reduce((sum, c) => sum + c.prize!, 0);
-
-        if (totalBonusWin > maxPossibleWin + 0.01) {
-            res.status(400).json({ error: 'Invalid win amount' });
-            return;
-        }
-
-        const newBalance = parseFloat(session.balance) + totalBonusWin;
-
-        await sql`
-            UPDATE sessions
-            SET balance = ${newBalance}, game_phase = 'base', bonus_data = NULL, last_seen = now()
-            WHERE id = ${sessionId}
-        `;
-
-        res.json({ balance: newBalance });
-    } catch (err) {
-        console.error('Bonus collect failed:', err);
-        res.status(500).json({ error: 'Bonus collect failed' });
     }
 });
 

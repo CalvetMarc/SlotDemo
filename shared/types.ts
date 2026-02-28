@@ -57,11 +57,8 @@ export interface BuyBonusResponse {
 }
 
 export interface BonusStartResponse {
-    chests: (number | null)[];
-    tier: number;
-}
-
-export interface BonusCollectResponse {
+    sequence: (number | null)[];
+    totalBonusWin: number;
     balance: number;
 }
 

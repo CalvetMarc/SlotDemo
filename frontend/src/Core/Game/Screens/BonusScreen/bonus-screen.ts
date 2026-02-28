@@ -6,14 +6,16 @@ import { BonusWinCounterView } from './views/bonus-win-counter-view';
 import { GameModel } from '../../SlotMachine/game-model';
 import { gameSignals } from '../../../Signals/game-signals';
 import { ApiClient } from '../../../Services/api-client';
-import type { BonusStartResponse, BonusCollectResponse } from '@shared/types';
+import type { BonusStartResponse } from '@shared/types';
 
 export class BonusScreen extends GameScreen {
     private _chests: ChestView[] = [];
     private _winCounter!: BonusWinCounterView;
     private _isPicking = false;
-    private _chestPrizes: (number | null)[] = [];
+    private _sequence: (number | null)[] = [];
+    private _pickIndex = 0;
     private _totalBonusWin = 0;
+    private _pendingBalance = 0;
 
     constructor() {
         super();
@@ -39,8 +41,10 @@ export class BonusScreen extends GameScreen {
         this._winCounter = uiViews['bonus_win_counter'] as BonusWinCounterView;
         this._winCounter?.updateWin(0);
         this._totalBonusWin = 0;
+        this._pickIndex = 0;
+        this._pendingBalance = 0;
 
-        // Server returns all chest prizes at once
+        // Server returns the predetermined sequence and credits balance atomically
         await this._startBonus();
     }
 
@@ -50,14 +54,17 @@ export class BonusScreen extends GameScreen {
 
     async onExit(): Promise<void> {
         this._chests = [];
-        this._chestPrizes = [];
+        this._sequence = [];
+        this._pickIndex = 0;
         GameModel.setSpinning(false);
     }
 
     private async _startBonus(): Promise<void> {
         try {
             const data = await ApiClient.post<BonusStartResponse>('/api/bonus/start');
-            this._chestPrizes = data.chests;
+            this._sequence = data.sequence;
+            this._totalBonusWin = data.totalBonusWin;
+            this._pendingBalance = data.balance;
         } catch (err) {
             console.error('Bonus start error:', err);
         }
@@ -65,30 +72,33 @@ export class BonusScreen extends GameScreen {
 
     private async _onChestPicked(index: number): Promise<void> {
         if (this._isPicking) return;
+        if (this._pickIndex >= this._sequence.length) return;
         this._isPicking = true;
 
         try {
-            const prize = this._chestPrizes[index];
+            const prize = this._sequence[this._pickIndex];
+            this._pickIndex++;
 
-            // Play the open animation (no API call needed)
+            // Play the open animation
             await this._chests[index].playOpen();
 
             if (prize !== null && prize !== undefined) {
-                // Show the prize multiplier rising out of the chest
                 const multiplier = Math.round(prize / GameModel.betAmount);
                 await this._chests[index].showPrize(multiplier);
 
-                this._totalBonusWin += prize;
-                this._winCounter?.updateWin(this._totalBonusWin);
+                // Update running win display
+                const runningWin = this._sequence
+                    .slice(0, this._pickIndex)
+                    .filter((v): v is number => v !== null)
+                    .reduce((sum, v) => sum + v, 0);
+                this._winCounter?.updateWin(runningWin);
             } else {
-                // Show skull (no need to await — game ends immediately after)
                 this._chests[index].showSkull();
             }
 
-            // Game over if skull (null) or all chests opened
+            // End if skull (null) or exhausted the sequence
             const isSkull = prize === null;
-            const allOpened = this._chests.every((_, i) => this._chests[i].isOpened);
-            if (isSkull || allOpened) {
+            if (isSkull || this._pickIndex >= this._sequence.length) {
                 await this._endBonus();
             }
         } catch (err) {
@@ -106,16 +116,9 @@ export class BonusScreen extends GameScreen {
 
         this._winCounter?.showGameOver(this._totalBonusWin);
 
-        // Collect winnings from the server
-        try {
-            const data = await ApiClient.post<BonusCollectResponse>(
-                '/api/bonus/collect',
-                { totalBonusWin: this._totalBonusWin },
-            );
-            GameModel.setBalance(data.balance);
-        } catch (err) {
-            console.error('Bonus collect error:', err);
-        }
+        // Apply the server-credited balance and store bonus win for animation
+        GameModel.setPendingBonusWin(this._totalBonusWin);
+        GameModel.setBalance(this._pendingBalance);
 
         // Wait then transition back to base
         setTimeout(() => {
