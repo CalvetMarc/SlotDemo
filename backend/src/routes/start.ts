@@ -17,7 +17,7 @@ router.post('/', async (req, res) => {
             }
         }
 
-        // Lazy cleanup: remove stale sessions
+        // Remove sessions inactive for over 1 hour (indexed on last_seen)
         await sql`DELETE FROM sessions WHERE last_seen < now() - interval '1 hour'`;
 
         // Create new session

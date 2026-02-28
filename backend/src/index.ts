@@ -18,6 +18,10 @@ async function ensureSchema(): Promise<void> {
     await sql`
         ALTER TABLE sessions ADD COLUMN IF NOT EXISTS bonus_data JSONB
     `;
+    // Index for fast stale-session cleanup
+    await sql`
+        CREATE INDEX IF NOT EXISTS idx_sessions_last_seen ON sessions (last_seen)
+    `;
 }
 
 ensureSchema()
