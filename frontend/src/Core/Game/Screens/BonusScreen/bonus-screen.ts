@@ -3,6 +3,7 @@ import { BONUS_VIEW_REGISTRY } from './config/bonus-scene-loader';
 import bonusConfig from './config/bonus-scene-config.json';
 import { ChestView } from './views/chest-view';
 import { BonusWinCounterView } from './views/bonus-win-counter-view';
+import { BonusHintView } from './views/bonus-hint-view';
 import { GameModel } from '../../SlotMachine/game-model';
 import { gameSignals } from '../../../Signals/game-signals';
 import { ApiClient } from '../../../Services/api-client';
@@ -11,6 +12,7 @@ import type { BonusStartResponse } from '@shared/types';
 export class BonusScreen extends GameScreen {
     private _chests: ChestView[] = [];
     private _winCounter!: BonusWinCounterView;
+    private _hintView: BonusHintView | null = null;
     private _isPicking = false;
     private _sequence: (number | null)[] = [];
     private _pickIndex = 0;
@@ -36,6 +38,8 @@ export class BonusScreen extends GameScreen {
             chest.setup(i, (index) => this._onChestPicked(index));
             this._chests.push(chest);
         }
+
+        this._hintView = gameViews['bonus_hint'] as BonusHintView ?? null;
 
         const uiViews = this.layerManager.getLayer('ui').getViews();
         this._winCounter = uiViews['bonus_win_counter'] as BonusWinCounterView;
@@ -93,7 +97,7 @@ export class BonusScreen extends GameScreen {
                     .reduce((sum, v) => sum + v, 0);
                 this._winCounter?.updateWin(runningWin);
             } else {
-                this._chests[index].showSkull();
+                await this._chests[index].showSkull();
             }
 
             // End if skull (null) or exhausted the sequence
@@ -109,6 +113,9 @@ export class BonusScreen extends GameScreen {
     }
 
     private async _endBonus(): Promise<void> {
+        // Hide the hint text
+        this._hintView?.hideHint();
+
         // Disable remaining chests
         for (const chest of this._chests) {
             chest.disable();
