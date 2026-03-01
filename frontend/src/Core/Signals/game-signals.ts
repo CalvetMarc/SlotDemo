@@ -1,4 +1,5 @@
 import { Signal } from './signal';
+import type { LineWinInfo } from '../Game/SlotMachine/win-presentation-controller';
 
 /** Centralized, typed signal registry for the slot machine game. */
 export const gameSignals = {
@@ -32,6 +33,14 @@ export const gameSignals = {
 
     /** Fired when a 401 is received, meaning the JWT expired. */
     sessionExpired: new Signal<void>(),
+
+    // ── Win presentation ────────────────────────────────────────
+
+    /** Fired when a line win is being celebrated. */
+    lineWinPresented: new Signal<LineWinInfo>(),
+
+    /** Fired when the win presentation is cleared. */
+    winPresentationCleared: new Signal<void>(),
 
 } as const;
 

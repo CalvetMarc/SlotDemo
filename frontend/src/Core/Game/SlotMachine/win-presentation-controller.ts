@@ -11,6 +11,13 @@ export interface WinPresentationConfig {
     reelContainer: Container;
 }
 
+export interface LineWinInfo {
+    lineIndex: number;
+    payout: number;
+    totalWin: number;
+    isWildBonus?: boolean;
+}
+
 export class WinPresentationController {
     private _reels: readonly Reel[];
     private _reelContainer: Container;
@@ -26,7 +33,12 @@ export class WinPresentationController {
 
     private static readonly _LINE_PAUSE_MS = 800;
 
+    private _totalWin = 0;
+    private _wildPay = 0;
+
     public onBonusDismissed?: () => void;
+    public onLinePresented?: (info: LineWinInfo) => void;
+    public onPresentationCleared?: () => void;
 
     constructor(config: WinPresentationConfig) {
         this._reels = config.reels;
@@ -63,6 +75,8 @@ export class WinPresentationController {
 
         this._pendingLineWins = result.lineWins;
         this._currentLineIndex = 0;
+        this._totalWin = result.winAmount;
+        this._wildPay = result.wildPay;
 
         if (this._hasBonusCelebrationStep) {
             this._presentBonusStep();
@@ -115,7 +129,10 @@ export class WinPresentationController {
         this._hasBonusCelebrationStep = false;
         this._bonusWildPositions.clear();
         this._isBonusPending = false;
+        this._totalWin = 0;
+        this._wildPay = 0;
         this._removeBonusDismissListeners();
+        this.onPresentationCleared?.();
     }
 
     dispose(): void {
@@ -143,6 +160,12 @@ export class WinPresentationController {
             }
             this._reels[reel].setCelebration(winRows, vfxRows, this._vfxLayer, vfxFrames);
         }
+
+        this.onLinePresented?.({
+            lineIndex: lw.lineIndex,
+            payout: lw.payout,
+            totalWin: this._totalWin,
+        });
     }
 
     private _advanceStep(): void {
@@ -172,6 +195,13 @@ export class WinPresentationController {
             }
             this._reels[reel].setCelebration(winRows, vfxRows, this._vfxLayer, vfxFrames, true);
         }
+
+        this.onLinePresented?.({
+            lineIndex: -1,
+            payout: this._wildPay,
+            totalWin: this._totalWin,
+            isWildBonus: true,
+        });
     }
 
     private _clearLineVisuals(): void {

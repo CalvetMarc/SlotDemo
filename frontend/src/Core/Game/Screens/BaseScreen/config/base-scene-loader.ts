@@ -13,6 +13,8 @@ import { BalanceDisplayView } from "../../../UI/balance-display-view";
 import { BuyBonusButtonView } from "../../../UI/buy-bonus-button-view";
 import { MenuButtonView } from "../../../UI/menu-button-view";
 import { AudioButtonView } from "../../../UI/audio-button-view";
+import { LineWinDisplayView } from "../../../UI/line-win-display-view";
+import { TotalWinDisplayView } from "../../../UI/total-win-display-view";
 
 export const BASE_VIEW_REGISTRY: ViewRegistry = {
     BaseBackgroundView,
@@ -27,5 +29,7 @@ export const BASE_VIEW_REGISTRY: ViewRegistry = {
     BalanceDisplayView,
     BuyBonusButtonView,
     MenuButtonView,
-    AudioButtonView
+    AudioButtonView,
+    LineWinDisplayView,
+    TotalWinDisplayView
 };

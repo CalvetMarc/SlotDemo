@@ -3,6 +3,14 @@ import { REEL_COUNT, VISIBLE_ROWS } from '@shared/types';
 import type { SpinResultWithWins } from './spin-result-provider';
 import { PAYLINES } from './slot-config';
 
+const WILD_PAYS: Readonly<Record<number, number>> = { 3: 8, 4: 21, 5: 83 };
+
+function calcWildPay(wildCount: number, totalBet: number): number {
+    const mult = WILD_PAYS[wildCount];
+    if (!mult) return 0;
+    return Math.round(mult * totalBet * 100) / 100;
+}
+
 export function countWilds(grid: SymbolId[][]): number {
     let count = 0;
     for (const reel of grid) {
@@ -43,7 +51,7 @@ export function createDebugLineWin(
     };
 }
 
-export function createDebugBonusTrigger(): SpinResultWithWins {
+export function createDebugBonusTrigger(betAmount: number): SpinResultWithWins {
     const grid: SymbolId[][] = [
         ['K.png', '1.png', 'Q.png'],
         ['3.png', 'J.png', 'A.png'],
@@ -57,13 +65,14 @@ export function createDebugBonusTrigger(): SpinResultWithWins {
     grid[4][2] = 'Wild_01.png';
 
     const wildCount = countWilds(grid);
+    const wildPay = calcWildPay(wildCount, betAmount);
     return {
         grid,
-        winAmount: 0,
+        winAmount: wildPay,
         lineWins: [],
         wildCount,
         bonusTriggered: wildCount >= 3,
-        wildPay: 0,
+        wildPay,
     };
 }
 
@@ -88,15 +97,16 @@ export function createDebugWildLineWin(betAmount: number): SpinResultWithWins {
         ['K.png', '1.png', 'J.png'],
     ];
 
-    const payout = betAmount * 10;
+    const linePayout = betAmount * 10;
     const wildCount = countWilds(grid);
+    const wildPay = calcWildPay(wildCount, betAmount);
     return {
         grid,
-        winAmount: payout,
-        lineWins: [{ lineIndex: 0, symbol: '1.png', count: 5, payout }],
+        winAmount: linePayout + wildPay,
+        lineWins: [{ lineIndex: 0, symbol: '1.png', count: 5, payout: linePayout }],
         wildCount,
         bonusTriggered: wildCount >= 3,
-        wildPay: 0,
+        wildPay,
     };
 }
 
@@ -136,7 +146,7 @@ export function createDebugKeyHandler(deps: DebugKeyDeps): { attach: () => () =>
                 } else if (debugPreset.type === 'tensionTest') {
                     forced = createDebugTensionTest();
                 } else if (debugPreset.type === 'bonus') {
-                    forced = createDebugBonusTrigger();
+                    forced = createDebugBonusTrigger(bet);
                 } else {
                     forced = createDebugLineWin(debugPreset.lineIndex, debugPreset.symbol, bet);
                 }

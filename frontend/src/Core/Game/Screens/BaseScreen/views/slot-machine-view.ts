@@ -1,4 +1,4 @@
-import { Sprite, Container, Graphics, Ticker, Text, TextStyle } from 'pixi.js';
+import { Sprite, Container, Graphics, Ticker } from 'pixi.js';
 import { View, bundle } from '../../../../Abstractions/view';
 import { Reel } from '../../../SlotMachine/reel';
 import {
@@ -25,8 +25,6 @@ export class SlotMachineView extends View {
     private _reelContainer!: Container;
     private _reelMask!: Graphics;
     private _reels: Reel[] = [];
-    private _debugWinText?: Text;
-    private _debugWinTimeout?: ReturnType<typeof setTimeout>;
     private _winPresentationTimeout?: ReturnType<typeof setTimeout>;
     private _unsubscribeSpin?: () => void;
     private _unsubscribeBuyBonus?: () => void;
@@ -81,13 +79,6 @@ export class SlotMachineView extends View {
         this._spinController.onSpinStarting = () => {
             this._clearAll();
             for (const reel of this._reels) reel.setDim(false);
-            if (this._debugWinText) {
-                this._debugWinText.visible = false;
-            }
-            if (this._debugWinTimeout) {
-                clearTimeout(this._debugWinTimeout);
-                this._debugWinTimeout = undefined;
-            }
         };
         this._spinController.onAllReelsStopped = (result, isTension) => {
             this._onAllReelsStopped(result, isTension);
@@ -104,7 +95,6 @@ export class SlotMachineView extends View {
 
         this._tensionController = new TensionController({ reels: this._reels });
         this._tensionController.onTensionResolved = (result, shouldCelebrate) => {
-            this._emitResultSignals(result);
             if (shouldCelebrate) {
                 this._winController.show(result);
             }
@@ -118,24 +108,12 @@ export class SlotMachineView extends View {
         this._frame.anchor.set(0.5);
         this.addChild(this._frame);
 
-        // Debug win text
-        if (IS_DEBUG) {
-            this._debugWinText = new Text({
-                text: '',
-                style: new TextStyle({
-                    fontFamily: 'Arial',
-                    fontSize: 48,
-                    fontWeight: 'bold',
-                    fill: 0xffd700,
-                    stroke: { color: 0x000000, width: 5 },
-                    align: 'center',
-                }),
-            });
-            this._debugWinText.anchor.set(0.5);
-            this._debugWinText.y = GRID_HEIGHT * 0.5 + 60;
-            this._debugWinText.visible = false;
-            this.addChild(this._debugWinText);
-        }
+        this._winController.onLinePresented = (info) => {
+            gameSignals.lineWinPresented.emit(info);
+        };
+        this._winController.onPresentationCleared = () => {
+            gameSignals.winPresentationCleared.emit();
+        };
 
         // ── Signals ──────────────────────────────────────────────────
         this._unsubscribeSpin = gameSignals.spinPressed.connect(() => {
@@ -258,10 +236,6 @@ export class SlotMachineView extends View {
 
         if (result.bonusTriggered) {
             this._winController.setupBonus(result);
-            if (!isTension) {
-                const wildPayMsg = result.wildPay > 0 ? ` +${result.wildPay.toFixed(2)}€ wild pay` : '';
-                this._showDebugWin(`BONUS! ${result.wildCount} wilds${wildPayMsg}`);
-            }
         }
 
         if (shouldCelebrate && !isTension) {
@@ -271,7 +245,6 @@ export class SlotMachineView extends View {
             const delay = wildAnimDelay + WIN_REVEAL_PAUSE;
 
             this._winPresentationTimeout = setTimeout(() => {
-                this._emitResultSignals(result);
                 this._winController.show(result);
             }, delay);
         }
@@ -315,31 +288,6 @@ export class SlotMachineView extends View {
     }
 
     // ── Helpers ──────────────────────────────────────────────────
-
-    private _emitResultSignals(result: SpinResultWithWins): void {
-        if (result.winAmount > 0) {
-            const lineWin = result.winAmount - result.wildPay;
-            if (lineWin > 0 && result.wildPay > 0) {
-                this._showDebugWin(`WIN ${result.winAmount.toFixed(2)}€ (wild pay +${result.wildPay.toFixed(2)})`);
-            } else if (result.wildPay > 0) {
-                this._showDebugWin(`WILD PAY ${result.wildPay.toFixed(2)}€`);
-            } else {
-                this._showDebugWin(`WIN ${result.winAmount.toFixed(2)}€`);
-            }
-        } else if (result.bonusTriggered) {
-            this._showDebugWin(`BONUS! ${result.wildCount} wilds`);
-        }
-    }
-
-    private _showDebugWin(message: string): void {
-        if (!this._debugWinText) return;
-        this._debugWinText.text = message;
-        this._debugWinText.visible = true;
-        if (this._debugWinTimeout) {
-            clearTimeout(this._debugWinTimeout);
-            this._debugWinTimeout = undefined;
-        }
-    }
 
     private _clearAll(): void {
         if (this._winPresentationTimeout) {
