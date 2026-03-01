@@ -3,6 +3,7 @@ import { GameScreen, ScreenConfig } from "../../../Abstractions/game-screen"
 import { BASE_VIEW_REGISTRY } from "./config/base-scene-loader";
 import baseConfig from "./config/base-scene-config.json"
 import { BuyBonusPanelView } from "../../UI/buy-bonus-panel-view";
+import { InfoPanelView } from "../../UI/info-panel-view";
 import { gameSignals } from "../../../Signals/game-signals";
 import { GameModel } from "../../SlotMachine/game-model";
 
@@ -15,6 +16,12 @@ export class BaseScreen extends GameScreen{
     private _unsubSessionExpired?: () => void;
     private _unsubBalanceUpdated?: () => void;
     private _resizeHandler?: () => void;
+
+    private _infoPanel?: InfoPanelView;
+    private _unsubInfoPressed?: () => void;
+    private _unsubInfoSpinning?: () => void;
+    private _unsubInfoSessionExpired?: () => void;
+    private _infoResizeHandler?: () => void;
 
     constructor(){
         super();
@@ -35,6 +42,7 @@ export class BaseScreen extends GameScreen{
         }
 
         this._setupPanel();
+        this._setupInfoPanel();
     }
 
     onUpdate(deltaMS: number): void {
@@ -42,6 +50,7 @@ export class BaseScreen extends GameScreen{
 
     async onExit(): Promise<void> {
         this._teardownPanel();
+        this._teardownInfoPanel();
     }
 
     // ── Panel lifecycle ──────────────────────────────────────────
@@ -99,6 +108,63 @@ export class BaseScreen extends GameScreen{
         window.addEventListener('resize', this._resizeHandler);
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', this._resizeHandler);
+        }
+    }
+
+    // ── Info panel lifecycle ────────────────────────────────────────
+
+    private _setupInfoPanel(): void {
+        this._infoPanel = new InfoPanelView(() => {
+            this._infoPanel?.hide();
+        });
+        this._infoPanel.zIndex = 100;
+        this.layerManager.root.addChild(this._infoPanel);
+
+        this._unsubInfoPressed = gameSignals.infoPressed.connect(() => {
+            const vp = getViewportSize();
+            this._infoPanel?.show(vp.width, vp.height);
+        });
+
+        this._unsubInfoSpinning = GameModel.spinningChanged.connect(({ isSpinning }) => {
+            if (isSpinning && this._infoPanel?.isOpen) {
+                this._infoPanel.hide();
+            }
+        });
+
+        this._unsubInfoSessionExpired = gameSignals.sessionExpired.connect(() => {
+            if (this._infoPanel?.isOpen) {
+                this._infoPanel.hide();
+            }
+        });
+
+        this._infoResizeHandler = () => {
+            const vp = getViewportSize();
+            if (vp.width > 0 && vp.height > 0) {
+                this._infoPanel?.resize(vp.width, vp.height);
+            }
+        };
+        window.addEventListener('resize', this._infoResizeHandler);
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', this._infoResizeHandler);
+        }
+    }
+
+    private _teardownInfoPanel(): void {
+        this._unsubInfoPressed?.();
+        this._unsubInfoSpinning?.();
+        this._unsubInfoSessionExpired?.();
+
+        if (this._infoResizeHandler) {
+            window.removeEventListener('resize', this._infoResizeHandler);
+            if (window.visualViewport) {
+                window.visualViewport.removeEventListener('resize', this._infoResizeHandler);
+            }
+            this._infoResizeHandler = undefined;
+        }
+
+        if (this._infoPanel) {
+            this._infoPanel.destroy({ children: true });
+            this._infoPanel = undefined;
         }
     }
 

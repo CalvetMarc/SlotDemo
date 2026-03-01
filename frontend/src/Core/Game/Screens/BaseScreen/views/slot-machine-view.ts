@@ -32,6 +32,7 @@ export class SlotMachineView extends View {
     private _unsubscribeBuyBonus?: () => void;
     private _debugCleanup?: () => void;
     private _skipHandler?: () => void;
+    private _keydownHandler?: (e: KeyboardEvent) => void;
 
     private _spinController!: SpinController;
     private _winController!: WinPresentationController;
@@ -165,6 +166,15 @@ export class SlotMachineView extends View {
         this._skipHandler = () => this._spinController.skipSpin();
         window.addEventListener('pointerdown', this._skipHandler);
 
+        // Space bar triggers spin
+        this._keydownHandler = (e: KeyboardEvent) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                gameSignals.spinPressed.emit();
+            }
+        };
+        window.addEventListener('keydown', this._keydownHandler);
+
         Ticker.shared.add(this._onTick, this);
     }
 
@@ -176,6 +186,10 @@ export class SlotMachineView extends View {
         if (this._skipHandler) {
             window.removeEventListener('pointerdown', this._skipHandler);
             this._skipHandler = undefined;
+        }
+        if (this._keydownHandler) {
+            window.removeEventListener('keydown', this._keydownHandler);
+            this._keydownHandler = undefined;
         }
         this._clearAll();
         this._spinController.dispose();

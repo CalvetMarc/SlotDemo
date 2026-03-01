@@ -1,6 +1,7 @@
 import { ButtonView } from "../../Abstractions/button-view";
 import { bundle } from "../../Abstractions/view";
 import { Sprite, Assets, Graphics } from "pixi.js";
+import { gameSignals } from "../../Signals/game-signals";
 
 export class MenuButtonView extends ButtonView {
     private background!: Graphics;
@@ -31,6 +32,6 @@ export class MenuButtonView extends ButtonView {
     }
 
     onMouseClick(): void {
-        // TODO: Open menu
+        gameSignals.infoPressed.emit();
     }
 }

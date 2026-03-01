@@ -33,6 +33,10 @@ async function main() {
   await Promise.all([
     document.fonts.load('bold 1em "Birch Std"'),
     document.fonts.load('bold 1em "Forte"'),
+    document.fonts.load('600 1em "Poppins"'),
+    document.fonts.load('700 1em "Poppins"'),
+    document.fonts.load('400 1em "Inter"'),
+    document.fonts.load('500 1em "Inter"'),
   ]);
 
   // Initialize canvas selection manager

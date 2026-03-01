@@ -157,6 +157,7 @@ export class BuyBonusPanelView extends Container {
         this._panelBg = new Graphics();
         this._panelBg.rect(gutterW, 0, contentW, viewportH);
         this._panelBg.fill({ color: COLORS.panelBg });
+        this._panelBg.eventMode = 'static';
         this._panelContainer.addChild(this._panelBg);
 
         this._panelContainer.x = viewportW - panelW;
@@ -237,6 +238,7 @@ export class BuyBonusPanelView extends Container {
         this._panelBg.arcTo(0, 0, cornerR, 0, cornerR);
         this._panelBg.closePath();
         this._panelBg.fill({ color: COLORS.panelBg });
+        this._panelBg.eventMode = 'static';
         this._panelContainer.addChild(this._panelBg);
 
         // Gutter strip — only top corners rounded

@@ -14,6 +14,10 @@
       "assets": {
         "Birch Std": "assets/fonts/BirchStd.ttf",
         "Forte": "assets/fonts/FORTE.TTF",
+        "Poppins SemiBold": "assets/fonts/Poppins-SemiBold.ttf",
+        "Poppins Bold": "assets/fonts/Poppins-Bold.ttf",
+        "Inter Regular": "assets/fonts/Inter-Regular.ttf",
+        "Inter Medium": "assets/fonts/Inter-Medium.ttf",
 
         "bats": "assets/base/background/animated/bats/bats_animated.json",
         "flies_appear": "assets/base/background/animated/flies/appear/flies_appear.json",
@@ -44,7 +48,7 @@
     {
       "name": "info",
       "assets": {
-        "paytable_static": "assets/base/info/static/paytable/paytable_static.json",
+        "paytable": "assets/base/info/static/paytable/paytable.json",
         "pattern_lines": "assets/base/info/static/_src/lines.png"
       }
     },
