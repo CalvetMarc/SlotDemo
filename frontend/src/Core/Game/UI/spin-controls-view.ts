@@ -48,14 +48,24 @@ export class SpinControlsView extends View {
         this._pickerContainer.position.set(this.autoButton.x, -35);
         this.addChild(this._pickerContainer);
 
-        // When spinning starts: if auto has a selected count, kick off autoplay
+        // Toggle stop icon based on spinning + autoplay state
         this._unsubSpinning = GameModel.spinningChanged.connect(({ isSpinning }) => {
             if (isSpinning) {
+                // First spin with autoplay selected: kick off autoplay
                 const count = this.autoButton.getSelectedCount();
                 if (count > 0 && GameModel.autoSpinRemaining === 0) {
                     this.autoButton.hidePicker();
                     GameModel.setAutoSpinRemaining(count);
+                }
+                // Show stop icon while spinning with autoplay
+                if (GameModel.autoSpinRemaining > 0) {
                     this.spinButton.setAutoMode(true);
+                }
+            } else {
+                const isBonusPause = GameModel.autoSpinRemaining > 0
+                    && GameModel.lastResult?.bonusTriggered;
+                if (GameModel.autoSpinRemaining <= 0 || isBonusPause) {
+                    this.spinButton.setAutoMode(false);
                 }
             }
         });

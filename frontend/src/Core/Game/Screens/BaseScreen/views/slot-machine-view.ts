@@ -183,9 +183,8 @@ export class SlotMachineView extends View {
 
             const lastResult = GameModel.lastResult;
 
-            // Cancel autoplay if bonus was triggered
+            // Pause autoplay on bonus — keep remaining count, user resumes with play
             if (lastResult?.bonusTriggered) {
-                GameModel.setAutoSpinRemaining(0);
                 return;
             }
 

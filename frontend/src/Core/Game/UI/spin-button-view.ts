@@ -31,7 +31,7 @@ export class SpinButtonView extends ButtonView {
     }
 
     onMouseClick(): void {
-        if (this._isAutoMode) {
+        if (this._isAutoMode && GameModel.isSpinning) {
             GameModel.setAutoSpinRemaining(0);
             return;
         }
