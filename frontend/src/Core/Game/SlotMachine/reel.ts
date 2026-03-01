@@ -316,7 +316,7 @@ export class Reel extends Container {
     // ── Celebration ─────────────────────────────────────────────
 
     /** Set up celebration visuals for this reel's symbols. */
-    setCelebration(winRows: Set<number>, vfxRows: Set<number>, vfxLayer: Container, vfxFrames: Texture[]): void {
+    setCelebration(winRows: Set<number>, vfxRows: Set<number>, vfxLayer: Container, vfxFrames: Texture[], gold = false): void {
         for (let row = 0; row < VISIBLE_ROWS; row++) {
             const sprite = this.getVisibleSymbol(row);
             const symbolId = this.getSymbolId(row);
@@ -330,7 +330,7 @@ export class Reel extends Container {
             }
 
             if (vfxRows.has(row)) {
-                sv.showVfx(vfxLayer, vfxFrames);
+                sv.showVfx(vfxLayer, vfxFrames, gold);
             }
 
             this._celebrationViews.push(sv);

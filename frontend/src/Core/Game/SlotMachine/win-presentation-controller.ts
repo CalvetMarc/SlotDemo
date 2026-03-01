@@ -170,7 +170,7 @@ export class WinPresentationController {
                     vfxRows.add(row);
                 }
             }
-            this._reels[reel].setCelebration(winRows, vfxRows, this._vfxLayer, vfxFrames);
+            this._reels[reel].setCelebration(winRows, vfxRows, this._vfxLayer, vfxFrames, true);
         }
     }
 

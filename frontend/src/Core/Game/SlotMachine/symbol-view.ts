@@ -59,6 +59,16 @@ const WIN_VFX_LAST_FRAME = 39;
 const WIN_VFX_FRAME_SIZE = 350;
 const WIN_VFX_FADE_MS = 220;
 
+// Shared gold filter — created once, reused across all gold VFX sprites
+let _goldFilter: ColorMatrixFilter | null = null;
+function getGoldFilter(): ColorMatrixFilter {
+    if (!_goldFilter) {
+        _goldFilter = new ColorMatrixFilter();
+        _goldFilter.hue(110, false);
+    }
+    return _goldFilter;
+}
+
 type VfxSubPhase = 'fadingIn' | 'playing' | 'fadingOut';
 
 // ── Helper: load VFX frames from spritesheet ─────────────────────
@@ -208,8 +218,8 @@ export class SymbolView {
         this._animFinished = false;
     }
 
-    /** Spawn VFX sprite on the shared vfxLayer. */
-    showVfx(vfxLayer: Container, frames: import('pixi.js').Texture[]): void {
+    /** Spawn VFX sprite on the shared vfxLayer. Pass gold=true for wild celebrations. */
+    showVfx(vfxLayer: Container, frames: import('pixi.js').Texture[], gold = false): void {
         if (frames.length === 0) return;
 
         const vfx = new AnimatedSprite(frames, false);
@@ -220,6 +230,10 @@ export class SymbolView {
         vfx.y = this.staticSprite.y;
         vfx.alpha = 0;
         vfx.scale.set(CELL_SIZE / WIN_VFX_FRAME_SIZE);
+
+        if (gold) {
+            vfx.filters = [getGoldFilter()];
+        }
 
         vfxLayer.addChild(vfx);
         vfx.gotoAndPlay(0);
