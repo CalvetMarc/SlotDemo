@@ -405,7 +405,8 @@ export class BuyBonusPanelView extends Container {
         const dt = performance.now() - this._gutterPrevTime;
         const velocity = dt > 0 && dt < 150 ? pointerDelta / dt : 0;
 
-        const shouldClose = (velocity > SWIPE_VELOCITY_THRESHOLD) || (dragDist > this._panelSize * DRAG_CLOSE_FRACTION);
+        const isTap = dragDist < 5;
+        const shouldClose = isTap || (velocity > SWIPE_VELOCITY_THRESHOLD) || (dragDist > this._panelSize * DRAG_CLOSE_FRACTION);
 
         if (shouldClose) {
             this.hide();
@@ -477,25 +478,17 @@ export class BuyBonusPanelView extends Container {
 
     private _createSwipeIndicator(direction: 'down' | 'right', size: number, strokeWidth: number = 5): Container {
         const container = new Container();
-
-        // Generous hit area for tapping
-        const hitSize = size * 3;
-        const hit = new Graphics();
-        hit.rect(-hitSize / 2, -hitSize / 2, hitSize, hitSize);
-        hit.fill({ color: 0x000000, alpha: 0.001 });
-        container.addChild(hit);
+        container.eventMode = 'none';
 
         const gfx = new Graphics();
 
         if (direction === 'down') {
-            // Downward chevron ∨ — wide and bold
             const hw = size * 0.7;
             const hh = size * 0.4;
             gfx.moveTo(-hw, -hh);
             gfx.lineTo(0, hh);
             gfx.lineTo(hw, -hh);
         } else {
-            // Right-pointing chevron > — tall and bold
             const hw = size * 0.4;
             const hh = size * 0.7;
             gfx.moveTo(-hw, -hh);
@@ -505,12 +498,6 @@ export class BuyBonusPanelView extends Container {
 
         gfx.stroke({ color: COLORS.closeNormal, width: strokeWidth });
         container.addChild(gfx);
-
-        container.eventMode = 'static';
-        container.cursor = 'pointer';
-        container.on('pointerover', () => { gfx.tint = COLORS.closeHover; });
-        container.on('pointerout', () => { gfx.tint = 0xffffff; });
-        container.on('pointertap', () => this._onClose());
 
         return container;
     }
