@@ -1,4 +1,4 @@
-import { Assets, BlurFilter, Container, Graphics, Sprite, Spritesheet, Text, TextStyle } from 'pixi.js';
+import { Assets, BlurFilter, Container, FederatedPointerEvent, Graphics, Sprite, Spritesheet, Text, TextStyle } from 'pixi.js';
 import { TweenManager, type TweenHandle } from '../../Animation/tween';
 import { easeOutCubic, easeInCubic } from '../../Animation/easing';
 import { GameModel } from '../SlotMachine/game-model';
@@ -34,6 +34,10 @@ const WILD_TEXTURE_ID = 'Wild_01.png';
 /** Reference width for portrait sizing (iPhone 7 CSS px). */
 const REF_W = 375;
 
+/** Drag-to-close thresholds */
+const SWIPE_VELOCITY_THRESHOLD = 0.25; // px/ms
+const DRAG_CLOSE_FRACTION = 0.15; // drag 15% of panel size to close
+
 // ── Panel ────────────────────────────────────────────────────────
 
 export class BuyBonusPanelView extends Container {
@@ -51,6 +55,16 @@ export class BuyBonusPanelView extends Container {
     private _blurFilter: BlurFilter | null = null;
     private _blurredSiblings: Container[] = [];
     private _blurStrength = BLUR_STRENGTH;
+
+    // Drag-to-close state
+    private _isPortrait = false;
+    private _openPos = 0;
+    private _panelSize = 0;
+    private _gutterDragging = false;
+    private _gutterDragStart = 0;
+    private _gutterDragPanelStart = 0;
+    private _gutterPrevPos = 0;
+    private _gutterPrevTime = 0;
 
     constructor(onBuy: (tier: number) => void, onClose: () => void) {
         super();
@@ -124,8 +138,8 @@ export class BuyBonusPanelView extends Container {
         this._panelContainer = new Container();
         this.addChild(this._panelContainer);
 
-        const isPortrait = viewportW / viewportH < 1;
-        if (isPortrait) {
+        this._isPortrait = viewportW / viewportH < 1;
+        if (this._isPortrait) {
             this._buildPortraitPanel(viewportW, viewportH);
         } else {
             this._buildSidePanel(viewportW, viewportH);
@@ -147,10 +161,17 @@ export class BuyBonusPanelView extends Container {
         const contentW = Math.round(420 * s);
         const panelW = gutterW + contentW;
 
-        // Arrow gutter — darker strip on the left
+        // Arrow gutter — darker strip on the left (draggable)
         const gutter = new Graphics();
         gutter.rect(0, 0, gutterW, viewportH);
         gutter.fill({ color: COLORS.panelBorder });
+        gutter.eventMode = 'static';
+        gutter.cursor = 'pointer';
+        gutter.on('pointerdown', (e: FederatedPointerEvent) => this._onGutterDown(e));
+        gutter.on('globalpointermove', (e: FederatedPointerEvent) => this._onGutterMove(e));
+        gutter.on('pointerup', () => this._onGutterUp());
+        gutter.on('pointerupoutside', () => this._onGutterUp());
+        gutter.on('pointercancel', () => this._onGutterUp());
         this._panelContainer.addChild(gutter);
 
         // Main panel bg — right of gutter
@@ -162,6 +183,8 @@ export class BuyBonusPanelView extends Container {
 
         this._panelContainer.x = viewportW - panelW;
         this._panelContainer.y = 0;
+        this._openPos = this._panelContainer.x;
+        this._panelSize = panelW;
 
         // Title — centered in content area
         const contentCenterX = gutterW + contentW / 2;
@@ -199,10 +222,10 @@ export class BuyBonusPanelView extends Container {
         const pad = Math.round(16 * s);
         const cornerR = Math.round(16 * s);
 
-        // Chevron gutter — generous space around a large, thick chevron
+        // Chevron gutter — generous drag area
         const chevronSize = 60;
         const chevronStroke = 8;
-        const chevronPadY = Math.round(12 * s);
+        const chevronPadY = Math.round(24 * s);
         const gutterVisualH = chevronPadY + chevronSize + chevronPadY;
 
         // Equal gap between gutter→title and title→first card
@@ -241,7 +264,7 @@ export class BuyBonusPanelView extends Container {
         this._panelBg.eventMode = 'static';
         this._panelContainer.addChild(this._panelBg);
 
-        // Gutter strip — only top corners rounded
+        // Gutter strip — only top corners rounded (draggable)
         const gutterBg = new Graphics();
         gutterBg.moveTo(cornerR, 0);
         gutterBg.arcTo(panelW, 0, panelW, cornerR, cornerR);
@@ -251,10 +274,18 @@ export class BuyBonusPanelView extends Container {
         gutterBg.arcTo(0, 0, cornerR, 0, cornerR);
         gutterBg.closePath();
         gutterBg.fill({ color: COLORS.panelBorder });
+        gutterBg.eventMode = 'static';
+        gutterBg.cursor = 'pointer';
+        gutterBg.on('pointerdown', (e: FederatedPointerEvent) => this._onGutterDown(e));
+        gutterBg.on('globalpointermove', (e: FederatedPointerEvent) => this._onGutterMove(e));
+        gutterBg.on('pointerup', () => this._onGutterUp());
+        gutterBg.on('pointerupoutside', () => this._onGutterUp());
         this._panelContainer.addChild(gutterBg);
 
         this._panelContainer.x = 0;
         this._panelContainer.y = viewportH - panelH;
+        this._openPos = this._panelContainer.y;
+        this._panelSize = panelH;
 
         // Swipe indicator — large, thick chevron centered in gutter
         const indicator = this._createSwipeIndicator('down', chevronSize, chevronStroke);
@@ -331,6 +362,64 @@ export class BuyBonusPanelView extends Container {
                 easing: easeInCubic,
                 onComplete: () => this._onHideComplete(),
             }));
+        }
+    }
+
+    // ── Gutter drag-to-close ─────────────────────────────────────
+
+    private _onGutterDown(e: FederatedPointerEvent): void {
+        this._gutterDragging = true;
+        const pos = this._isPortrait ? e.globalY : e.globalX;
+        this._gutterDragStart = pos;
+        this._gutterDragPanelStart = this._isPortrait ? this._panelContainer.y : this._panelContainer.x;
+        this._gutterPrevPos = pos;
+        this._gutterPrevTime = performance.now();
+    }
+
+    private _onGutterMove(e: FederatedPointerEvent): void {
+        if (!this._gutterDragging) return;
+        const pos = this._isPortrait ? e.globalY : e.globalX;
+        const delta = pos - this._gutterDragStart;
+
+        if (this._isPortrait) {
+            this._panelContainer.y = Math.max(this._openPos, this._gutterDragPanelStart + delta);
+        } else {
+            this._panelContainer.x = Math.max(this._openPos, this._gutterDragPanelStart + delta);
+        }
+
+        this._gutterPrevPos = pos;
+        this._gutterPrevTime = performance.now();
+    }
+
+    private _onGutterUp(): void {
+        if (!this._gutterDragging) return;
+        this._gutterDragging = false;
+
+        const currentPos = this._isPortrait ? this._panelContainer.y : this._panelContainer.x;
+        const dragDist = currentPos - this._openPos;
+        // Velocity from last move sample (positive = toward close)
+        const currentPointer = this._isPortrait
+            ? this._panelContainer.y - this._gutterDragPanelStart + this._gutterDragStart
+            : this._panelContainer.x - this._gutterDragPanelStart + this._gutterDragStart;
+        const pointerDelta = currentPointer - this._gutterPrevPos;
+        const dt = performance.now() - this._gutterPrevTime;
+        const velocity = dt > 0 && dt < 150 ? pointerDelta / dt : 0;
+
+        const shouldClose = (velocity > SWIPE_VELOCITY_THRESHOLD) || (dragDist > this._panelSize * DRAG_CLOSE_FRACTION);
+
+        if (shouldClose) {
+            this.hide();
+        } else {
+            this._killActiveTweens();
+            if (this._isPortrait) {
+                this._activeTweens.push(
+                    TweenManager.moveTo(this._panelContainer, { x: 0, y: this._openPos }, 200, easeOutCubic),
+                );
+            } else {
+                this._activeTweens.push(
+                    TweenManager.moveTo(this._panelContainer, { x: this._openPos, y: 0 }, 200, easeOutCubic),
+                );
+            }
         }
     }
 
