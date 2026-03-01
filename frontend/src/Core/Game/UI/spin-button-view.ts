@@ -8,6 +8,7 @@ export class SpinButtonView extends ButtonView {
     private background!: Graphics;
     private iconSprite!: Sprite;
     private _isAutoMode: boolean = false;
+    private _isSkipMode: boolean = false;
 
     bundleNeeded(): bundle {
         return "base";
@@ -35,16 +36,30 @@ export class SpinButtonView extends ButtonView {
             GameModel.setAutoSpinRemaining(0);
             return;
         }
+        if (this._isSkipMode) {
+            gameSignals.skipRequested.emit();
+            return;
+        }
         gameSignals.spinPressed.emit();
     }
 
     public setAutoMode(active: boolean): void {
         this._isAutoMode = active;
-        const sheet = Assets.get('ui_icons');
-        this.iconSprite.texture = sheet.textures[active ? 'stop.png' : 'play.png'];
+        this._updateIcon();
+    }
+
+    public setSkipMode(active: boolean): void {
+        this._isSkipMode = active;
+        this._updateIcon();
     }
 
     public getAutoMode(): boolean {
         return this._isAutoMode;
+    }
+
+    private _updateIcon(): void {
+        const sheet = Assets.get('ui_icons');
+        const isStop = this._isAutoMode || this._isSkipMode;
+        this.iconSprite.texture = sheet.textures[isStop ? 'stop.png' : 'play.png'];
     }
 }

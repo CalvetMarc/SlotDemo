@@ -60,8 +60,12 @@ export class SpinControlsView extends View {
                 // Show stop icon while spinning with autoplay
                 if (GameModel.autoSpinRemaining > 0) {
                     this.spinButton.setAutoMode(true);
+                } else {
+                    // Non-autoplay: show stop icon so player can skip
+                    this.spinButton.setSkipMode(true);
                 }
             } else {
+                this.spinButton.setSkipMode(false);
                 const isBonusPause = GameModel.autoSpinRemaining > 0
                     && GameModel.lastResult?.bonusTriggered;
                 if (GameModel.autoSpinRemaining <= 0 || isBonusPause) {

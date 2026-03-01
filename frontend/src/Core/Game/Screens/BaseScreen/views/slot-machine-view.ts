@@ -33,6 +33,9 @@ export class SlotMachineView extends View {
     private _debugCleanup?: () => void;
     private _skipHandler?: () => void;
     private _keydownHandler?: (e: KeyboardEvent) => void;
+    private _unsubSkipRequested?: () => void;
+    private _unsubCelebrationDone?: () => void;
+    private _waitingForCelebration = false;
 
     private _spinController!: SpinController;
     private _winController!: WinPresentationController;
@@ -146,6 +149,10 @@ export class SlotMachineView extends View {
         this._skipHandler = () => this._spinController.skipSpin();
         window.addEventListener('pointerdown', this._skipHandler);
 
+        this._unsubSkipRequested = gameSignals.skipRequested.connect(() => {
+            this._spinController.skipSpin();
+        });
+
         // Space bar triggers spin
         this._keydownHandler = (e: KeyboardEvent) => {
             if (e.code === 'Space') {
@@ -166,16 +173,21 @@ export class SlotMachineView extends View {
                 return;
             }
 
-            // Decrement remaining
-            const next = GameModel.autoSpinRemaining - 1;
-            GameModel.setAutoSpinRemaining(next);
-
-            // If still remaining, fire next spin after short delay
-            if (next > 0) {
-                this._autoSpinTimeout = setTimeout(() => {
-                    gameSignals.spinPressed.emit();
-                }, 500);
+            // In turbo mode with wins, wait for celebration to finish first
+            if (GameModel.isTurbo && lastResult && lastResult.winAmount > 0) {
+                this._waitingForCelebration = true;
+                return;
             }
+
+            this._fireNextAutoSpin();
+        });
+
+        // When celebration ends, fire next auto-spin if we were waiting
+        this._unsubCelebrationDone = gameSignals.winPresentationCleared.connect(() => {
+            if (!this._waitingForCelebration) return;
+            this._waitingForCelebration = false;
+            if (GameModel.autoSpinRemaining <= 0) return;
+            this._fireNextAutoSpin();
         });
 
         Ticker.shared.add(this._onTick, this);
@@ -199,6 +211,9 @@ export class SlotMachineView extends View {
             window.removeEventListener('keydown', this._keydownHandler);
             this._keydownHandler = undefined;
         }
+        this._unsubSkipRequested?.();
+        this._unsubCelebrationDone?.();
+        this._waitingForCelebration = false;
         this._clearAll();
         this._spinController.dispose();
         this._winController.dispose();
@@ -236,6 +251,11 @@ export class SlotMachineView extends View {
 
         if (result.bonusTriggered) {
             this._winController.setupBonus(result);
+        }
+
+        // In turbo + autoplay, play celebrations once then auto-clear
+        if (GameModel.isTurbo && GameModel.autoSpinRemaining > 0) {
+            this._winController.singleCycle = true;
         }
 
         if (shouldCelebrate && !isTension) {
@@ -284,6 +304,19 @@ export class SlotMachineView extends View {
         } catch (err) {
             GameModel.setSpinning(false);
             console.error('Buy bonus request failed:', err);
+        }
+    }
+
+    // ── Autoplay helper ─────────────────────────────────────────
+
+    private _fireNextAutoSpin(): void {
+        const next = GameModel.autoSpinRemaining - 1;
+        GameModel.setAutoSpinRemaining(next);
+
+        if (next > 0) {
+            this._autoSpinTimeout = setTimeout(() => {
+                gameSignals.spinPressed.emit();
+            }, 500);
         }
     }
 

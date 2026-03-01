@@ -9,6 +9,9 @@ export const gameSignals = {
     /** Fired when the player presses the spin button. */
     spinPressed: new Signal<void>(),
 
+    /** Fired when the player taps the spin button to skip (stop reels early). */
+    skipRequested: new Signal<void>(),
+
     /** Fired when the player presses the buy bonus button. */
     buyBonusPressed: new Signal<void>(),
 

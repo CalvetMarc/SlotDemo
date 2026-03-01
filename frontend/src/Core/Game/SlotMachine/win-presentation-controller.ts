@@ -30,6 +30,7 @@ export class WinPresentationController {
     private _isBonusPending = false;
     private _hasBonusCelebrationStep = false;
     private _bonusWildPositions = new Set<string>();
+    private _singleCycle = false;
 
     private static readonly _LINE_PAUSE_MS = 800;
 
@@ -68,6 +69,10 @@ export class WinPresentationController {
         }
     }
 
+    set singleCycle(value: boolean) {
+        this._singleCycle = value;
+    }
+
     show(result: SpinResultWithWins): void {
         if (this._reels[0].isCelebrating || !this._reels[0].isIdle) return;
 
@@ -100,6 +105,9 @@ export class WinPresentationController {
                     + (this._hasBonusCelebrationStep ? 1 : 0);
                 if (totalSteps > 1) {
                     this._advanceStep();
+                } else if (this._singleCycle) {
+                    this.clear();
+                    return;
                 } else {
                     for (const reel of this._reels) reel.restartCelebration();
                 }
@@ -126,6 +134,7 @@ export class WinPresentationController {
         this._pendingLineWins = [];
         this._currentLineIndex = 0;
         this._linePauseElapsed = -1;
+        this._singleCycle = false;
         this._hasBonusCelebrationStep = false;
         this._bonusWildPositions.clear();
         this._isBonusPending = false;
@@ -171,7 +180,15 @@ export class WinPresentationController {
     private _advanceStep(): void {
         const totalSteps = this._pendingLineWins.length
             + (this._hasBonusCelebrationStep ? 1 : 0);
-        this._currentLineIndex = (this._currentLineIndex + 1) % totalSteps;
+        const nextIndex = (this._currentLineIndex + 1) % totalSteps;
+
+        // Single cycle mode: clear after one full pass
+        if (this._singleCycle && nextIndex === 0) {
+            this.clear();
+            return;
+        }
+
+        this._currentLineIndex = nextIndex;
 
         if (this._hasBonusCelebrationStep && this._currentLineIndex === 0) {
             this._presentBonusStep();
