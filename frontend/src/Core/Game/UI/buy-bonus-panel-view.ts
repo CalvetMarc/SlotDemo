@@ -524,7 +524,7 @@ class OptionCard extends Container {
         // Title
         const titleText = new Text({
             text: title,
-            style: new TextStyle({ fontFamily: FONT_TITLE, fontSize: titleFs, fill: COLORS.titleText, fontWeight: 'bold' }),
+            style: new TextStyle({ fontFamily: FONT_TITLE, fontSize: titleFs, fill: COLORS.priceText, fontWeight: 'bold' }),
         });
         titleText.anchor.set(0.5, 0);
         titleText.position.set(cx, y);
@@ -534,7 +534,7 @@ class OptionCard extends Container {
         // Price
         this._priceText = new Text({
             text: '€0.00',
-            style: new TextStyle({ fontFamily: FONT_BODY, fontSize: priceFs, fill: COLORS.priceText, fontWeight: 'bold' }),
+            style: new TextStyle({ fontFamily: FONT_BODY, fontSize: priceFs, fill: COLORS.titleText, fontWeight: 'bold' }),
         });
         this._priceText.anchor.set(0.5, 0);
         this._priceText.position.set(cx, y);
