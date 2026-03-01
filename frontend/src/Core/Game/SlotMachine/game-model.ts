@@ -18,6 +18,7 @@ class GameModelClass {
     private _isSpinning = false;
     private _isTurbo = false;
     private _isAutoSpin = false;
+    private _autoSpinRemaining = 0;
     private _lastResult: SpinResultWithWins | null = null;
     private _pendingBonusWin = 0;
 
@@ -27,6 +28,7 @@ class GameModelClass {
     readonly spinningChanged = new Signal<{ isSpinning: boolean }>();
     readonly turboChanged = new Signal<{ active: boolean }>();
     readonly autoSpinChanged = new Signal<{ active: boolean }>();
+    readonly autoSpinRemainingChanged = new Signal<{ count: number }>();
 
     // ── Getters ───────────────────────────────────────────────────
     get balance(): number { return this._balance; }
@@ -36,6 +38,7 @@ class GameModelClass {
     get isSpinning(): boolean { return this._isSpinning; }
     get isTurbo(): boolean { return this._isTurbo; }
     get isAutoSpin(): boolean { return this._isAutoSpin; }
+    get autoSpinRemaining(): number { return this._autoSpinRemaining; }
     get lastResult(): SpinResultWithWins | null { return this._lastResult; }
     get pendingBonusWin(): number { return this._pendingBonusWin; }
     get isMinBet(): boolean { return this._betIndex <= 0; }
@@ -77,6 +80,11 @@ class GameModelClass {
     setAutoSpin(active: boolean): void {
         this._isAutoSpin = active;
         this.autoSpinChanged.emit({ active });
+    }
+
+    setAutoSpinRemaining(count: number): void {
+        this._autoSpinRemaining = count;
+        this.autoSpinRemainingChanged.emit({ count });
     }
 
     setLastResult(result: SpinResultWithWins | null): void {

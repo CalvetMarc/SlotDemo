@@ -30,6 +30,8 @@ export class SlotMachineView extends View {
     private _winPresentationTimeout?: ReturnType<typeof setTimeout>;
     private _unsubscribeSpin?: () => void;
     private _unsubscribeBuyBonus?: () => void;
+    private _unsubSpinningForAutoplay?: () => void;
+    private _autoSpinTimeout?: ReturnType<typeof setTimeout>;
     private _debugCleanup?: () => void;
     private _skipHandler?: () => void;
     private _keydownHandler?: (e: KeyboardEvent) => void;
@@ -175,6 +177,30 @@ export class SlotMachineView extends View {
         };
         window.addEventListener('keydown', this._keydownHandler);
 
+        // Autoplay loop: when a spin ends and remaining > 0, fire next spin
+        this._unsubSpinningForAutoplay = GameModel.spinningChanged.connect(({ isSpinning }) => {
+            if (isSpinning || GameModel.autoSpinRemaining <= 0) return;
+
+            const lastResult = GameModel.lastResult;
+
+            // Cancel autoplay if bonus was triggered
+            if (lastResult?.bonusTriggered) {
+                GameModel.setAutoSpinRemaining(0);
+                return;
+            }
+
+            // Decrement remaining
+            const next = GameModel.autoSpinRemaining - 1;
+            GameModel.setAutoSpinRemaining(next);
+
+            // If still remaining, fire next spin after short delay
+            if (next > 0) {
+                this._autoSpinTimeout = setTimeout(() => {
+                    gameSignals.spinPressed.emit();
+                }, 500);
+            }
+        });
+
         Ticker.shared.add(this._onTick, this);
     }
 
@@ -182,6 +208,11 @@ export class SlotMachineView extends View {
         Ticker.shared.remove(this._onTick, this);
         this._unsubscribeSpin?.();
         this._unsubscribeBuyBonus?.();
+        this._unsubSpinningForAutoplay?.();
+        if (this._autoSpinTimeout) {
+            clearTimeout(this._autoSpinTimeout);
+            this._autoSpinTimeout = undefined;
+        }
         this._debugCleanup?.();
         if (this._skipHandler) {
             window.removeEventListener('pointerdown', this._skipHandler);
