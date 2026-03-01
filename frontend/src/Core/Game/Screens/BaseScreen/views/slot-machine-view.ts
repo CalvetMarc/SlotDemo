@@ -35,6 +35,7 @@ export class SlotMachineView extends View {
     private _keydownHandler?: (e: KeyboardEvent) => void;
     private _unsubSkipRequested?: () => void;
     private _unsubCelebrationDone?: () => void;
+    private _unsubAutoSpinCancel?: () => void;
     private _waitingForCelebration = false;
 
     private _spinController!: SpinController;
@@ -146,7 +147,10 @@ export class SlotMachineView extends View {
             }).attach();
         }
 
-        this._skipHandler = () => this._spinController.skipSpin();
+        this._skipHandler = () => {
+            if (GameModel.autoSpinRemaining > 0) return;
+            this._spinController.skipSpin();
+        };
         window.addEventListener('pointerdown', this._skipHandler);
 
         this._unsubSkipRequested = gameSignals.skipRequested.connect(() => {
@@ -190,6 +194,14 @@ export class SlotMachineView extends View {
             this._fireNextAutoSpin();
         });
 
+        // When autoplay is cancelled mid-celebration, let it loop normally
+        this._unsubAutoSpinCancel = GameModel.autoSpinRemainingChanged.connect(({ count }) => {
+            if (count === 0) {
+                this._winController.singleCycle = false;
+                this._waitingForCelebration = false;
+            }
+        });
+
         Ticker.shared.add(this._onTick, this);
     }
 
@@ -213,6 +225,7 @@ export class SlotMachineView extends View {
         }
         this._unsubSkipRequested?.();
         this._unsubCelebrationDone?.();
+        this._unsubAutoSpinCancel?.();
         this._waitingForCelebration = false;
         this._clearAll();
         this._spinController.dispose();
