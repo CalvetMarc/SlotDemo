@@ -14,8 +14,8 @@ export const GRID_HEIGHT = CELL_SIZE * VISIBLE_ROWS;  // 984
 
 // ── Paylines (mirrors backend spin-service.ts) ──────────────────
 export const PAYLINES: readonly (readonly number[])[] = [
-    [1, 1, 1, 1, 1], // 1: straight middle
-    [0, 0, 0, 0, 0], // 2: straight top
+    [0, 0, 0, 0, 0], // 1: straight top
+    [1, 1, 1, 1, 1], // 2: straight middle
     [2, 2, 2, 2, 2], // 3: straight bottom
     [0, 1, 2, 1, 0], // 4: V shape
     [2, 1, 0, 1, 2], // 5: inverted V

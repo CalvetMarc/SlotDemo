@@ -15,8 +15,8 @@ const REEL_STRIPS: readonly (readonly number[])[] = [
 
 /** 10 payline patterns — each array has 5 row indices (0=top, 1=mid, 2=bottom) */
 const PAYLINES: readonly (readonly number[])[] = [
-    [1, 1, 1, 1, 1], // 1: straight middle
-    [0, 0, 0, 0, 0], // 2: straight top
+    [0, 0, 0, 0, 0], // 1: straight top
+    [1, 1, 1, 1, 1], // 2: straight middle
     [2, 2, 2, 2, 2], // 3: straight bottom
     [0, 1, 2, 1, 0], // 4: V shape
     [2, 1, 0, 1, 2], // 5: inverted V
