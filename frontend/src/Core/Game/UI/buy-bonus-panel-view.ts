@@ -588,7 +588,7 @@ class OptionCard extends Container {
         const cx = w / 2;
 
         const titleFs = Math.round(24 * sc);
-        const priceFs = Math.round(26 * sc);
+        const priceFs = Math.round(20 * sc);
         const btnH = Math.round(36 * sc);
         const btnW = Math.round(200 * sc);
         const btnFs = Math.round(22 * sc);
@@ -620,6 +620,12 @@ class OptionCard extends Container {
         this.addChild(titleText);
         y += titleLineH + gap;
 
+        // Wild row
+        const wilds = createWildRow(wildCount, w * 0.9, wildRowH);
+        wilds.position.set(cx - w * 0.45, y);
+        this.addChild(wilds);
+        y += wildRowH + Math.round(0 * sc);
+
         // Price
         this._priceText = new Text({
             text: '€0.00',
@@ -628,13 +634,7 @@ class OptionCard extends Container {
         this._priceText.anchor.set(0.5, 0);
         this._priceText.position.set(cx, y);
         this.addChild(this._priceText);
-        y += priceLineH + gap;
-
-        // Wild row
-        const wilds = createWildRow(wildCount, w * 0.9, wildRowH);
-        wilds.position.set(cx - w * 0.45, y);
-        this.addChild(wilds);
-        y += wildRowH + gap;
+        y += priceLineH + Math.round(16 * sc);
 
         // BUY button
         this._buyButton = new Container();
