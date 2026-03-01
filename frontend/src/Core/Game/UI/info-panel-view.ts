@@ -517,7 +517,7 @@ export class InfoPanelView extends Container {
         const fs = Math.round(14 * s);
 
         // ── Wild substitution note ───────────────────────────────
-        const wildNote = this._createBodyText('Wild substitutes for all symbols.', fs);
+        const wildNote = this._createBodyText('Wild substitutes for all symbols and pays in any position.', fs);
         wildNote.style.wordWrap = true;
         wildNote.style.wordWrapWidth = w;
         wildNote.position.set(0, y);
@@ -549,7 +549,7 @@ export class InfoPanelView extends Container {
             y += linesBgH + Math.round(12 * s);
         }
 
-        const linesNote = this._createBodyText('Wins are evaluated from left to right. 3 or more consecutive matching symbols on a payline, starting from the leftmost reel, result in a win.', fs);
+        const linesNote = this._createBodyText('Wins are evaluated from left to right. 3 or more consecutive matching symbols on a payline, starting from the leftmost reel, result in a win. A payline made entirely of Wild symbols will not count as a separate line win.', fs);
         linesNote.style.wordWrap = true;
         linesNote.style.wordWrapWidth = w;
         linesNote.position.set(0, y);

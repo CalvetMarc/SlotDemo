@@ -79,9 +79,9 @@ function evaluatePayline(
         }
     }
 
-    // All wilds — pays as Wild from paytable
+    // All wilds — no line pay (handled by wild pay instead)
     if (baseSymbol === null) {
-        baseSymbol = WILD;
+        return null;
     }
 
     // Count consecutive matching from left
