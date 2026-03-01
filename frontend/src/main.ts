@@ -9,8 +9,8 @@ import { IS_DEBUG } from './Core/Utils/env';
 
 async function main() {
 
-  // Fire backend session in the background — not needed until BASE screen
-  SessionManager.init().catch(() => {
+  // Start backend session — must complete before BASE screen so balance is available
+  await SessionManager.init().catch(() => {
     console.warn('Backend not available — running in offline mode');
   });
 
