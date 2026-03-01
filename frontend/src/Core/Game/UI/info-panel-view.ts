@@ -522,7 +522,7 @@ export class InfoPanelView extends Container {
         wildNote.style.wordWrapWidth = w;
         wildNote.position.set(0, y);
         this._scrollContent.addChild(wildNote);
-        y += Math.round(30 * s);
+        y += wildNote.getBounds().height + Math.round(20 * s);
 
         // ── Line patterns section ────────────────────────────────
         const linesTitle = this._createText('Line Patterns', Math.round(18 * s), COLORS.gold, 'bold');
