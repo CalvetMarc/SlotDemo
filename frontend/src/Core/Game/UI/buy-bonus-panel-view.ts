@@ -24,8 +24,8 @@ const COLORS = {
     white: 0xffffff,
 } as const;
 
-const FONT_TITLE = 'Birch Std, Arial, sans-serif';
-const FONT_BODY = 'Forte, Arial, sans-serif';
+const FONT_TITLE = 'Poppins, Arial, sans-serif';
+const FONT_BODY = 'Inter, Arial, sans-serif';
 const ANIM_DURATION = 300;
 const BACKDROP_ALPHA = 0.8;
 const BLUR_STRENGTH = 4;
@@ -498,7 +498,7 @@ class OptionCard extends Container {
         const sc = h / REF_CARD_H;
         const cx = w / 2;
 
-        const titleFs = Math.round(18 * sc);
+        const titleFs = Math.round(24 * sc);
         const priceFs = Math.round(26 * sc);
         const btnH = Math.round(36 * sc);
         const btnW = Math.round(200 * sc);
