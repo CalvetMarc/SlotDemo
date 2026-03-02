@@ -125,11 +125,6 @@ export class WinPresentationController {
                 if (this._isShowingAll) {
                     // All-wins phase done → wilds → individual lines → loop
                     this._isShowingAll = false;
-                    if (this._singleCycle && this._pendingLineWins.length <= 1 && !this._wildSource) {
-                        console.log('[WPC] showAll done → singleCycle clear');
-                        this.clear();
-                        return;
-                    }
                     if (this._wildSource) {
                         console.log('[WPC] showAll done → wildStep (wildCount:', this._wildSource.wildCount, ')');
                         this._presentWildStep();
