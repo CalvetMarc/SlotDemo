@@ -664,7 +664,7 @@ export class InfoPanelView extends Container {
 
         const entries: { title: string; text: string; iconFrame?: string }[] = [
             { title: 'HOW TO PLAY', text: 'To select a bet, press the up/down arrows and choose from the available bets. To start a game round, press the Spin button. Alternatively, press the keyboard space bar.' },
-            { title: 'AUTOPLAY', text: 'To play a number of game rounds in succession, press the Auto button and select the number of rounds to play. Then press the Spin button to start. The Spin button displays the remaining Autoplays and, when pressed, cancels them.', iconFrame: 'auto.png' },
+            { title: 'AUTOPLAY', text: 'To play a number of game rounds in succession, press the Auto button and select the number of rounds to play. Then press the Spin button to start. The Auto button displays the remaining Autoplays when active. Press it again or use the Stop button to cancel them.', iconFrame: 'auto.png' },
             { title: 'TURBO MODE', text: 'Turbo Mode may be enabled or disabled by pressing the Turbo button. When enabled, certain animations during a game round are skipped or played through quickly.', iconFrame: 'turboOff.png' },
             { title: 'PAYOUTS', text: 'A symbol win is awarded when a number of instances of the same symbol appear on adjacent reels, starting from the leftmost reel. Only the payout for the longest winning combination is awarded. The highest combination win value is always awarded. All wins occur on matching win combinations. Wins on separate matching combinations are added. The paytable reflects the current bet configuration, based on the bet per matching combination.' },
         ];
