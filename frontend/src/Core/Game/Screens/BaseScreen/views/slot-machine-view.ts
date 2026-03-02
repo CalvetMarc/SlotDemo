@@ -301,6 +301,9 @@ export class SlotMachineView extends View {
     // ── Junction ─────────────────────────────────────────────────
 
     private _onAllReelsStopped(result: SpinResultWithWins, isTension: boolean): void {
+        if (result.balance !== undefined) {
+            GameModel.setBalance(result.balance);
+        }
         GameModel.setLastResult(result);
         const shouldCelebrate = result.winAmount > 0 || result.bonusTriggered;
 

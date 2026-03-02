@@ -1,6 +1,5 @@
 import type { SpinResult, SpinResponse, SymbolId, LineWin } from '@shared/types';
 import { SYMBOL_IDS, REEL_COUNT, VISIBLE_ROWS } from '@shared/types';
-import { GameModel } from './game-model';
 import { ApiClient } from '../../Services/api-client';
 
 export interface SpinResultWithWins extends SpinResult {
@@ -9,6 +8,8 @@ export interface SpinResultWithWins extends SpinResult {
     wildCount: number;
     bonusTriggered: boolean;
     wildPay: number;
+    /** Server-authoritative balance, applied when reels settle. */
+    balance?: number;
 }
 
 export interface ISpinResultProvider {
@@ -18,7 +19,6 @@ export interface ISpinResultProvider {
 export class RemoteSpinResultProvider implements ISpinResultProvider {
     async generateResult(betAmount: number): Promise<SpinResultWithWins> {
         const data = await ApiClient.post<SpinResponse>('/api/spin', { betAmount });
-        GameModel.setBalance(data.balance);
 
         return {
             grid: data.grid,
@@ -27,6 +27,7 @@ export class RemoteSpinResultProvider implements ISpinResultProvider {
             wildCount: data.wildCount,
             bonusTriggered: data.bonusTriggered,
             wildPay: data.wildPay ?? 0,
+            balance: data.balance,
         };
     }
 }
