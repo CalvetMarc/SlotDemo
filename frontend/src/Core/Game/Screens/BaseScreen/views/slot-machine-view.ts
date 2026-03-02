@@ -146,13 +146,12 @@ export class SlotMachineView extends View {
             if (info.isBonusEntry) {
                 this._winTextOverlay.showMessage('Enter Bonus Feature');
             } else if (info.isAllWins) {
-                // BigWinView handles big/super/mega on first cycle
-                if (!info.isFirstCycle || !isBigWin(info.totalWin, GameModel.betAmount)) {
-                    if (this._winController.isBonusPending) {
-                        this._winTextOverlay.showBonusEnter(info.totalWin);
-                    } else {
-                        this._winTextOverlay.showTotal(info.totalWin);
-                    }
+                // Bonus pending: always show text (BigWinView is not used for bonus entry)
+                if (this._winController.isBonusPending) {
+                    this._winTextOverlay.showBonusEnter(info.totalWin);
+                } else if (!info.isFirstCycle || !isBigWin(info.totalWin, GameModel.betAmount)) {
+                    // BigWinView handles big/super/mega on first cycle
+                    this._winTextOverlay.showTotal(info.totalWin);
                 } else {
                     this._winTextOverlay.hide();
                 }
@@ -351,8 +350,8 @@ export class SlotMachineView extends View {
             this._winController.setupBonusDismiss();
         }
 
-        // In autoplay, play celebrations once then auto-clear
-        if (GameModel.autoSpinRemaining > 0) {
+        // In autoplay, play celebrations once then auto-clear (bonus loops until entry)
+        if (GameModel.autoSpinRemaining > 0 && !result.bonusTriggered) {
             this._winController.singleCycle = true;
         }
 
@@ -443,20 +442,29 @@ export class SlotMachineView extends View {
         const totalWin = bonusWin + entryWin;
         console.log('[BonusCelebration]', { bonusWin, entryWin, totalWin });
 
+        const showTotalAndAdvance = (): void => {
+            this._winTextOverlay.showBonusTotal(totalWin);
+            gameSignals.lineWinPresented.emit({
+                lineIndex: -1, payout: totalWin, totalWin, isBonusPay: true,
+            });
+            if (GameModel.autoSpinRemaining > 0) {
+                setTimeout(() => {
+                    this._winTextOverlay.hide();
+                    this._fireNextAutoSpin();
+                }, 2000);
+            }
+        };
+
         // Show big/super/mega overlay if threshold is met
         if (isBigWin(totalWin, bet)) {
             this._bigWinView.show(totalWin, bet, false);
             this._bigWinView.onComplete = () => {
                 this._bigWinView.hide();
-                this._winTextOverlay.showBonusTotal(totalWin);
+                showTotalAndAdvance();
             };
         } else {
-            this._winTextOverlay.showBonusTotal(totalWin);
+            showTotalAndAdvance();
         }
-
-        gameSignals.lineWinPresented.emit({
-            lineIndex: -1, payout: totalWin, totalWin, isBonusPay: true,
-        });
     }
 
     // ── Helpers ──────────────────────────────────────────────────
