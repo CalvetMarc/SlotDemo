@@ -18,6 +18,8 @@ export interface LineWinInfo {
     isWildBonus?: boolean;
     isBonusPay?: boolean;
     isBonusEntry?: boolean;
+    isAllWins?: boolean;
+    isFirstCycle?: boolean;
 }
 
 export class WinPresentationController {
@@ -32,9 +34,12 @@ export class WinPresentationController {
     private _isBonusPending = false;
     private _singleCycle = false;
     private _isWildCelebration = false;
-    private _pendingResult: SpinResultWithWins | null = null;
     private _wildSource: SpinResultWithWins | null = null;
     private _chainSource: SpinResultWithWins | null = null;
+
+    private _isFirstCycle = true;
+    private _isShowingAll = false;
+    private _isShowingWilds = false;
 
     private static readonly _LINE_PAUSE_MS = 800;
 
@@ -64,12 +69,10 @@ export class WinPresentationController {
         this._addBonusDismissListeners();
     }
 
-    showWildCelebration(result: SpinResultWithWins, chainResult?: SpinResultWithWins): void {
+    /** Standalone wild celebration — only for bonus entry (no cycling). */
+    showWildCelebration(result: SpinResultWithWins): void {
         this._clearLineVisuals();
         this._isWildCelebration = true;
-        this._pendingResult = chainResult ?? null;
-        this._wildSource = chainResult ? result : null;
-        this._chainSource = chainResult ?? null;
         const vfxFrames = getWinVfxFrames();
 
         for (let reel = 0; reel < REEL_COUNT; reel++) {
@@ -83,65 +86,90 @@ export class WinPresentationController {
             }
             this._reels[reel].setCelebration(winRows, vfxRows, this._vfxLayer, vfxFrames, true);
         }
-
-        if (result.wildPay > 0) {
-            const totalWin = chainResult?.winAmount ?? result.winAmount;
-            this.onLinePresented?.({
-                lineIndex: -1,
-                payout: result.wildPay,
-                totalWin,
-                isWildBonus: true,
-            });
-        }
     }
 
     set singleCycle(value: boolean) {
         this._singleCycle = value;
     }
 
-    show(result: SpinResultWithWins): void {
-        if (this._reels[0].isCelebrating || !this._reels[0].isIdle) return;
+    show(result: SpinResultWithWins, wildResult?: SpinResultWithWins): void {
+        console.log('[WPC.show] guard:', { celebrating: this._reels[0].isCelebrating, idle: this._reels[0].isIdle });
+        if (this._reels[0].isCelebrating || !this._reels[0].isIdle) {
+            console.log('[WPC.show] EARLY RETURN — reels not ready');
+            return;
+        }
+        console.log('[WPC.show] started', { totalWin: result.winAmount, lines: result.lineWins.length, wilds: wildResult?.wildCount });
 
         for (const reel of this._reels) reel.clearWildPop();
 
         this._pendingLineWins = result.lineWins;
         this._currentLineIndex = 0;
         this._totalWin = result.winAmount;
+        this._isFirstCycle = true;
+        this._wildSource = (wildResult && wildResult.wildCount >= 3) ? wildResult : null;
+        this._chainSource = this._wildSource ? result : null;
 
-        if (this._pendingLineWins.length > 0) {
-            this._presentCurrentLine();
+        if (this._pendingLineWins.length > 0 || this._wildSource) {
+            this._presentAllWins();
         }
     }
 
     update(deltaMs: number): void {
-        if (this._pendingLineWins.length === 0 && !this._isWildCelebration) return;
+        if (this._pendingLineWins.length === 0 && !this._isWildCelebration && !this._isShowingWilds && !this._isShowingAll) return;
 
         if (this._linePauseElapsed >= 0) {
             this._linePauseElapsed += deltaMs;
             if (this._linePauseElapsed >= WinPresentationController._LINE_PAUSE_MS) {
                 this._linePauseElapsed = -1;
 
-                // Wild celebration finished — chain into line cycling
-                if (this._pendingResult) {
-                    const result = this._pendingResult;
-                    this._pendingResult = null;
-                    this._isWildCelebration = false;
-                    this._pendingLineWins = result.lineWins;
-                    this._currentLineIndex = 0;
-                    this._totalWin = result.winAmount;
-                    if (this._pendingLineWins.length > 0) {
+                if (this._isShowingAll) {
+                    // All-wins phase done → wilds → individual lines → loop
+                    this._isShowingAll = false;
+                    if (this._singleCycle && this._pendingLineWins.length <= 1 && !this._wildSource) {
+                        console.log('[WPC] showAll done → singleCycle clear');
+                        this.clear();
+                        return;
+                    }
+                    if (this._wildSource) {
+                        console.log('[WPC] showAll done → wildStep (wildCount:', this._wildSource.wildCount, ')');
+                        this._presentWildStep();
+                    } else if (this._pendingLineWins.length > 0) {
+                        console.log('[WPC] showAll done → line 0');
+                        this._currentLineIndex = 0;
                         this._presentCurrentLine();
+                    } else {
+                        console.log('[WPC] showAll done → loop (no wilds, no lines)');
+                        this._isFirstCycle = false;
+                        this._presentAllWins();
+                    }
+                } else if (this._isShowingWilds) {
+                    // Wild step done → individual lines, or loop back to total
+                    this._isShowingWilds = false;
+                    if (this._pendingLineWins.length > 0) {
+                        console.log('[WPC] wildStep done → line 0');
+                        this._currentLineIndex = 0;
+                        this._presentCurrentLine();
+                    } else {
+                        console.log('[WPC] wildStep done → loop (no lines)');
+                        this._isFirstCycle = false;
+                        this._presentAllWins();
                     }
                 } else if (this._pendingLineWins.length > 1) {
+                    console.log('[WPC] line done → advanceStep (idx:', this._currentLineIndex, ')');
                     this._advanceStep();
                 } else if (this._singleCycle) {
+                    console.log('[WPC] singleLine done → singleCycle clear');
                     this.clear();
                     return;
-                } else if (this._wildSource) {
-                    // Single line win with wilds: replay wild → line cycle
-                    this.showWildCelebration(this._wildSource, this._chainSource!);
+                } else if (this._isWildCelebration) {
+                    // Standalone wild celebration done (bonus entry) — stop
+                    console.log('[WPC] wildCelebration done (bonus entry)');
+                    this._isWildCelebration = false;
                 } else {
-                    for (const reel of this._reels) reel.restartCelebration();
+                    // Loop: show all wins again
+                    console.log('[WPC] line done → loop to allWins');
+                    this._isFirstCycle = false;
+                    this._presentAllWins();
                 }
             }
             return;
@@ -164,13 +192,15 @@ export class WinPresentationController {
     clear(): void {
         this._clearLineVisuals();
         this._pendingLineWins = [];
-        this._pendingResult = null;
         this._wildSource = null;
         this._chainSource = null;
         this._currentLineIndex = 0;
         this._linePauseElapsed = -1;
         this._singleCycle = false;
         this._isWildCelebration = false;
+        this._isShowingAll = false;
+        this._isShowingWilds = false;
+        this._isFirstCycle = true;
         this._isBonusPending = false;
         this._totalWin = 0;
         this._removeBonusDismissListeners();
@@ -179,6 +209,51 @@ export class WinPresentationController {
 
     dispose(): void {
         this.clear();
+    }
+
+    private _presentAllWins(): void {
+        this._clearLineVisuals();
+        this._isShowingAll = true;
+
+        const allWinPositions = getWinPositions(this._pendingLineWins);
+
+        // Include wild positions so they animate in the "total" display
+        if (this._wildSource) {
+            for (let reel = 0; reel < REEL_COUNT; reel++) {
+                for (let row = 0; row < VISIBLE_ROWS; row++) {
+                    if (this._wildSource.grid[reel][row] === 'Wild_01.png') {
+                        allWinPositions.add(`${reel},${row}`);
+                    }
+                }
+            }
+        }
+
+        const vfxFrames = getWinVfxFrames();
+
+        for (let reel = 0; reel < REEL_COUNT; reel++) {
+            const winRows = new Set<number>();
+            const vfxRows = new Set<number>();
+            const goldRows = new Set<number>();
+            for (let row = 0; row < VISIBLE_ROWS; row++) {
+                const key = `${reel},${row}`;
+                if (allWinPositions.has(key)) {
+                    winRows.add(row);
+                    vfxRows.add(row);
+                }
+                if (this._wildSource?.grid[reel][row] === 'Wild_01.png') {
+                    goldRows.add(row);
+                }
+            }
+            this._reels[reel].setCelebration(winRows, vfxRows, this._vfxLayer, vfxFrames, goldRows);
+        }
+
+        this.onLinePresented?.({
+            lineIndex: -1,
+            payout: this._totalWin,
+            totalWin: this._totalWin,
+            isAllWins: true,
+            isFirstCycle: this._isFirstCycle,
+        });
     }
 
     private _presentCurrentLine(): void {
@@ -216,14 +291,43 @@ export class WinPresentationController {
             return;
         }
 
-        // Wrap around: replay wild celebration before restarting lines
-        if (nextIndex === 0 && this._wildSource) {
-            this.showWildCelebration(this._wildSource, this._chainSource!);
+        // Wrap around: loop back to all-wins (wilds are shown earlier in cycle)
+        if (nextIndex === 0) {
+            this._isFirstCycle = false;
+            this._presentAllWins();
             return;
         }
 
         this._currentLineIndex = nextIndex;
         this._presentCurrentLine();
+    }
+
+    private _presentWildStep(): void {
+        this._clearLineVisuals();
+        this._isShowingWilds = true;
+
+        const source = this._wildSource!;
+        const vfxFrames = getWinVfxFrames();
+
+        for (let reel = 0; reel < REEL_COUNT; reel++) {
+            const winRows = new Set<number>();
+            const vfxRows = new Set<number>();
+            for (let row = 0; row < VISIBLE_ROWS; row++) {
+                if (source.grid[reel][row] === 'Wild_01.png') {
+                    winRows.add(row);
+                    vfxRows.add(row);
+                }
+            }
+            this._reels[reel].setCelebration(winRows, vfxRows, this._vfxLayer, vfxFrames, true);
+        }
+
+        const totalWin = this._chainSource?.winAmount ?? source.winAmount;
+        this.onLinePresented?.({
+            lineIndex: -1,
+            payout: source.wildPay,
+            totalWin,
+            isWildBonus: true,
+        });
     }
 
     private _clearLineVisuals(): void {

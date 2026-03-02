@@ -289,56 +289,6 @@
       }
     },
     {
-      "id": "ui_line_win",
-      "type": "LineWinDisplayView",
-      "layer": "game",
-      "layout": {
-        "default": {
-          "relativeTo": "slot_machine",
-          "relativeAnchor": "bottom-center",
-          "relativeOffset": { "x": "-25w%", "y": "0h%" },
-          "anchor": "bottom-center",
-          "origin": { "x": 0.5, "y": 0.5 },
-          "scale": { "x": "4h%", "y": "4h%" }
-        },
-        "overrides": {
-          "9:16": {
-            "relativeTo": "slot_machine",
-            "relativeAnchor": "bottom-center",
-            "relativeOffset": { "x": "-25w%", "y": "5h%" },
-            "anchor": "bottom-center",
-            "origin": { "x": 0.5, "y": 0.5 },
-            "scale": { "x": "3h%", "y": "3h%" }
-          }
-        }
-      }
-    },
-    {
-      "id": "ui_total_win",
-      "type": "TotalWinDisplayView",
-      "layer": "game",
-      "layout": {
-        "default": {
-          "relativeTo": "slot_machine",
-          "relativeAnchor": "bottom-center",
-          "relativeOffset": { "x": "25w%", "y": "0h%" },
-          "anchor": "bottom-center",
-          "origin": { "x": 0.5, "y": 0.5 },
-          "scale": { "x": "4h%", "y": "4h%" }
-        },
-        "overrides": {
-          "9:16": {
-            "relativeTo": "slot_machine",
-            "relativeAnchor": "bottom-center",
-            "relativeOffset": { "x": "25w%", "y": "5h%" },
-            "anchor": "bottom-center",
-            "origin": { "x": 0.5, "y": 0.5 },
-            "scale": { "x": "3h%", "y": "3h%" }
-          }
-        }
-      }
-    },
-    {
       "id": "ui_audio",
       "type": "AudioButtonView",
       "layer": "ui",
