@@ -12,6 +12,7 @@ export class BetDisplayView extends View {
     private upArrow!: ArrowButtonView;
     private downArrow!: ArrowButtonView;
     private _unsubscribeBet?: () => void;
+    private _unsubscribeSpinning?: () => void;
 
     bundleNeeded(): bundle {
         return "base";
@@ -77,12 +78,23 @@ export class BetDisplayView extends View {
             this._updateDisplay(amount, index);
         });
 
+        // Block bet changes while spinning
+        this._unsubscribeSpinning = GameModel.spinningChanged.connect(({ isSpinning }) => {
+            if (isSpinning) {
+                this.upArrow.setDisabled(true);
+                this.downArrow.setDisabled(true);
+            } else {
+                this._updateDisplay(GameModel.betAmount, GameModel.betIndex);
+            }
+        });
+
         // Initial display from model
         this._updateDisplay(GameModel.betAmount, GameModel.betIndex);
     }
 
     protected dispose(): void {
         this._unsubscribeBet?.();
+        this._unsubscribeSpinning?.();
     }
 
     private _updateProgressBar(index: number): void {
