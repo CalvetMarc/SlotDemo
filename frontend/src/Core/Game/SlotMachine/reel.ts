@@ -1,4 +1,4 @@
-import { Container, Sprite, Assets, Spritesheet, ColorMatrixFilter, type Texture } from 'pixi.js';
+import { BlurFilter, Container, Sprite, Assets, Spritesheet, ColorMatrixFilter, type Texture } from 'pixi.js';
 import {
     CELL_SIZE, SYMBOL_SIZE, VISIBLE_ROWS,
     SPIN_SPEED, OVERSHOOT_PX, BOUNCE_DURATION,
@@ -14,6 +14,9 @@ type ReelState = 'idle' | 'anticipating' | 'spinning' | 'stopping';
 const LANDING_MS = 200;
 const TENSION_DIM_BRIGHTNESS = 0.2;
 const TENSION_DIM_FADE_MS = 80;
+
+const SPIN_BLUR_STRENGTH = 6;
+const SPIN_BLUR_QUALITY = 2;
 
 // ── Wild landing pop: grow on land, shrink when all reels stop ──
 
@@ -70,6 +73,9 @@ export class Reel extends Container {
     private _isSkipBouncing = false;
     private _skipBounceElapsed = 0;
     private _skipBounceBaseY = 0;
+
+    // Spin blur
+    private _blurFilter: BlurFilter | null = null;
 
     // Tension dim
     private _dimFilter: ColorMatrixFilter | null = null;
@@ -161,6 +167,7 @@ export class Reel extends Container {
         this._isSkipBouncing = true;
         this._skipBounceElapsed = 0;
 
+        this._removeBlur();
         this._state = 'idle';
         this._speed = 0;
         this._stopQueue = [];
@@ -227,6 +234,7 @@ export class Reel extends Container {
                 this._anticipationStartY = [];
                 this._state = 'spinning';
                 this._speed = SPIN_SPEED * 0.4;
+                this._applyBlur();
             }
             return;
         }
@@ -236,6 +244,7 @@ export class Reel extends Container {
             if (this._speed < SPIN_SPEED) {
                 this._speed = Math.min(this._speed * 1.25, SPIN_SPEED);
             }
+            this._updateBlur(this._speed / SPIN_SPEED);
             this._moveDown(this._speed * dt);
             return;
         }
@@ -262,6 +271,8 @@ export class Reel extends Container {
             const t = Math.min(this._phaseElapsed / LANDING_MS, 1);
             const ease = easeOutQuad(t);
 
+            this._updateBlur(1 - ease);
+
             for (let i = 0; i < this._sortedForLanding.length; i++) {
                 const snapY = (i - 1) * CELL_SIZE + CELL_SIZE * 0.5;
                 const overshootY = snapY + OVERSHOOT_PX;
@@ -272,6 +283,7 @@ export class Reel extends Container {
             if (t >= 1) {
                 this._isOvershooting = true;
                 this._phaseElapsed = 0;
+                this._removeBlur();
             }
             return;
         }
@@ -546,6 +558,26 @@ export class Reel extends Container {
         this._sortedSymbols = [...this._symbols].sort((a, b) => a.y - b.y);
         for (let i = 0; i < this._totalSlots; i++) {
             this._sortedSymbols[i].y = (i - 1) * CELL_SIZE + CELL_SIZE * 0.5;
+        }
+    }
+
+    private _applyBlur(): void {
+        if (!this._blurFilter) {
+            this._blurFilter = new BlurFilter({ strengthX: 0, strengthY: 0, quality: SPIN_BLUR_QUALITY });
+        }
+        this._blurFilter.strengthY = 0;
+        this.filters = [this._blurFilter];
+    }
+
+    private _updateBlur(ratio: number): void {
+        if (this._blurFilter) {
+            this._blurFilter.strengthY = SPIN_BLUR_STRENGTH * ratio;
+        }
+    }
+
+    private _removeBlur(): void {
+        if (this._blurFilter) {
+            this.filters = [];
         }
     }
 
