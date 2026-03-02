@@ -13,6 +13,7 @@ export class BetDisplayView extends View {
     private downArrow!: ArrowButtonView;
     private _unsubscribeBet?: () => void;
     private _unsubscribeSpinning?: () => void;
+    private _unsubscribeAutoSpin?: () => void;
 
     bundleNeeded(): bundle {
         return "base";
@@ -78,14 +79,13 @@ export class BetDisplayView extends View {
             this._updateDisplay(amount, index);
         });
 
-        // Block bet changes while spinning
-        this._unsubscribeSpinning = GameModel.spinningChanged.connect(({ isSpinning }) => {
-            if (isSpinning) {
-                this.upArrow.setDisabled(true);
-                this.downArrow.setDisabled(true);
-            } else {
-                this._updateDisplay(GameModel.betAmount, GameModel.betIndex);
-            }
+        // Block bet changes while spinning or in auto modes
+        this._unsubscribeSpinning = GameModel.spinningChanged.connect(() => {
+            this._refreshButtons();
+        });
+
+        this._unsubscribeAutoSpin = GameModel.autoSpinRemainingChanged.connect(() => {
+            this._refreshButtons();
         });
 
         // Initial display from model
@@ -95,6 +95,7 @@ export class BetDisplayView extends View {
     protected dispose(): void {
         this._unsubscribeBet?.();
         this._unsubscribeSpinning?.();
+        this._unsubscribeAutoSpin?.();
     }
 
     private _updateProgressBar(index: number): void {
@@ -105,12 +106,22 @@ export class BetDisplayView extends View {
         this.progressFill.fill({ color: 0x00d4aa });  // Magical cyan accent
     }
 
+    private _refreshButtons(): void {
+        const isBlocked = GameModel.isSpinning
+            || GameModel.autoSpinRemaining > 0;
+
+        if (isBlocked) {
+            this.upArrow.setDisabled(true);
+            this.downArrow.setDisabled(true);
+        } else {
+            this.upArrow.setDisabled(GameModel.betIndex >= BET_STEPS.length - 1);
+            this.downArrow.setDisabled(GameModel.betIndex <= 0);
+        }
+    }
+
     private _updateDisplay(amount: number, index: number): void {
         this.valueText.text = `€${amount.toFixed(2)}`;
         this._updateProgressBar(index);
-
-        // Update arrow states based on limits
-        this.upArrow.setDisabled(index >= BET_STEPS.length - 1);
-        this.downArrow.setDisabled(index <= 0);
+        this._refreshButtons();
     }
 }

@@ -60,7 +60,8 @@
         "bonus_bg": "assets/bonus/background/static/_src/bonus_game.png",
         "bonus_bg_back": "assets/bonus/background/static/_src/bonus_game_back.png",
         "bonus_stairs": "assets/bonus/background/static/_src/bonus_stairs.png",
-        "prizes_static": "assets/bonus/prizes/allPrizes.json"
+        "prizes_static": "assets/bonus/prizes/allPrizes.json",
+        "loadingBar": "assets/bonus/loadingBar/loadingBar.json"
       }
     }
   ]
