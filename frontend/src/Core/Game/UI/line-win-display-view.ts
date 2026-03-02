@@ -29,9 +29,15 @@ export class LineWinDisplayView extends View {
         this._text.alpha = 0;
 
         this._unsubPresented = gameSignals.lineWinPresented.connect((info) => {
-            this._text.text = info.isWildBonus
-                ? `Wilds pay ${info.payout.toFixed(2)}€`
-                : `Line ${info.lineIndex + 1} pays ${info.payout.toFixed(2)}€`;
+            if (info.isBonusEntry) {
+                this._text.text = 'Enter Bonus Feature';
+            } else if (info.isBonusPay) {
+                this._text.text = `Bonus pays ${info.payout.toFixed(2)}€`;
+            } else if (info.isWildBonus) {
+                this._text.text = `Wilds pay ${info.payout.toFixed(2)}€`;
+            } else {
+                this._text.text = `Line ${info.lineIndex + 1} pays ${info.payout.toFixed(2)}€`;
+            }
             this._text.alpha = 1;
         });
 

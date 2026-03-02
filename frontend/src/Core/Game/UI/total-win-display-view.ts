@@ -29,7 +29,9 @@ export class TotalWinDisplayView extends View {
         this._text.alpha = 0;
 
         this._unsubPresented = gameSignals.lineWinPresented.connect((info) => {
-            this._text.text = `Total Win ${info.totalWin.toFixed(2)}€`;
+            this._text.text = info.isBonusEntry
+                ? 'Enter Bonus Feature'
+                : `Total Win ${info.totalWin.toFixed(2)}€`;
             this._text.alpha = 1;
         });
 

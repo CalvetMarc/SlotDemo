@@ -16,6 +16,8 @@ export interface LineWinInfo {
     payout: number;
     totalWin: number;
     isWildBonus?: boolean;
+    isBonusPay?: boolean;
+    isBonusEntry?: boolean;
 }
 
 export class WinPresentationController {
@@ -28,14 +30,15 @@ export class WinPresentationController {
     private _linePauseElapsed = -1;
 
     private _isBonusPending = false;
-    private _hasBonusCelebrationStep = false;
-    private _bonusWildPositions = new Set<string>();
     private _singleCycle = false;
+    private _isWildCelebration = false;
+    private _pendingResult: SpinResultWithWins | null = null;
+    private _wildSource: SpinResultWithWins | null = null;
+    private _chainSource: SpinResultWithWins | null = null;
 
     private static readonly _LINE_PAUSE_MS = 800;
 
     private _totalWin = 0;
-    private _wildPay = 0;
 
     public onBonusDismissed?: () => void;
     public onLinePresented?: (info: LineWinInfo) => void;
@@ -56,16 +59,39 @@ export class WinPresentationController {
         return this._isBonusPending;
     }
 
-    setupBonus(result: SpinResultWithWins): void {
+    setupBonusDismiss(): void {
         this._isBonusPending = true;
-        this._hasBonusCelebrationStep = true;
-        this._bonusWildPositions.clear();
+        this._addBonusDismissListeners();
+    }
+
+    showWildCelebration(result: SpinResultWithWins, chainResult?: SpinResultWithWins): void {
+        this._clearLineVisuals();
+        this._isWildCelebration = true;
+        this._pendingResult = chainResult ?? null;
+        this._wildSource = chainResult ? result : null;
+        this._chainSource = chainResult ?? null;
+        const vfxFrames = getWinVfxFrames();
+
         for (let reel = 0; reel < REEL_COUNT; reel++) {
+            const winRows = new Set<number>();
+            const vfxRows = new Set<number>();
             for (let row = 0; row < VISIBLE_ROWS; row++) {
                 if (result.grid[reel][row] === 'Wild_01.png') {
-                    this._bonusWildPositions.add(`${reel},${row}`);
+                    winRows.add(row);
+                    vfxRows.add(row);
                 }
             }
+            this._reels[reel].setCelebration(winRows, vfxRows, this._vfxLayer, vfxFrames, true);
+        }
+
+        if (result.wildPay > 0) {
+            const totalWin = chainResult?.winAmount ?? result.winAmount;
+            this.onLinePresented?.({
+                lineIndex: -1,
+                payout: result.wildPay,
+                totalWin,
+                isWildBonus: true,
+            });
         }
     }
 
@@ -81,33 +107,39 @@ export class WinPresentationController {
         this._pendingLineWins = result.lineWins;
         this._currentLineIndex = 0;
         this._totalWin = result.winAmount;
-        this._wildPay = result.wildPay;
 
-        if (this._hasBonusCelebrationStep) {
-            this._presentBonusStep();
-        } else if (this._pendingLineWins.length > 0) {
+        if (this._pendingLineWins.length > 0) {
             this._presentCurrentLine();
-        }
-
-        if (this._isBonusPending) {
-            this._addBonusDismissListeners();
         }
     }
 
     update(deltaMs: number): void {
-        if (this._pendingLineWins.length === 0 && !this._hasBonusCelebrationStep) return;
+        if (this._pendingLineWins.length === 0 && !this._isWildCelebration) return;
 
         if (this._linePauseElapsed >= 0) {
             this._linePauseElapsed += deltaMs;
             if (this._linePauseElapsed >= WinPresentationController._LINE_PAUSE_MS) {
                 this._linePauseElapsed = -1;
-                const totalSteps = this._pendingLineWins.length
-                    + (this._hasBonusCelebrationStep ? 1 : 0);
-                if (totalSteps > 1) {
+
+                // Wild celebration finished — chain into line cycling
+                if (this._pendingResult) {
+                    const result = this._pendingResult;
+                    this._pendingResult = null;
+                    this._isWildCelebration = false;
+                    this._pendingLineWins = result.lineWins;
+                    this._currentLineIndex = 0;
+                    this._totalWin = result.winAmount;
+                    if (this._pendingLineWins.length > 0) {
+                        this._presentCurrentLine();
+                    }
+                } else if (this._pendingLineWins.length > 1) {
                     this._advanceStep();
                 } else if (this._singleCycle) {
                     this.clear();
                     return;
+                } else if (this._wildSource) {
+                    // Single line win with wilds: replay wild → line cycle
+                    this.showWildCelebration(this._wildSource, this._chainSource!);
                 } else {
                     for (const reel of this._reels) reel.restartCelebration();
                 }
@@ -132,14 +164,15 @@ export class WinPresentationController {
     clear(): void {
         this._clearLineVisuals();
         this._pendingLineWins = [];
+        this._pendingResult = null;
+        this._wildSource = null;
+        this._chainSource = null;
         this._currentLineIndex = 0;
         this._linePauseElapsed = -1;
         this._singleCycle = false;
-        this._hasBonusCelebrationStep = false;
-        this._bonusWildPositions.clear();
+        this._isWildCelebration = false;
         this._isBonusPending = false;
         this._totalWin = 0;
-        this._wildPay = 0;
         this._removeBonusDismissListeners();
         this.onPresentationCleared?.();
     }
@@ -151,10 +184,7 @@ export class WinPresentationController {
     private _presentCurrentLine(): void {
         this._clearLineVisuals();
 
-        const lineIdx = this._hasBonusCelebrationStep
-            ? this._currentLineIndex - 1
-            : this._currentLineIndex;
-        const lw = this._pendingLineWins[lineIdx];
+        const lw = this._pendingLineWins[this._currentLineIndex];
         const winPositions = getWinPositions([lw]);
         const fullPositions = getFullPaylinePositions([lw]);
         const vfxFrames = getWinVfxFrames();
@@ -178,9 +208,7 @@ export class WinPresentationController {
     }
 
     private _advanceStep(): void {
-        const totalSteps = this._pendingLineWins.length
-            + (this._hasBonusCelebrationStep ? 1 : 0);
-        const nextIndex = (this._currentLineIndex + 1) % totalSteps;
+        const nextIndex = (this._currentLineIndex + 1) % this._pendingLineWins.length;
 
         // Single cycle mode: clear after one full pass
         if (this._singleCycle && nextIndex === 0) {
@@ -188,37 +216,14 @@ export class WinPresentationController {
             return;
         }
 
+        // Wrap around: replay wild celebration before restarting lines
+        if (nextIndex === 0 && this._wildSource) {
+            this.showWildCelebration(this._wildSource, this._chainSource!);
+            return;
+        }
+
         this._currentLineIndex = nextIndex;
-
-        if (this._hasBonusCelebrationStep && this._currentLineIndex === 0) {
-            this._presentBonusStep();
-        } else {
-            this._presentCurrentLine();
-        }
-    }
-
-    private _presentBonusStep(): void {
-        this._clearLineVisuals();
-        const vfxFrames = getWinVfxFrames();
-
-        for (let reel = 0; reel < REEL_COUNT; reel++) {
-            const winRows = new Set<number>();
-            const vfxRows = new Set<number>();
-            for (let row = 0; row < VISIBLE_ROWS; row++) {
-                if (this._bonusWildPositions.has(`${reel},${row}`)) {
-                    winRows.add(row);
-                    vfxRows.add(row);
-                }
-            }
-            this._reels[reel].setCelebration(winRows, vfxRows, this._vfxLayer, vfxFrames, true);
-        }
-
-        this.onLinePresented?.({
-            lineIndex: -1,
-            payout: this._wildPay,
-            totalWin: this._totalWin,
-            isWildBonus: true,
-        });
+        this._presentCurrentLine();
     }
 
     private _clearLineVisuals(): void {
@@ -230,7 +235,6 @@ export class WinPresentationController {
 
     private _onBonusDismiss = (): void => {
         this._removeBonusDismissListeners();
-        this.clear();
         this.onBonusDismissed?.();
     };
 

@@ -18,6 +18,7 @@ import { SpinController } from '../../../SlotMachine/spin-controller';
 import { TweenManager } from '../../../../Animation/tween';
 import { GameModel } from '../../../SlotMachine/game-model';
 import { IS_DEBUG } from '../../../../Utils/env';
+import { BigWinView, isBigWin } from '../../../SlotMachine/big-win-view';
 
 export class SlotMachineView extends View {
     private _frameBackground!: Sprite;
@@ -36,11 +37,15 @@ export class SlotMachineView extends View {
     private _unsubSkipRequested?: () => void;
     private _unsubCelebrationDone?: () => void;
     private _unsubAutoSpinCancel?: () => void;
+    private _unsubBaseTransition?: () => void;
     private _waitingForCelebration = false;
+    private _pendingBonusCelebration = -1;
+    private _bonusEntryResult: SpinResultWithWins | null = null;
 
     private _spinController!: SpinController;
     private _winController!: WinPresentationController;
     private _tensionController!: TensionController;
+    private _bigWinView!: BigWinView;
 
     bundleNeeded(): bundle {
         return 'base';
@@ -93,14 +98,30 @@ export class SlotMachineView extends View {
             reelContainer: this._reelContainer,
         });
         this._winController.onBonusDismissed = () => {
-            this._clearAll();
             gameSignals.requestBonusTransition.emit();
         };
 
         this._tensionController = new TensionController({ reels: this._reels });
         this._tensionController.onTensionResolved = (result, shouldCelebrate) => {
             if (shouldCelebrate) {
-                this._winController.show(result);
+                if (result.bonusTriggered) {
+                    this._winController.showWildCelebration(result);
+                    gameSignals.lineWinPresented.emit({
+                        lineIndex: -1, payout: 0, totalWin: 0, isBonusEntry: true,
+                    });
+                } else {
+                    if (isBigWin(result.winAmount, GameModel.betAmount)) {
+                        this._bigWinView.show(
+                            result.winAmount,
+                            GameModel.betAmount,
+                            GameModel.autoSpinRemaining > 0,
+                        );
+                        this._bigWinView.onComplete = () => {
+                            this._bigWinView.hide();
+                        };
+                    }
+                    this._winController.show(result);
+                }
             }
         };
 
@@ -111,6 +132,10 @@ export class SlotMachineView extends View {
         this._frame = Sprite.from('frame');
         this._frame.anchor.set(0.5);
         this.addChild(this._frame);
+
+        // Big win overlay (on top of frame)
+        this._bigWinView = new BigWinView();
+        this.addChild(this._bigWinView);
 
         this._winController.onLinePresented = (info) => {
             gameSignals.lineWinPresented.emit(info);
@@ -149,6 +174,10 @@ export class SlotMachineView extends View {
 
         this._skipHandler = () => {
             if (GameModel.autoSpinRemaining > 0) return;
+            if (this._bigWinView.isActive) {
+                this._bigWinView.skip();
+                return;
+            }
             this._spinController.skipSpin();
         };
         window.addEventListener('pointerdown', this._skipHandler);
@@ -202,6 +231,19 @@ export class SlotMachineView extends View {
             }
         });
 
+        // Returning from bonus: clear stale celebrations and prepare bonus win celebration
+        this._unsubBaseTransition = gameSignals.requestBaseTransition.connect(() => {
+            const entryResult = this._bonusEntryResult;
+            this._clearAll();
+            const bonusWin = GameModel.pendingBonusWin;
+            GameModel.setPendingBonusWin(0);
+            // Always celebrate on return — entry line wins even if bonus paid 0
+            if (bonusWin > 0 || entryResult) {
+                this._pendingBonusCelebration = bonusWin;
+                this._bonusEntryResult = entryResult;
+            }
+        });
+
         Ticker.shared.add(this._onTick, this);
     }
 
@@ -226,6 +268,7 @@ export class SlotMachineView extends View {
         this._unsubSkipRequested?.();
         this._unsubCelebrationDone?.();
         this._unsubAutoSpinCancel?.();
+        this._unsubBaseTransition?.();
         this._waitingForCelebration = false;
         this._clearAll();
         this._spinController.dispose();
@@ -246,6 +289,13 @@ export class SlotMachineView extends View {
             reel.updateWildPop(deltaMs);
         }
         this._winController.update(deltaMs);
+
+        // Start bonus celebration once the view is back on screen (with short delay)
+        if (this._pendingBonusCelebration >= 0 && this.parent) {
+            const bonusWin = this._pendingBonusCelebration;
+            this._pendingBonusCelebration = -1;
+            setTimeout(() => this._showBonusCelebration(bonusWin), 2000);
+        }
     }
 
     // ── Junction ─────────────────────────────────────────────────
@@ -263,7 +313,8 @@ export class SlotMachineView extends View {
         this._spinController.clearTimeouts();
 
         if (result.bonusTriggered) {
-            this._winController.setupBonus(result);
+            this._bonusEntryResult = result;
+            this._winController.setupBonusDismiss();
         }
 
         // In turbo + autoplay, play celebrations once then auto-clear
@@ -278,7 +329,25 @@ export class SlotMachineView extends View {
             const delay = wildAnimDelay + WIN_REVEAL_PAUSE;
 
             this._winPresentationTimeout = setTimeout(() => {
-                this._winController.show(result);
+                if (result.bonusTriggered) {
+                    // Celebrate wilds + show "Enter Bonus Feature"
+                    this._winController.showWildCelebration(result);
+                    gameSignals.lineWinPresented.emit({
+                        lineIndex: -1, payout: 0, totalWin: 0, isBonusEntry: true,
+                    });
+                } else {
+                    if (isBigWin(result.winAmount, GameModel.betAmount)) {
+                        this._bigWinView.show(
+                            result.winAmount,
+                            GameModel.betAmount,
+                            GameModel.autoSpinRemaining > 0,
+                        );
+                        this._bigWinView.onComplete = () => {
+                            this._bigWinView.hide();
+                        };
+                    }
+                    this._winController.show(result);
+                }
             }, delay);
         }
 
@@ -333,6 +402,52 @@ export class SlotMachineView extends View {
         }
     }
 
+    // ── Bonus celebration ─────────────────────────────────────────
+
+    private _showBonusCelebration(bonusWin: number): void {
+        const bet = GameModel.betAmount;
+        const entryResult = this._bonusEntryResult;
+        this._bonusEntryResult = null;
+
+        // Total win = bonus winnings + entry spin line wins
+        const entryWin = entryResult?.winAmount ?? 0;
+        const totalWin = bonusWin + entryWin;
+
+        // Show big/super/mega overlay if threshold is met (based on total)
+        if (isBigWin(totalWin, bet)) {
+            this._bigWinView.show(totalWin, bet, false);
+            this._bigWinView.onComplete = () => {
+                this._bigWinView.hide();
+            };
+        }
+
+        // Celebrate wilds first (gold VFX), then chain into line cycling
+        if (entryResult && entryResult.wildCount > 0 && entryResult.lineWins.length > 0) {
+            const celebrationResult: SpinResultWithWins = {
+                ...entryResult,
+                winAmount: totalWin,
+            };
+            this._winController.showWildCelebration(entryResult, celebrationResult);
+        } else if (entryResult && entryResult.lineWins.length > 0) {
+            const celebrationResult: SpinResultWithWins = {
+                ...entryResult,
+                winAmount: totalWin,
+            };
+            this._winController.show(celebrationResult);
+        } else if (entryResult && entryResult.wildCount > 0) {
+            // Buy bonus: wilds but no line wins — celebrate wilds with correct total
+            const wildResult: SpinResultWithWins = {
+                ...entryResult,
+                winAmount: totalWin,
+            };
+            this._winController.showWildCelebration(wildResult);
+        } else {
+            gameSignals.lineWinPresented.emit({
+                lineIndex: -1, payout: bonusWin, totalWin, isBonusPay: true,
+            });
+        }
+    }
+
     // ── Helpers ──────────────────────────────────────────────────
 
     private _clearAll(): void {
@@ -340,9 +455,12 @@ export class SlotMachineView extends View {
             clearTimeout(this._winPresentationTimeout);
             this._winPresentationTimeout = undefined;
         }
+        this._pendingBonusCelebration = -1;
+        this._bonusEntryResult = null;
         this._tensionController.clearTimeouts();
         for (const reel of this._reels) reel.clearWildPop();
         this._winController.clear();
+        this._bigWinView.hide();
     }
 
     private _setInitialSymbols(): void {
