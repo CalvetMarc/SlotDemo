@@ -5,7 +5,7 @@ const FONT_FAMILY = 'Forte, Arial, sans-serif';
 const STROKE_WIDTH = 4;
 
 const TOTAL_FONT_SIZE = 70;
-const LINE_FONT_SIZE = 45;
+const LINE_FONT_SIZE = 55;
 
 export class WinTextOverlay extends Container {
     private _text: Text;
