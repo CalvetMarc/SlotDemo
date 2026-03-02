@@ -2,10 +2,14 @@ import { ButtonView } from "../../Abstractions/button-view";
 import { bundle } from "../../Abstractions/view";
 import { Sprite, Assets, Graphics } from "pixi.js";
 import { gameSignals } from "../../Signals/game-signals";
+import { GameModel } from "../SlotMachine/game-model";
 
 export class MenuButtonView extends ButtonView {
     private background!: Graphics;
     private iconSprite!: Sprite;
+    private _isDisabled = false;
+    private _unsubSpinning?: () => void;
+    private _unsubAutoSpin?: () => void;
 
     bundleNeeded(): bundle {
         return "base";
@@ -29,9 +33,24 @@ export class MenuButtonView extends ButtonView {
         this.addChild(this.iconSprite);
 
         this.setupInteractivity();
+
+        this._unsubSpinning = GameModel.spinningChanged.connect(() => this._refreshDisabled());
+        this._unsubAutoSpin = GameModel.autoSpinRemainingChanged.connect(() => this._refreshDisabled());
     }
 
     onMouseClick(): void {
+        if (this._isDisabled) return;
         gameSignals.infoPressed.emit();
+    }
+
+    private _refreshDisabled(): void {
+        this._isDisabled = GameModel.isSpinning || GameModel.autoSpinRemaining > 0;
+        this.tint = this._isDisabled ? 0x8a90a0 : 0xffffff;
+        this.cursor = this._isDisabled ? 'default' : 'pointer';
+    }
+
+    protected dispose(): void {
+        this._unsubSpinning?.();
+        this._unsubAutoSpin?.();
     }
 }

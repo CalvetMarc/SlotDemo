@@ -2,6 +2,7 @@ import { ButtonView } from "../../Abstractions/button-view";
 import { bundle } from "../../Abstractions/view";
 import { Text, TextStyle, Graphics, Ticker } from "pixi.js";
 import { gameSignals } from "../../Signals/game-signals";
+import { GameModel } from "../SlotMachine/game-model";
 
 export class BuyBonusButtonView extends ButtonView {
     private background!: Graphics;
@@ -9,7 +10,10 @@ export class BuyBonusButtonView extends ButtonView {
     private buyText!: Text;
     private bonusText!: Text;
     private _hue: number = 0;
+    private _isDisabled = false;
     private tickerCallback!: () => void;
+    private _unsubSpinning?: () => void;
+    private _unsubAutoSpin?: () => void;
 
     // Rainbow animation settings
     private _rainbowSpeed: number = 0.8;      // Degrees per frame (0.5 = ~12s full cycle)
@@ -64,10 +68,20 @@ export class BuyBonusButtonView extends ButtonView {
         // Start rainbow animation
         this.tickerCallback = () => this.updateRainbow();
         Ticker.shared.add(this.tickerCallback);
+
+        this._unsubSpinning = GameModel.spinningChanged.connect(() => this._refreshDisabled());
+        this._unsubAutoSpin = GameModel.autoSpinRemainingChanged.connect(() => this._refreshDisabled());
     }
 
     onMouseClick(): void {
+        if (this._isDisabled) return;
         gameSignals.buyBonusPressed.emit();
+    }
+
+    private _refreshDisabled(): void {
+        this._isDisabled = GameModel.isSpinning || GameModel.autoSpinRemaining > 0;
+        this.tint = this._isDisabled ? 0x8a90a0 : 0xffffff;
+        this.cursor = this._isDisabled ? 'default' : 'pointer';
     }
 
     private updateRainbow(): void {
@@ -95,5 +109,7 @@ export class BuyBonusButtonView extends ButtonView {
         if (this.tickerCallback) {
             Ticker.shared.remove(this.tickerCallback);
         }
+        this._unsubSpinning?.();
+        this._unsubAutoSpin?.();
     }
 }
