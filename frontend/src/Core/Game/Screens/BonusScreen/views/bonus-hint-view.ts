@@ -4,7 +4,7 @@ import { bundle, View } from '../../../../Abstractions/view';
 const PULSE_SPEED = 0.003;
 const ALPHA_MIN = 0.3;
 const ALPHA_MAX = 1;
-const FADE_OUT_DURATION = 250;
+const FADE_OUT_DURATION = 120;
 
 export class BonusHintView extends View {
     private _text!: Text;

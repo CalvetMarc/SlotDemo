@@ -1,4 +1,4 @@
-import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Container, Text, TextStyle } from 'pixi.js';
 import { TweenManager, type TweenHandle } from '../../Animation/tween';
 import { easeOutCubic, easeOutElastic } from '../../Animation/easing';
 import { GRID_WIDTH, GRID_HEIGHT } from './slot-config';
@@ -36,7 +36,6 @@ export function isBigWin(winAmount: number, betAmount: number): boolean {
 // ── BigWinView ──────────────────────────────────────────────────
 
 export class BigWinView extends Container {
-    private _backdrop: Graphics;
     private _tierLabel: Text;
     private _amountText: Text;
 
@@ -57,9 +56,6 @@ export class BigWinView extends Container {
 
     constructor() {
         super();
-
-        this._backdrop = new Graphics();
-        this.addChild(this._backdrop);
 
         this._tierLabel = new Text({
             text: '',
@@ -207,17 +203,7 @@ export class BigWinView extends Container {
     }
 
     private _redrawBackdrop(): void {
-        const PAD_X = 30;
-        const PAD_Y = 16;
-        const labelB = this._tierLabel.getBounds();
-        const amountB = this._amountText.getBounds();
-        const bw = Math.max(labelB.width, amountB.width) + PAD_X * 2;
-        const top = this._tierLabel.y - labelB.height / 2 - PAD_Y;
-        const bottom = this._amountText.y + amountB.height / 2 + PAD_Y;
-        const bh = bottom - top;
-        this._backdrop.clear();
-        this._backdrop.roundRect(-bw / 2, top, bw, bh, 14);
-        this._backdrop.fill({ color: 0x000000, alpha: 0.55 });
+        // No backdrop — text renders with stroke only
     }
 
     private _updateColors(multiplier: number): void {
