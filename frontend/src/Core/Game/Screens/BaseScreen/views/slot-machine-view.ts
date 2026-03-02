@@ -40,6 +40,7 @@ export class SlotMachineView extends View {
     private _unsubAutoSpinCancel?: () => void;
     private _unsubBaseTransition?: () => void;
     private _waitingForCelebration = false;
+    private _spinSkippedInAutoPlay = false;
     private _pendingBonusCelebration = -1;
     private _bonusEntryResult: SpinResultWithWins | null = null;
 
@@ -197,12 +198,21 @@ export class SlotMachineView extends View {
         }
 
         this._skipHandler = () => {
-            if (GameModel.autoSpinRemaining > 0) return;
             if (this._bigWinView.isActive) {
                 this._bigWinView.skip();
                 return;
             }
-            this._spinController.skipSpin();
+            if (GameModel.isSpinning) {
+                this._spinController.skipSpin();
+                if (GameModel.autoSpinRemaining > 0) {
+                    this._spinSkippedInAutoPlay = true;
+                }
+                return;
+            }
+            // Not spinning — if in auto-spin, skip celebration and advance
+            if (GameModel.autoSpinRemaining > 0) {
+                this._clearAll();
+            }
         };
         window.addEventListener('pointerdown', this._skipHandler);
 
@@ -230,11 +240,14 @@ export class SlotMachineView extends View {
                 return;
             }
 
-            // In turbo mode with wins, wait for celebration to finish first
-            if (GameModel.isTurbo && lastResult && lastResult.winAmount > 0) {
+            // Wait for celebration when turbo has wins, or spin was skipped with wins
+            const hasWin = lastResult && lastResult.winAmount > 0;
+            if (hasWin && (GameModel.isTurbo || this._spinSkippedInAutoPlay)) {
+                this._spinSkippedInAutoPlay = false;
                 this._waitingForCelebration = true;
                 return;
             }
+            this._spinSkippedInAutoPlay = false;
 
             this._fireNextAutoSpin();
         });
