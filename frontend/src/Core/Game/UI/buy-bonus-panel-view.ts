@@ -66,6 +66,22 @@ export class BuyBonusPanelView extends Container {
     private _gutterPrevPos = 0;
     private _gutterPrevTime = 0;
 
+    // Bet controls
+    private _betText!: Text;
+    private _betUpBtn!: Container;
+    private _betDownBtn!: Container;
+    private _unsubBetChanged?: () => void;
+
+    // Scroll state
+    private _scrollContent: Container | null = null;
+    private _scrollMaskGfx: Graphics | null = null;
+    private _scrollEnabled = false;
+    private _maxScrollDist = 0;
+    private _scrollBaseY = 0;
+    private _scrollDragging = false;
+    private _scrollDragStartY = 0;
+    private _scrollDragContentY = 0;
+
     constructor(onBuy: (tier: number) => void, onClose: () => void) {
         super();
         this._onBuy = onBuy;
@@ -84,12 +100,21 @@ export class BuyBonusPanelView extends Container {
         this._killActiveTweens();
         this._build(viewportW, viewportH);
         this.updatePrices(GameModel.betAmount);
+        this._updateBetDisplay();
         this._animateIn(viewportW, viewportH);
+
+        this._unsubBetChanged = GameModel.betChanged.connect(({ amount }) => {
+            this._updateBetDisplay();
+            this.updatePrices(amount);
+        });
     }
 
     hide(): void {
         if (!this._isOpen) return;
         this._isOpen = false;
+
+        this._unsubBetChanged?.();
+        this._unsubBetChanged = undefined;
 
         this._killActiveTweens();
         this._animateOut();
@@ -114,7 +139,11 @@ export class BuyBonusPanelView extends Container {
     }
 
     override destroy(options?: boolean | { children?: boolean }): void {
+        this._unsubBetChanged?.();
+        this._unsubBetChanged = undefined;
         this._killActiveTweens();
+        this._scrollContent = null;
+        this._scrollMaskGfx = null;
         super.destroy(options);
     }
 
@@ -123,6 +152,9 @@ export class BuyBonusPanelView extends Container {
     private _build(viewportW: number, viewportH: number): void {
         this.removeChildren();
         this._cards = [];
+        this._scrollContent = null;
+        this._scrollMaskGfx = null;
+        this._scrollEnabled = false;
 
         // Backdrop
         this._backdrop = new Graphics();
@@ -186,31 +218,81 @@ export class BuyBonusPanelView extends Container {
         this._openPos = this._panelContainer.x;
         this._panelSize = panelW;
 
-        // Title — centered in content area
-        const contentCenterX = gutterW + contentW / 2;
-        this._titleText = this._createText('BUY BONUS', Math.round(40 * s), COLORS.titleText, 'bold');
-        this._titleText.anchor.set(0.5, 0);
-        this._titleText.position.set(contentCenterX, Math.round(40 * s));
-        this._panelContainer.addChild(this._titleText);
-
         // Swipe indicator — centered in gutter, vertically centered
         const indicator = this._createSwipeIndicator('right', Math.round(28 * s));
         indicator.position.set(gutterW / 2, viewportH / 2);
         this._panelContainer.addChild(indicator);
 
+        // Title — fixed, always on panel
+        const contentCenterX = gutterW + contentW / 2;
+        const titleY = Math.round(40 * s);
+        this._titleText = this._createText('BUY BONUS', Math.round(40 * s), COLORS.titleText, 'bold');
+        this._titleText.anchor.set(0.5, 0);
+        this._titleText.position.set(contentCenterX, titleY);
+        this._panelContainer.addChild(this._titleText);
+
+        // Bet controls — fixed, always on panel
+        const betControlsY = Math.round(100 * s);
+        const betControls = this._buildBetControls(contentW, s);
+        betControls.container.position.set(gutterW, betControlsY);
+        this._panelContainer.addChild(betControls.container);
+
         const cardPad = Math.round(30 * s);
         const cardW = contentW - cardPad * 2;
-        const cardStartY = Math.round(110 * s);
+        const cardStartY = betControlsY + betControls.height + Math.round(20 * s);
         const cardGap = Math.round(20 * s);
         const bottomPad = Math.round(20 * s);
-        const cardH = Math.round((viewportH - cardStartY - bottomPad - cardGap * (BUY_BONUS_TIERS.length - 1)) / BUY_BONUS_TIERS.length);
 
-        for (let i = 0; i < BUY_BONUS_TIERS.length; i++) {
-            const tier = BUY_BONUS_TIERS[i];
-            const card = new OptionCard(tier.title, tier.multiplier, tier.wildCount, cardW, cardH, () => this._onBuy(tier.tier));
-            card.position.set(gutterW + cardPad, cardStartY + i * (cardH + cardGap));
-            this._panelContainer.addChild(card);
-            this._cards.push(card);
+        // Card height: maintain minimum aspect ratio
+        const minCardH = Math.round(cardW * REF_CARD_H / REF_CARD_W);
+        const calcCardH = Math.round((viewportH - cardStartY - bottomPad - cardGap * (BUY_BONUS_TIERS.length - 1)) / BUY_BONUS_TIERS.length);
+        const cardH = Math.max(calcCardH, minCardH);
+
+        const totalCardsH = cardH * BUY_BONUS_TIERS.length
+            + cardGap * (BUY_BONUS_TIERS.length - 1) + bottomPad;
+        const visibleCardsH = viewportH - cardStartY;
+        const isOverflow = totalCardsH > visibleCardsH;
+
+        // Cards — scrollable when overflowing
+        if (isOverflow) {
+            this._scrollContent = new Container();
+            this._scrollContent.position.set(gutterW, cardStartY);
+            this._panelContainer.addChild(this._scrollContent);
+
+            this._scrollMaskGfx = new Graphics();
+            this._scrollMaskGfx.rect(gutterW, cardStartY, contentW, visibleCardsH);
+            this._scrollMaskGfx.fill({ color: 0xffffff });
+            this._panelContainer.addChild(this._scrollMaskGfx);
+            this._scrollContent.mask = this._scrollMaskGfx;
+
+            this._scrollEnabled = true;
+            this._scrollBaseY = cardStartY;
+            this._maxScrollDist = totalCardsH - visibleCardsH;
+
+            // Transparent hit area for scroll drag
+            const hitBg = new Graphics();
+            hitBg.rect(0, 0, contentW, totalCardsH);
+            hitBg.fill({ color: 0x000000 });
+            hitBg.alpha = 0.001;
+            this._scrollContent.addChild(hitBg);
+
+            this._setupScrollEvents();
+
+            for (let i = 0; i < BUY_BONUS_TIERS.length; i++) {
+                const tier = BUY_BONUS_TIERS[i];
+                const card = new OptionCard(tier.title, tier.multiplier, tier.wildCount, cardW, cardH, () => this._onBuy(tier.tier));
+                card.position.set(cardPad, i * (cardH + cardGap));
+                this._scrollContent.addChild(card);
+                this._cards.push(card);
+            }
+        } else {
+            for (let i = 0; i < BUY_BONUS_TIERS.length; i++) {
+                const tier = BUY_BONUS_TIERS[i];
+                const card = new OptionCard(tier.title, tier.multiplier, tier.wildCount, cardW, cardH, () => this._onBuy(tier.tier));
+                card.position.set(gutterW + cardPad, cardStartY + i * (cardH + cardGap));
+                this._panelContainer.addChild(card);
+                this._cards.push(card);
+            }
         }
     }
 
@@ -232,24 +314,23 @@ export class BuyBonusPanelView extends Container {
         const titleFs = Math.round(30 * s);
         const titleLineH = Math.round(titleFs * 1.3);
         const sectionGap = Math.round(20 * s);
-        const headerH = gutterVisualH + sectionGap + titleLineH + sectionGap;
+        const betRowH = Math.round(44 * s);
+        const headerH = gutterVisualH + sectionGap + titleLineH + sectionGap + betRowH + sectionGap;
 
         const cardGap = Math.round(12 * s);
         const bottomPad = Math.round(16 * s);
         const cardAreaW = panelW - pad * 2;
 
-        // Scale: prefer width-driven, cap by max vertical budget
+        // Scale: always proportional to screen width (no height cap)
         const maxPanelH = viewportH * 0.92;
-        const maxCardAreaH = maxPanelH - headerH - bottomPad;
-        const scaleByW = cardAreaW / REF_CARD_W;
-        const scaleByH = (maxCardAreaH - cardGap) / (REF_CARD_H * BUY_BONUS_TIERS.length);
-        const cardScale = Math.min(scaleByW, scaleByH);
-
+        const cardScale = cardAreaW / REF_CARD_W;
         const scaledCardH = REF_CARD_H * cardScale;
 
-        // Panel height wraps content tightly
-        const panelH = headerH + scaledCardH * BUY_BONUS_TIERS.length
+        // Total content height vs available panel height
+        const totalContentH = headerH + scaledCardH * BUY_BONUS_TIERS.length
             + cardGap * (BUY_BONUS_TIERS.length - 1) + bottomPad;
+        const isOverflow = totalContentH > maxPanelH;
+        const panelH = isOverflow ? maxPanelH : totalContentH;
 
         // Panel bg — only top corners rounded
         this._panelBg = new Graphics();
@@ -292,20 +373,63 @@ export class BuyBonusPanelView extends Container {
         indicator.position.set(panelW / 2, gutterVisualH / 2);
         this._panelContainer.addChild(indicator);
 
-        // Title — equal spacing from gutter bottom and to first card
+        // Title — fixed, always on panel
         this._titleText = this._createText('BUY BONUS', titleFs, COLORS.titleText, 'bold');
         this._titleText.anchor.set(0.5, 0);
         this._titleText.position.set(panelW / 2, gutterVisualH + sectionGap);
         this._panelContainer.addChild(this._titleText);
 
-        // Cards
-        for (let i = 0; i < BUY_BONUS_TIERS.length; i++) {
-            const tier = BUY_BONUS_TIERS[i];
-            const card = new OptionCard(tier.title, tier.multiplier, tier.wildCount,
-                cardAreaW, scaledCardH, () => this._onBuy(tier.tier));
-            card.position.set(pad, headerH + i * (scaledCardH + cardGap));
-            this._panelContainer.addChild(card);
-            this._cards.push(card);
+        // Bet controls — fixed, always on panel
+        const betControls = this._buildBetControls(panelW, s);
+        betControls.container.position.set(0, gutterVisualH + sectionGap + titleLineH + sectionGap);
+        this._panelContainer.addChild(betControls.container);
+
+        // Cards — scrollable when overflowing
+        const totalCardsH = scaledCardH * BUY_BONUS_TIERS.length
+            + cardGap * (BUY_BONUS_TIERS.length - 1) + bottomPad;
+        const visibleCardsH = panelH - headerH;
+
+        if (isOverflow) {
+            this._scrollContent = new Container();
+            this._scrollContent.position.set(0, headerH);
+            this._panelContainer.addChild(this._scrollContent);
+
+            this._scrollMaskGfx = new Graphics();
+            this._scrollMaskGfx.rect(0, headerH, panelW, visibleCardsH);
+            this._scrollMaskGfx.fill({ color: 0xffffff });
+            this._panelContainer.addChild(this._scrollMaskGfx);
+            this._scrollContent.mask = this._scrollMaskGfx;
+
+            this._scrollEnabled = true;
+            this._scrollBaseY = headerH;
+            this._maxScrollDist = totalCardsH - visibleCardsH;
+
+            // Transparent hit area for scroll drag on empty space
+            const hitBg = new Graphics();
+            hitBg.rect(0, 0, panelW, totalCardsH);
+            hitBg.fill({ color: 0x000000 });
+            hitBg.alpha = 0.001;
+            this._scrollContent.addChild(hitBg);
+
+            this._setupScrollEvents();
+
+            for (let i = 0; i < BUY_BONUS_TIERS.length; i++) {
+                const tier = BUY_BONUS_TIERS[i];
+                const card = new OptionCard(tier.title, tier.multiplier, tier.wildCount,
+                    cardAreaW, scaledCardH, () => this._onBuy(tier.tier));
+                card.position.set(pad, i * (scaledCardH + cardGap));
+                this._scrollContent.addChild(card);
+                this._cards.push(card);
+            }
+        } else {
+            for (let i = 0; i < BUY_BONUS_TIERS.length; i++) {
+                const tier = BUY_BONUS_TIERS[i];
+                const card = new OptionCard(tier.title, tier.multiplier, tier.wildCount,
+                    cardAreaW, scaledCardH, () => this._onBuy(tier.tier));
+                card.position.set(pad, headerH + i * (scaledCardH + cardGap));
+                this._panelContainer.addChild(card);
+                this._cards.push(card);
+            }
         }
     }
 
@@ -424,10 +548,57 @@ export class BuyBonusPanelView extends Container {
         }
     }
 
+    // ── Scroll ──────────────────────────────────────────────────────
+
+    private _setupScrollEvents(): void {
+        if (!this._scrollContent) return;
+
+        this._scrollContent.eventMode = 'static';
+        this._scrollContent.on('pointerdown', (e: FederatedPointerEvent) => this._onScrollDown(e));
+        this._scrollContent.on('globalpointermove', (e: FederatedPointerEvent) => this._onScrollMove(e));
+        this._scrollContent.on('pointerup', () => this._onScrollUp());
+        this._scrollContent.on('pointerupoutside', () => this._onScrollUp());
+        this._scrollContent.on('pointercancel', () => this._onScrollUp());
+        this._scrollContent.on('wheel', (e: { deltaY: number }) => this._onScrollWheel(e.deltaY));
+    }
+
+    private _onScrollDown(e: FederatedPointerEvent): void {
+        this._scrollDragging = true;
+        this._scrollDragStartY = e.globalY;
+        this._scrollDragContentY = this._scrollContent?.y ?? 0;
+    }
+
+    private _onScrollMove(e: FederatedPointerEvent): void {
+        if (!this._scrollDragging || !this._scrollContent) return;
+        const delta = e.globalY - this._scrollDragStartY;
+        this._scrollContent.y = this._scrollDragContentY + delta;
+        this._clampScroll();
+    }
+
+    private _onScrollUp(): void {
+        this._scrollDragging = false;
+    }
+
+    private _onScrollWheel(deltaY: number): void {
+        if (!this._scrollContent || !this._scrollEnabled) return;
+        this._scrollContent.y -= deltaY;
+        this._clampScroll();
+    }
+
+    private _clampScroll(): void {
+        if (!this._scrollContent) return;
+        const minY = this._scrollBaseY - this._maxScrollDist;
+        const maxY = this._scrollBaseY;
+        this._scrollContent.y = Math.max(minY, Math.min(maxY, this._scrollContent.y));
+    }
+
     private _onHideComplete(): void {
         this.visible = false;
         this.removeChildren();
         this._cards = [];
+        this._scrollContent = null;
+        this._scrollMaskGfx = null;
+        this._scrollEnabled = false;
     }
 
     // ── Blur ─────────────────────────────────────────────────────
@@ -474,6 +645,127 @@ export class BuyBonusPanelView extends Container {
             text: content,
             style: new TextStyle({ fontFamily: FONT_TITLE, fontSize, fill, fontWeight: fontWeight as TextStyle['fontWeight'] }),
         });
+    }
+
+    private _updateBetDisplay(): void {
+        if (!this._betText) return;
+        this._betText.text = `€${GameModel.betAmount.toFixed(2)}`;
+        this._refreshBetButtons();
+    }
+
+    private _refreshBetButtons(): void {
+        if (!this._betUpBtn || !this._betDownBtn) return;
+        const isUp = GameModel.isMaxBet;
+        const isDown = GameModel.isMinBet;
+        this._betUpBtn.alpha = isUp ? 0.3 : 1;
+        this._betUpBtn.eventMode = isUp ? 'none' : 'static';
+        this._betDownBtn.alpha = isDown ? 0.3 : 1;
+        this._betDownBtn.eventMode = isDown ? 'none' : 'static';
+    }
+
+    /**
+     * Builds the bet row: [▼] €X.XX [▲] and returns the container + its height.
+     */
+    private _buildBetControls(rowW: number, scale: number): { container: Container; height: number } {
+        const row = new Container();
+        const fontSize = Math.round(20 * scale);
+        const labelFs = Math.round(16 * scale);
+        const rowH = Math.round(44 * scale);
+        const pillH = Math.round(38 * scale);
+        const pillPadX = Math.round(16 * scale);
+        const arrowPad = Math.round(12 * scale);
+        const cx = rowW / 2;
+
+        // Measure texts to size pill dynamically
+        const betLabel = new Text({
+            text: 'Bet',
+            style: new TextStyle({ fontFamily: FONT_BODY, fontSize: labelFs, fill: COLORS.closeNormal, fontWeight: 'bold' }),
+        });
+        betLabel.anchor.set(0, 0.5);
+
+        this._betText = new Text({
+            text: `€${GameModel.betAmount.toFixed(2)}`,
+            style: new TextStyle({ fontFamily: FONT_BODY, fontSize, fill: COLORS.closeNormal, fontWeight: 'bold' }),
+        });
+        this._betText.anchor.set(0, 0.5);
+
+        const arrowW = Math.round(8 * scale);
+        const gap = Math.round(8 * scale);
+        const innerW = arrowW + arrowPad + betLabel.width + gap + this._betText.width + arrowPad + arrowW;
+        const pillW = innerW + pillPadX * 2;
+        const pillX = cx - pillW / 2;
+        const pillY = (rowH - pillH) / 2;
+
+        // Pill background
+        const pill = new Graphics();
+        pill.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
+        pill.fill({ color: COLORS.panelBorder });
+        row.addChild(pill);
+
+        // Position elements inside pill
+        let x = pillX + pillPadX;
+
+        // Left arrow (decrease)
+        this._betDownBtn = this._createBetArrow('left', arrowW, scale);
+        this._betDownBtn.position.set(x + arrowW / 2, rowH / 2);
+        this._betDownBtn.on('pointertap', () => GameModel.decreaseBet());
+        row.addChild(this._betDownBtn);
+        x += arrowW + arrowPad;
+
+        // "Bet" label
+        betLabel.position.set(x, rowH / 2);
+        row.addChild(betLabel);
+        x += betLabel.width + gap;
+
+        // Bet amount
+        this._betText.position.set(x, rowH / 2);
+        row.addChild(this._betText);
+        x += this._betText.width + arrowPad;
+
+        // Right arrow (increase)
+        this._betUpBtn = this._createBetArrow('right', arrowW, scale);
+        this._betUpBtn.position.set(x + arrowW / 2, rowH / 2);
+        this._betUpBtn.on('pointertap', () => GameModel.increaseBet());
+        row.addChild(this._betUpBtn);
+
+        this._refreshBetButtons();
+        return { container: row, height: rowH };
+    }
+
+    private _createBetArrow(direction: 'left' | 'right', _size: number, scale: number): Container {
+        const btn = new Container();
+        btn.eventMode = 'static';
+        btn.cursor = 'pointer';
+
+        const tri = new Graphics();
+        const hh = Math.round(8 * scale);
+        const hw = Math.round(6 * scale);
+        if (direction === 'right') {
+            tri.moveTo(-hw, -hh);
+            tri.lineTo(hw, 0);
+            tri.lineTo(-hw, hh);
+            tri.closePath();
+        } else {
+            tri.moveTo(hw, -hh);
+            tri.lineTo(-hw, 0);
+            tri.lineTo(hw, hh);
+            tri.closePath();
+        }
+        tri.fill({ color: COLORS.titleText });
+        btn.addChild(tri);
+
+        // Generous hit area
+        const hitPad = Math.round(16 * scale);
+        const hitGfx = new Graphics();
+        hitGfx.rect(-hw - hitPad, -hh - hitPad, (hw + hitPad) * 2, (hh + hitPad) * 2);
+        hitGfx.fill({ color: 0x000000 });
+        hitGfx.alpha = 0;
+        btn.addChild(hitGfx);
+
+        btn.on('pointerover', () => { tri.tint = COLORS.titleText; });
+        btn.on('pointerout', () => { tri.tint = 0xffffff; });
+
+        return btn;
     }
 
     private _createSwipeIndicator(direction: 'down' | 'right', size: number, strokeWidth: number = 5): Container {

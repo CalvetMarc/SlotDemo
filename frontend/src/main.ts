@@ -6,6 +6,7 @@ import { CANVAS_16_9, CANVAS_9_16, CANVAS_4_3 } from './Core/Layout/design-canva
 import { GuideManager } from './Core/Debug/guide-manager';
 import { SessionManager } from './Core/Game/SlotMachine/session-manager';
 import { IS_DEBUG } from './Core/Utils/env';
+import { AudioManager } from './Core/Audio/audio-manager';
 
 async function main() {
 
@@ -24,6 +25,8 @@ async function main() {
   });
 
   document.body.appendChild(app.canvas);
+
+  AudioManager.init();
 
   await Assets.init({
     manifest: 'assets_manifest.json'
@@ -66,6 +69,9 @@ async function main() {
 
   ScreenManager.I.init(app, layoutManager.root);
   await ScreenManager.I.start();
+
+  // Fire-and-forget preload of core SFX (non-blocking)
+  AudioManager.preload(['uiSprites', 'reelSprites', 'winChime']);
 
   layoutManager.onCanvasChanged = (canvas) => {
     ScreenManager.I.onLayoutChanged(canvas);

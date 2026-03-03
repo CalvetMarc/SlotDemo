@@ -5,10 +5,11 @@ import { WILD_POP_GROW_MS } from './reel';
 import type { ISpinResultProvider, SpinResultWithWins } from './spin-result-provider';
 import {
     SPIN_MIN_DURATION, REEL_START_INTERVAL, REEL_STOP_INTERVAL,
-    WILD_TENSION_MULTIPLIERS, BOUNCE_DURATION,
+    WILD_TENSION_MULTIPLIERS, BOUNCE_DURATION, ANTICIPATION_MS,
 } from './slot-config';
 import { countWilds } from './debug-spins';
 import { GameModel } from './game-model';
+import { AudioManager } from '../../Audio/audio-manager';
 
 export interface SpinControllerConfig {
     reels: readonly Reel[];
@@ -24,6 +25,7 @@ export class SpinController {
     private _pendingResult?: SpinResultWithWins;
     private _spinStartTime = 0;
     private _settledReels = new Set<number>();
+    private _reelSoundId?: number;
     private _unsubscribeTurbo?: () => void;
 
     private static readonly _MIN_SKIP_DELAY = 300;
@@ -65,6 +67,12 @@ export class SpinController {
         this._spinStartTime = Date.now();
 
         this.onSpinStarting?.();
+
+        // Play reel sound once when first reel starts moving down
+        const sfxTimeout = setTimeout(() => {
+            this._reelSoundId = AudioManager.play('reelFast');
+        }, ANTICIPATION_MS);
+        this._stopTimeouts.push(sfxTimeout);
 
         if (GameModel.isTurbo) {
             for (let i = 0; i < REEL_COUNT; i++) {
@@ -142,6 +150,7 @@ export class SpinController {
         this._isTensionSpin = false;
         this._pendingResult = undefined;
         this._settledReels.clear();
+        this._stopReelSound();
         const bounceTimeout = setTimeout(() => {
             this.onAllReelsStopped?.(result, false);
         }, BOUNCE_DURATION);
@@ -198,6 +207,7 @@ export class SpinController {
                         this._pendingResult = undefined;
                         const isTension = this._isTensionSpin;
                         this._isTensionSpin = false;
+                        this._stopReelSound();
                         this.onAllReelsStopped?.(result, isTension);
                     }
                 };
@@ -211,6 +221,13 @@ export class SpinController {
 
             const multiplier = WILD_TENSION_MULTIPLIERS[wildsSoFar] ?? 1;
             cumulativeDelay += REEL_STOP_INTERVAL * multiplier;
+        }
+    }
+
+    private _stopReelSound(): void {
+        if (this._reelSoundId !== undefined) {
+            AudioManager.stop('reelFast', this._reelSoundId);
+            this._reelSoundId = undefined;
         }
     }
 

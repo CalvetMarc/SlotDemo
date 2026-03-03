@@ -31,7 +31,6 @@ const PAYLINE_COUNT = PAYLINES.length;
 
 /** Paytable: symbol → [x3, x4, x5] multipliers of totalBet. */
 const PAYTABLE: ReadonlyMap<SymbolId, readonly [number, number, number]> = new Map([
-    ['Wild_01.png', [2.85,  9.98, 71.27]],
     ['1.png',       [1.71,  6.41, 42.76]],
     ['2.png',       [1.14,  4.28, 28.51]],
     ['3.png',       [0.71,  2.85, 18.53]],

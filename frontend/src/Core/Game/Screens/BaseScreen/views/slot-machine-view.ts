@@ -324,7 +324,7 @@ export class SlotMachineView extends View {
         if (this._pendingBonusCelebration >= 0 && this.parent) {
             const bonusWin = this._pendingBonusCelebration;
             this._pendingBonusCelebration = -1;
-            setTimeout(() => this._showBonusCelebration(bonusWin), 2000);
+            setTimeout(() => this._showBonusCelebration(bonusWin), 3000);
         }
     }
 

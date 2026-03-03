@@ -58,11 +58,11 @@
 },
 "Wild_pay.png":
 {
-	"frame": {"x":343,"y":744,"w":344,"h":248},
+	"frame": {"x":343,"y":744,"w":367,"h":248},
 	"rotated": false,
 	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":344,"h":248},
-	"sourceSize": {"w":344,"h":248}
+	"spriteSourceSize": {"x":0,"y":0,"w":367,"h":248},
+	"sourceSize": {"w":367,"h":248}
 }},
 "meta": {
 	"app": "https://www.codeandweb.com/texturepacker",
@@ -71,6 +71,6 @@
 	"format": "RGBA8888",
 	"size": {"w":795,"h":992},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:4ca2f392580aa63387d82133fc1ba77e:a2b3dd5be25a059cd341fe168929eb8c:0f68fea9f431d65eb54c267865589464$"
+	"smartupdate": "$TexturePacker:SmartUpdate:ac760315a95f1debc43a9e0b17ca7531:435da5259b2b31797674699f0b1c335f:0f68fea9f431d65eb54c267865589464$"
 }
 }

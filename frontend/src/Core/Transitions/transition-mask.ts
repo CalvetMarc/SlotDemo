@@ -1,28 +1,30 @@
-import { Container, Graphics, Sprite, Texture, Ticker } from 'pixi.js';
+import { Assets, Container, Graphics, Sprite, Spritesheet, Texture, Ticker } from 'pixi.js';
 import { VideoAlphaFilter } from '../Filters/video-alpha-filter';
 
-const FADE_IN_PATH = 'assets/bonus/transiotionMask/fadeIn.mp4';
-const FADE_OUT_PATH = 'assets/bonus/transiotionMask/fadeOut.mp4';
+const COVER_PATH = 'assets/bonus/transiotionMask/fadeOut.mp4';
+const REVEAL_PATH = 'assets/bonus/transiotionMask/fadeIn.mp4';
+const LOADING_BAR_PATH = 'assets/bonus/loadingBar/loadingBar.json';
 
-const FADE_IN_SPEED = 0.75;
-const FADE_OUT_SPEED = 0.8;
+const COVER_SPEED = 0.8;
+const REVEAL_SPEED = 0.75;
 const HOLD_DELAY_MS = 1000;
 
+/** How fast the fake progress creeps toward 90% while loading (fraction/ms). */
+const PROGRESS_SPEED = 0.0004;
+
 export class TransitionMask extends Container {
-    private _sprite: Sprite | null = null;
     private _filter: VideoAlphaFilter;
-    private _solidCover: Graphics;
     private _videoAspect = 16 / 9;
+
+    // Loading bar state
+    private _barFill: Sprite | null = null;
+    private _barFillFullW = 0;
+    private _progress = 0;
+    private _targetProgress = 0;
 
     constructor() {
         super();
         this._filter = new VideoAlphaFilter();
-
-        this._solidCover = new Graphics();
-        this._solidCover.rect(0, 0, 1, 1).fill(0x000000);
-        this._solidCover.visible = false;
-        this.addChild(this._solidCover);
-
         this.visible = false;
     }
 
@@ -33,20 +35,32 @@ export class TransitionMask extends Container {
     ): Promise<void> {
         this.visible = true;
 
-        const fadeInVideo = this._createVideoElement(FADE_IN_PATH);
-        const fadeOutVideo = this._createVideoElement(FADE_OUT_PATH);
+        // Pre-load loading bar sheet (tiny, loads fast)
+        let sheet: Spritesheet | undefined = Assets.get('loadingBar');
+        if (!sheet) {
+            try { sheet = await Assets.load(LOADING_BAR_PATH) as Spritesheet; } catch { /* skip */ }
+        }
+
+        const coverVideo = this._createVideoElement(COVER_PATH);
+        const revealVideo = this._createVideoElement(REVEAL_PATH);
         await Promise.all([
-            this._waitCanPlay(fadeInVideo),
-            this._waitCanPlay(fadeOutVideo),
+            this._waitCanPlay(coverVideo),
+            this._waitCanPlay(revealVideo),
         ]);
 
-        // Phase 1 – cover
-        await this._showVideo(fadeInVideo, width, height, FADE_IN_SPEED);
+        // Hold layer: black bg + loading bar — masked by bats video
+        const holdLayer = new Container();
+        const bg = new Graphics();
+        bg.rect(0, 0, width, height);
+        bg.fill(0x000000);
+        holdLayer.addChild(bg);
+        this._buildLoadingBar(holdLayer, width, height, sheet);
+        this.addChild(holdLayer);
 
-        // Hold
-        this._solidCover.scale.set(width, height);
-        this._solidCover.visible = true;
+        // Phase 1 – bats gradually cover screen, revealing hold layer (loading bar)
+        await this._playMaskedVideo(coverVideo, width, height, COVER_SPEED, holdLayer);
 
+        // Scene swap while loading bar progresses
         try {
             await Promise.race([
                 onCovered(),
@@ -57,53 +71,124 @@ export class TransitionMask extends Container {
             console.error('[TransitionMask] onCovered() threw:', err);
         }
 
+        // Fill to 100% and hold
+        await this._completeLoadingBar();
         await this._delay(HOLD_DELAY_MS);
 
-        // Phase 2 – reveal
-        this._solidCover.visible = false;
-        await this._showVideo(fadeOutVideo, width, height, FADE_OUT_SPEED);
+        // Phase 2 – bats leave, hiding hold layer and revealing new scene
+        await this._playMaskedVideo(revealVideo, width, height, REVEAL_SPEED, holdLayer, true);
 
+        // Clean up
+        this._stopLoadingBar();
+        holdLayer.destroy({ children: true });
         this.visible = false;
     }
 
     resize(width: number, height: number): void {
-        if (this._sprite) {
-            this._applyCover(this._sprite, width, height);
-        }
-        if (this._solidCover.visible) {
-            this._solidCover.scale.set(width, height);
-        }
+        void width;
+        void height;
     }
 
-    // -- internals ---------------------------------------------------------
+    // -- loading bar -----------------------------------------------------------
 
-    /** Scale sprite to cover the viewport while keeping the video aspect ratio. */
-    private _applyCover(sprite: Sprite, vw: number, vh: number): void {
-        const viewportAspect = vw / vh;
-        let sw: number;
-        let sh: number;
+    private _buildLoadingBar(parent: Container, vw: number, vh: number, sheet?: Spritesheet): void {
+        if (!sheet?.textures) return;
 
-        if (viewportAspect > this._videoAspect) {
-            // Viewport is wider than video — match width, crop top/bottom
-            sw = vw;
-            sh = vw / this._videoAspect;
-        } else {
-            // Viewport is taller than video — match height, crop left/right
-            sh = vh;
-            sw = vh * this._videoAspect;
-        }
+        const container = new Container();
 
-        sprite.width = sw;
-        sprite.height = sh;
-        sprite.x = (vw - sw) / 2;
-        sprite.y = (vh - sh) / 2;
+        const isPortrait = vw / vh < 1;
+        const barBgTex = sheet.textures['barBG.png'];
+        const scale = (vw * (isPortrait ? 0.7 : 0.5)) / barBgTex.width;
+        const gap = barBgTex.height * scale * 1.0;
+
+        // "LOADING" image
+        const loadingImg = new Sprite(sheet.textures['loading.png']);
+        loadingImg.anchor.set(0.5);
+        loadingImg.scale.set(scale);
+        loadingImg.position.set(vw / 2, vh / 2 - gap);
+        container.addChild(loadingImg);
+
+        // Bar background
+        const barBg = new Sprite(barBgTex);
+        barBg.anchor.set(0.5);
+        barBg.scale.set(scale);
+        barBg.position.set(vw / 2, vh / 2 + gap);
+        container.addChild(barBg);
+
+        // Bar fill
+        const fillTex = sheet.textures['barFill.png'];
+        this._barFill = new Sprite(fillTex);
+        this._barFill.scale.set(scale);
+        this._barFillFullW = fillTex.width * scale;
+
+        const barTopY = vh / 2 + gap - (barBgTex.height * scale) / 2;
+        const barLeftX = vw / 2 - (barBgTex.width * scale) / 2;
+        const fillOffsetX = (barBgTex.width - fillTex.width) / 2 * scale;
+        const fillOffsetY = (barBgTex.height - fillTex.height) / 2 * scale;
+        this._barFill.position.set(barLeftX + fillOffsetX, barTopY + fillOffsetY);
+        this._barFill.width = 0;
+        container.addChild(this._barFill);
+
+        this._progress = 0;
+        this._targetProgress = 0.9;
+
+        parent.addChild(container);
+        Ticker.shared.add(this._tickLoading, this);
     }
 
-    private async _showVideo(
+    private _tickLoading(): void {
+        if (!this._barFill) return;
+        const dt = Ticker.shared.deltaMS;
+        const diff = this._targetProgress - this._progress;
+        this._progress += diff * PROGRESS_SPEED * dt;
+        if (this._progress > this._targetProgress) this._progress = this._targetProgress;
+        this._barFill.width = this._barFillFullW * this._progress;
+    }
+
+    private async _completeLoadingBar(): Promise<void> {
+        if (!this._barFill) return;
+        this._targetProgress = 1;
+
+        await new Promise<void>((resolve) => {
+            const fill = () => {
+                this._progress += (1 - this._progress) * 0.08;
+                if (this._progress >= 0.995) {
+                    this._progress = 1;
+                    if (this._barFill) this._barFill.width = this._barFillFullW;
+                    Ticker.shared.remove(fill);
+                    resolve();
+                    return;
+                }
+                if (this._barFill) this._barFill.width = this._barFillFullW * this._progress;
+            };
+            Ticker.shared.add(fill);
+        });
+    }
+
+    /** Stop ticker only — sprites are destroyed with holdLayer. */
+    private _stopLoadingBar(): void {
+        Ticker.shared.remove(this._tickLoading, this);
+        this._barFill = null;
+    }
+
+    // -- masked video playback ------------------------------------------------
+
+    /**
+     * Plays a video and uses it as a sprite mask on `target`.
+     * The filter in mask mode outputs r = (1 - videoRed), so:
+     *   Black pixels (bats) → r=1 → target visible
+     *   White pixels         → r=0 → target hidden
+     *
+     * @param hideOnComplete  Hide the target before removing the mask
+     *                        to prevent a flash (used for fadeOut).
+     */
+    private async _playMaskedVideo(
         video: HTMLVideoElement,
         w: number,
         h: number,
-        speed = 1,
+        speed: number,
+        target: Container,
+        hideOnComplete = false,
     ): Promise<void> {
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth || 1;
@@ -111,18 +196,17 @@ export class TransitionMask extends Container {
         const ctx = canvas.getContext('2d')!;
 
         this._videoAspect = canvas.width / canvas.height;
-
-        // Draw first frame so it's not blank
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        const texture = Texture.from(canvas, true);   // skipCache = true
+        const texture = Texture.from(canvas, true);
         const source = texture.source;
 
-        const sprite = new Sprite(texture);
-        this._applyCover(sprite, w, h);
-        sprite.filters = [this._filter];
-        this._sprite = sprite;
-        this.addChild(sprite);
+        const maskSprite = new Sprite(texture);
+        this._applyCover(maskSprite, w, h);
+        this._filter.maskMode = true;
+        maskSprite.filters = [this._filter];
+        this.addChild(maskSprite);
+        target.mask = maskSprite;
 
         const drawFrame = () => {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -145,10 +229,34 @@ export class TransitionMask extends Container {
             });
         });
 
-        this.removeChild(sprite);
+        if (hideOnComplete) target.visible = false;
+        target.mask = null;
+        this.removeChild(maskSprite);
         Ticker.shared.remove(drawFrame);
-        sprite.destroy({ texture: true, textureSource: true });
-        this._sprite = null;
+        this._filter.maskMode = false;
+        maskSprite.destroy({ texture: true, textureSource: true });
+    }
+
+    // -- internals ---------------------------------------------------------
+
+    /** Scale sprite to cover the viewport while keeping the video aspect ratio. */
+    private _applyCover(sprite: Sprite, vw: number, vh: number): void {
+        const viewportAspect = vw / vh;
+        let sw: number;
+        let sh: number;
+
+        if (viewportAspect > this._videoAspect) {
+            sw = vw;
+            sh = vw / this._videoAspect;
+        } else {
+            sh = vh;
+            sw = vh * this._videoAspect;
+        }
+
+        sprite.width = sw;
+        sprite.height = sh;
+        sprite.x = (vw - sw) / 2;
+        sprite.y = (vh - sh) / 2;
     }
 
     private _waitCanPlay(video: HTMLVideoElement): Promise<void> {
@@ -176,12 +284,7 @@ export class TransitionMask extends Container {
     }
 
     destroy(): void {
-        if (this._sprite) {
-            this.removeChild(this._sprite);
-            this._sprite.destroy({ texture: true, textureSource: true });
-            this._sprite = null;
-        }
-        this._solidCover.destroy();
+        this._stopLoadingBar();
         this._filter.destroy();
         super.destroy({ children: true });
     }

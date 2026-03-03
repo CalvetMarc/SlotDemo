@@ -1,6 +1,7 @@
 import { ButtonView } from "../../Abstractions/button-view";
 import { bundle } from "../../Abstractions/view";
 import { Sprite, Assets, Graphics } from "pixi.js";
+import { AudioManager } from "../../Audio/audio-manager";
 
 export class AudioButtonView extends ButtonView {
     private background!: Graphics;
@@ -34,12 +35,17 @@ export class AudioButtonView extends ButtonView {
         this.iconSprite.scale.set(0.3);
         this.addChild(this.iconSprite);
 
+        // Sync initial state with AudioManager
+        this._isOn = !AudioManager.isMuted;
+        this.iconSprite.texture = sheet.textures[this._isOn ? 'volumeOn.png' : 'volumeOff.png'];
+
         this.showDebugBounds(AudioButtonView.DEBUG_BOUNDS);
         this.setupInteractivity();
     }
 
     onMouseClick(): void {
-        this.setOn(!this._isOn);
+        const isMuted = AudioManager.toggleMute();
+        this.setOn(!isMuted);
     }
 
     public setOn(on: boolean): void {

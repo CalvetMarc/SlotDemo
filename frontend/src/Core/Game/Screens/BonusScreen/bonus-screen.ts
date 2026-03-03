@@ -130,6 +130,6 @@ export class BonusScreen extends GameScreen {
         // Wait then transition back to base
         setTimeout(() => {
             gameSignals.requestBaseTransition.emit();
-        }, 2500);
+        }, 2000);
     }
 }
