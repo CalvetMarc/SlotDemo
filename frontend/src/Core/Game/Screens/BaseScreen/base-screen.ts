@@ -6,6 +6,7 @@ import { BuyBonusPanelView } from "../../UI/buy-bonus-panel-view";
 import { InfoPanelView } from "../../UI/info-panel-view";
 import { gameSignals } from "../../../Signals/game-signals";
 import { GameModel } from "../../SlotMachine/game-model";
+import { AudioManager } from "../../../Audio/audio-manager";
 
 export class BaseScreen extends GameScreen{
 

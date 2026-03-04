@@ -27,6 +27,12 @@ class AudioManagerClass {
     return this._isUnlocked;
   }
 
+  get isMusicPlaying(): boolean {
+    if (!this._currentMusic) return false;
+    const howl = this._howls.get(this._currentMusic);
+    return !!howl && howl.playing();
+  }
+
   /* ── Lifecycle ──────────────────────────────────────── */
 
   init(): void {
@@ -78,6 +84,28 @@ class AudioManagerClass {
     return id;
   }
 
+  /** Play a sound that automatically fades out before ending. */
+  playFadeOut(ref: string, fadeOutMs: number = 300, rate: number = 1): number | undefined {
+    const { key, sprite } = resolveSoundRef(ref);
+    const howl = this._getOrLoad(key);
+    const entry = AUDIO_MANIFEST[key];
+    const entryVolume = entry.volume ?? 1;
+    const channelVolume = this._channelVolumes[entry.channel];
+    const finalVolume = entryVolume * channelVolume;
+
+    const id = sprite ? howl.play(sprite) : howl.play();
+    howl.volume(finalVolume, id);
+    if (rate !== 1) howl.rate(rate, id);
+
+    const duration = howl.duration(id) * 1000;
+    if (duration > fadeOutMs) {
+      setTimeout(() => {
+        this._manualFade(howl, finalVolume, 0, fadeOutMs, id);
+      }, duration - fadeOutMs);
+    }
+    return id;
+  }
+
   stop(ref: string, instanceId?: number): void {
     const { key } = resolveSoundRef(ref);
     const howl = this._howls.get(key);
@@ -90,19 +118,63 @@ class AudioManagerClass {
     const { key } = resolveSoundRef(ref);
     const howl = this._howls.get(key);
     if (howl) {
-      howl.fade(from, to, durationMs);
+      this._manualFade(howl, from, to, durationMs);
     }
+  }
+
+  private _manualFade(howl: Howl, from: number, to: number, durationMs: number, id?: number, onComplete?: () => void): void {
+    const steps = 20;
+    const stepMs = durationMs / steps;
+    let step = 0;
+    if (id !== undefined) howl.volume(from, id); else howl.volume(from);
+    const interval = setInterval(() => {
+      step++;
+      const t = step / steps;
+      const vol = from + (to - from) * t;
+      if (id !== undefined) howl.volume(vol, id); else howl.volume(vol);
+      if (step >= steps) {
+        clearInterval(interval);
+        if (onComplete) {
+          onComplete();
+        } else if (to === 0) {
+          howl.stop(id);
+        }
+      }
+    }, stepMs);
   }
 
   /* ── Music ──────────────────────────────────────────── */
 
-  playMusic(key: SoundId): void {
+  playMusic(key: SoundId, fadeInMs: number = 500): void {
     if (this._currentMusic === key) return;
     if (this._currentMusic) {
       this.stopMusic();
     }
     this._currentMusic = key;
-    this.play(key);
+    this._startMusicTrack(key, fadeInMs);
+  }
+
+  restartMusic(key: SoundId, fadeInMs: number = 500): void {
+    this.stopMusic();
+    this._currentMusic = key;
+    this._startMusicTrack(key, fadeInMs);
+  }
+
+  private _startMusicTrack(key: SoundId, fadeInMs: number): void {
+    const entry = AUDIO_MANIFEST[key];
+    const entryVolume = entry.volume ?? 1;
+    const channelVolume = this._channelVolumes[entry.channel];
+    const targetVolume = entryVolume * channelVolume;
+
+    const howl = this._getOrLoad(key);
+    howl.volume(0);
+    const id = howl.play();
+
+    if (fadeInMs <= 0) {
+      howl.volume(targetVolume, id);
+    } else {
+      this._manualFade(howl, 0, targetVolume, fadeInMs, id);
+    }
   }
 
   stopMusic(fadeMs?: number): void {
@@ -110,8 +182,7 @@ class AudioManagerClass {
     const howl = this._howls.get(this._currentMusic);
     if (howl) {
       if (fadeMs && fadeMs > 0) {
-        howl.fade(howl.volume() as number, 0, fadeMs);
-        howl.once('fade', () => howl.stop());
+        this._manualFade(howl, howl.volume() as number, 0, fadeMs);
       } else {
         howl.stop();
       }
@@ -123,26 +194,49 @@ class AudioManagerClass {
     const oldKey = this._currentMusic;
     if (oldKey === newKey) return;
 
-    // Fade out old track
     if (oldKey) {
       const oldHowl = this._howls.get(oldKey);
       if (oldHowl) {
-        oldHowl.fade(oldHowl.volume() as number, 0, durationMs);
-        oldHowl.once('fade', () => oldHowl.stop());
+        this._manualFade(oldHowl, oldHowl.volume() as number, 0, durationMs);
       }
     }
 
-    // Start new track at zero, fade up
     this._currentMusic = newKey;
+    this._startMusicTrack(newKey, durationMs);
+  }
+
+  /**
+   * Switches to a different music track.
+   * The current track is faded out and paused (keeps position).
+   * The new track is resumed from its previous position, or started fresh.
+   */
+  switchMusic(newKey: SoundId, fadeMs: number = 1000): void {
+    const oldKey = this._currentMusic;
+    if (oldKey === newKey) return;
+
+    // Fade out and pause old track (preserves position)
+    if (oldKey) {
+      const oldHowl = this._howls.get(oldKey);
+      if (oldHowl) {
+        this._manualFade(oldHowl, oldHowl.volume() as number, 0, fadeMs, undefined, () => {
+          oldHowl.pause();
+        });
+      }
+    }
+
+    this._currentMusic = newKey;
+
+    // Resume or start the new track
     const entry = AUDIO_MANIFEST[newKey];
     const entryVolume = entry.volume ?? 1;
     const channelVolume = this._channelVolumes[entry.channel];
     const targetVolume = entryVolume * channelVolume;
 
     const howl = this._getOrLoad(newKey);
-    const id = howl.play();
-    howl.volume(0, id);
-    howl.fade(0, targetVolume, durationMs, id);
+    howl.volume(0);
+    howl.play(); // resumes from paused position, or starts fresh
+
+    this._manualFade(howl, 0, targetVolume, fadeMs);
   }
 
   /* ── Mute ───────────────────────────────────────────── */
@@ -214,7 +308,6 @@ class AudioManagerClass {
       volume: entryVolume * channelVolume,
       loop,
       preload: true,
-      html5: isMusic, // stream music via HTML5 Audio to save memory
     };
 
     if (isSpriteEntry(entry)) {
@@ -232,11 +325,12 @@ class AudioManagerClass {
     }
 
     const unlock = () => {
-      // Resume suspended AudioContext
+      // Run pending actions synchronously within the user gesture
+      // so HTML5 Audio elements get autoplay permission
+      this._onUnlock();
+      // Also resume WebAudio context for SFX
       if (Howler.ctx && Howler.ctx.state !== 'running') {
-        Howler.ctx.resume().then(() => this._onUnlock());
-      } else {
-        this._onUnlock();
+        Howler.ctx.resume();
       }
       document.removeEventListener('click', unlock, true);
       document.removeEventListener('touchstart', unlock, true);

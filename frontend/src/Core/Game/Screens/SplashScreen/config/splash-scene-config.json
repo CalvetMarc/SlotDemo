@@ -68,6 +68,27 @@
           }
         }
       }
+    },
+    {
+      "id": "press_to_continue",
+      "type": "PressToContinueView",
+      "layer": "game",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "offset": { "x": 0, "y": "30h%" },
+          "scale": { "x": 1, "y": 1 }
+        },
+        "overrides": {
+          "9:16": {
+            "anchor": "center",
+            "origin": { "x": 0.5, "y": 0.5 },
+            "offset": { "x": 0, "y": "25h%" },
+            "scale": { "x": 0.7, "y": 0.7 }
+          }
+        }
+      }
     }
   ]
 }

@@ -5,6 +5,7 @@ import type { LineWin } from '@shared/types';
 import { REEL_COUNT, VISIBLE_ROWS } from '@shared/types';
 import { getWinPositions, getFullPaylinePositions } from './slot-config';
 import { getWinVfxFrames } from './symbol-view';
+import { AudioManager } from '../../Audio/audio-manager';
 
 export interface WinPresentationConfig {
     reels: readonly Reel[];
@@ -242,6 +243,8 @@ export class WinPresentationController {
             this._reels[reel].setCelebration(winRows, vfxRows, this._vfxLayer, vfxFrames, goldRows);
         }
 
+        AudioManager.play('totalWin');
+
         this.onLinePresented?.({
             lineIndex: -1,
             payout: this._totalWin,
@@ -269,6 +272,8 @@ export class WinPresentationController {
             }
             this._reels[reel].setCelebration(winRows, vfxRows, this._vfxLayer, vfxFrames);
         }
+
+        AudioManager.play('normalWin');
 
         this.onLinePresented?.({
             lineIndex: lw.lineIndex,
@@ -315,6 +320,8 @@ export class WinPresentationController {
             }
             this._reels[reel].setCelebration(winRows, vfxRows, this._vfxLayer, vfxFrames, true);
         }
+
+        AudioManager.play('wildWin');
 
         const totalWin = this._chainSource?.winAmount ?? source.winAmount;
         this.onLinePresented?.({

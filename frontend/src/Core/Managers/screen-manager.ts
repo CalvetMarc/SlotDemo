@@ -3,6 +3,7 @@ import { Ticker } from 'pixi.js';
 
 import { SingletonBase } from '../Abstractions/singleton-base';
 import { GameScreen } from '../Abstractions/game-screen';
+import { AudioManager } from '../Audio/audio-manager';
 import { SplashScreen } from '../Game/Screens/SplashScreen/splash-screen';
 
 import { ScreenTypes } from '../Utils/utils';
@@ -78,7 +79,21 @@ export class ScreenManager extends SingletonBase {
     const minTimePromise = this.delay(2000);
 
     Promise.all([preloadPromise, minTimePromise]).then(() => {
-      this.transitionMap.SPLASH();
+      // Hide the loading spinner and show "press to continue"
+      const splash = this._currentScreen as SplashScreen;
+      splash.showPressToContinue();
+
+      // Wait for user interaction to proceed (also unlocks audio)
+      const proceed = () => {
+        document.removeEventListener('click', proceed, true);
+        document.removeEventListener('touchstart', proceed, true);
+        document.removeEventListener('keydown', proceed, true);
+        AudioManager.restartMusic('baseMusic', 500);
+        this.transitionMap.SPLASH();
+      };
+      document.addEventListener('click', proceed, true);
+      document.addEventListener('touchstart', proceed, true);
+      document.addEventListener('keydown', proceed, true);
     });
   }
 

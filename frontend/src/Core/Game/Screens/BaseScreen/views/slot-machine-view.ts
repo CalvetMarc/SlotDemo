@@ -100,6 +100,7 @@ export class SlotMachineView extends View {
             reelContainer: this._reelContainer,
         });
         this._winController.onBonusDismissed = () => {
+            this._clearAll();
             gameSignals.requestBonusTransition.emit();
         };
 

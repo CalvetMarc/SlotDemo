@@ -2,10 +2,13 @@ import { Sprite, Container, AnimatedSprite, Assets, ColorMatrixFilter, Spriteshe
 import type { SymbolId } from '@shared/types';
 import { CELL_SIZE } from './slot-config';
 import { evalKeyframes, type Keyframe } from '../../Animation/keyframe-lerp';
+import { AudioManager } from '../../Audio/audio-manager';
 
 // ── Animated symbol mapping ──────────────────────────────────────
 
 /** Maps SymbolId → { asset: bundle asset key, anim: animation key inside the spritesheet }. */
+const LOW_SYMBOLS: ReadonlySet<SymbolId> = new Set(['J.png', 'Q.png', 'K.png', 'A.png'] as SymbolId[]);
+
 const ANIMATED_SYMBOL_MAP: Partial<Record<SymbolId, { asset: string; anim: string }>> = {
     '1.png':           { asset: 'king_animated',    anim: 'king' },
     '2.png':           { asset: 'queen_animated',   anim: 'queen' },
@@ -398,6 +401,9 @@ export class SymbolView {
                     this.staticSprite.visible = false;
                     this._animSprite.visible = true;
                     this._animSprite.gotoAndPlay(0);
+                    if (LOW_SYMBOLS.has(this.symbolId)) {
+                        AudioManager.playFadeOut('lowWin', 500, 0.95);
+                    }
                 }
             }
         } else if (this._pulsePhase === 'playing') {

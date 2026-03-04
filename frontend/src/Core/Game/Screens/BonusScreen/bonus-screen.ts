@@ -8,6 +8,7 @@ import { GameModel } from '../../SlotMachine/game-model';
 import { gameSignals } from '../../../Signals/game-signals';
 import { ApiClient } from '../../../Services/api-client';
 import type { BonusStartResponse } from '@shared/types';
+import { AudioManager } from '../../../Audio/audio-manager';
 
 export class BonusScreen extends GameScreen {
     private _chests: ChestView[] = [];
@@ -48,6 +49,9 @@ export class BonusScreen extends GameScreen {
         this._pickIndex = 0;
         this._pendingBalance = 0;
 
+        // Fade out base music (paused to keep position) and fade in bonus
+        AudioManager.switchMusic('bonusMusic', 1000);
+
         // Server returns the predetermined sequence and credits balance atomically
         await this._startBonus();
     }
@@ -57,6 +61,9 @@ export class BonusScreen extends GameScreen {
     }
 
     async onExit(): Promise<void> {
+        // Fade out bonus, resume base music from where it was
+        AudioManager.switchMusic('baseMusic', 1000);
+
         this._chests = [];
         this._sequence = [];
         this._pickIndex = 0;

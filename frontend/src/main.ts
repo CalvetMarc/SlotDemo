@@ -71,7 +71,7 @@ async function main() {
   await ScreenManager.I.start();
 
   // Fire-and-forget preload of core SFX (non-blocking)
-  AudioManager.preload(['uiSprites', 'reelSprites', 'winChime']);
+  AudioManager.preload(['uiSprites', 'reelSprites', 'winChime', 'baseMusic', 'bonusMusic']);
 
   layoutManager.onCanvasChanged = (canvas) => {
     ScreenManager.I.onLayoutChanged(canvas);

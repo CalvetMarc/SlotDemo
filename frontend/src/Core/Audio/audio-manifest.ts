@@ -63,10 +63,35 @@ export const AUDIO_MANIFEST: Record<string, AudioEntry> = {
   } as AudioSpriteEntry,
 
   /* ── Standalone SFX ───────────────────────────────────── */
+  lowWin: {
+    src: ['assets/audio/sfx/low-win.wav'],
+    channel: 'sfx',
+    volume: 0.4,
+  },
+
   reelFast: {
     src: ['assets/audio/sfx/reel-fast.wav'],
     channel: 'sfx',
     volume: 0.3,
+    loop: true,
+  },
+
+  totalWin: {
+    src: ['assets/audio/sfx/total-win.wav'],
+    channel: 'sfx',
+    volume: 1,
+  },
+
+  normalWin: {
+    src: ['assets/audio/sfx/normal-win.wav'],
+    channel: 'sfx',
+    volume: 0.5,
+  },
+
+  wildWin: {
+    src: ['assets/audio/sfx/wild-win.wav'],
+    channel: 'sfx',
+    volume: 0.5,
   },
 
   winChime: {
@@ -82,14 +107,16 @@ export const AUDIO_MANIFEST: Record<string, AudioEntry> = {
 
   /* ── Music ────────────────────────────────────────────── */
   baseMusic: {
-    src: ['assets/audio/music/base-theme.webm', 'assets/audio/music/base-theme.mp3'],
+    src: ['assets/audio/music/base-theme.mp3'],
     channel: 'music',
+    volume: 0.4,
     loop: true,
   },
 
   bonusMusic: {
-    src: ['assets/audio/music/bonus-theme.webm', 'assets/audio/music/bonus-theme.mp3'],
+    src: ['assets/audio/music/bonus-theme.mp3'],
     channel: 'music',
+    volume: 0.4,
     loop: true,
   },
 };
