@@ -73,6 +73,8 @@ class AudioManagerClass {
     const channelVolume = this._channelVolumes[entry.channel];
     const finalVolume = entryVolume * channelVolume;
 
+    howl.volume(finalVolume);
+
     if (sprite) {
       const id = howl.play(sprite);
       howl.volume(finalVolume, id);
@@ -100,7 +102,10 @@ class AudioManagerClass {
     const duration = howl.duration(id) * 1000;
     if (duration > fadeOutMs) {
       setTimeout(() => {
-        this._manualFade(howl, finalVolume, 0, fadeOutMs, id);
+        this._manualFade(howl, finalVolume, 0, fadeOutMs, id, () => {
+          howl.stop(id);
+          howl.volume(finalVolume);
+        });
       }, duration - fadeOutMs);
     }
     return id;
