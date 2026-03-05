@@ -9,9 +9,10 @@ import { AudioManager } from '../../Audio/audio-manager';
 /** Maps SymbolId → { asset: bundle asset key, anim: animation key inside the spritesheet }. */
 const LOW_SYMBOLS: ReadonlySet<SymbolId> = new Set(['J.png', 'Q.png', 'K.png', 'A.png'] as SymbolId[]);
 
-const HIGH_SYMBOL_SFX: Partial<Record<SymbolId, 'h1Sfx' | 'h2Sfx'>> = {
+const HIGH_SYMBOL_SFX: Partial<Record<SymbolId, 'h1Sfx' | 'h2Sfx' | 'wolfSfx'>> = {
     '1.png': 'h1Sfx',
     '2.png': 'h2Sfx',
+    '3.png': 'wolfSfx',
 };
 
 const ANIMATED_SYMBOL_MAP: Partial<Record<SymbolId, { asset: string; anim: string }>> = {
@@ -414,12 +415,18 @@ export class SymbolView {
                     }
                     const highSfx = HIGH_SYMBOL_SFX[this.symbolId];
                     if (highSfx) {
-                        const rate = 1.3;
+                        const rate = highSfx === 'h2Sfx' ? 0.9 : highSfx === 'wolfSfx' ? 1 : 1.3;
+                        const delay = highSfx === 'wolfSfx' ? 100 : 200;
                         setTimeout(() => {
                             AudioManager.stop(highSfx);
                             AudioManager.play(highSfx, undefined, rate);
-                        }, 200);
+                        }, delay);
                     }
+                } else if (this.symbolId === 'Wild_01.png' as SymbolId) {
+                    setTimeout(() => {
+                        AudioManager.stop('heartbeatSfx');
+                        AudioManager.play('heartbeatSfx');
+                    }, 200);
                 }
             }
         } else if (this._pulsePhase === 'playing') {

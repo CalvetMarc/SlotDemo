@@ -8,6 +8,7 @@ import {
 import { SymbolView } from './symbol-view';
 import { easeOutQuad, easeOutQuartic } from '../../Animation/easing';
 import { evalKeyframes, type Keyframe } from '../../Animation/keyframe-lerp';
+import { AudioManager } from '../../Audio/audio-manager';
 
 type ReelState = 'idle' | 'anticipating' | 'spinning' | 'stopping';
 
@@ -440,8 +441,10 @@ export class Reel extends Container {
 
     /** Grow any visible Wild symbols when this reel lands. */
     startWildPop(): void {
+        let hasWild = false;
         for (let row = 0; row < VISIBLE_ROWS; row++) {
             if (this.getSymbolId(row) === WILD_ID) {
+                hasWild = true;
                 const sprite = this.getVisibleSymbol(row);
                 this._wildPops.push({
                     sprite,
@@ -451,6 +454,9 @@ export class Reel extends Container {
                     elapsed: 0,
                 });
             }
+        }
+        if (hasWild) {
+            AudioManager.play('wildPopSfx');
         }
     }
 

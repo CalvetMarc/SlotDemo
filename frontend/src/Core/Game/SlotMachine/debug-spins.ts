@@ -68,28 +68,34 @@ export function createDebugLineWin(
     };
 }
 
-export function createDebugBonusTrigger(betAmount: number): SpinResultWithWins {
+export function createDebugMultiLineWin(betAmount: number): SpinResultWithWins {
+    // 3 winning paylines with a wild in the center (reel 2, row 1)
+    // Payline 1 [0,0,0,0,0] top:    1, 1, 1, J, 3 → 3 of 1 (king)
+    // Payline 2 [1,1,1,1,1] middle:  2, 2, Wild, 2, 2 → 5 of 2 (queen)
+    // Payline 3 [2,2,2,2,2] bottom:  K, K, K, K, Q → 4 of K
     const grid: SymbolId[][] = [
-        ['K.png', '1.png', 'Q.png'],
-        ['3.png', 'J.png', 'A.png'],
-        ['A.png', 'K.png', '2.png'],
-        ['J.png', 'Q.png', '3.png'],
-        ['2.png', 'A.png', 'K.png'],
+        ['1.png', '2.png', 'K.png'],
+        ['1.png', '2.png', 'K.png'],
+        ['1.png', 'Wild_01.png', 'K.png'],
+        ['J.png', '2.png', 'K.png'],
+        ['3.png', '2.png', 'Q.png'],
     ];
 
-    grid[0][0] = 'Wild_01.png';
-    grid[2][1] = 'Wild_01.png';
-    grid[4][2] = 'Wild_01.png';
-
+    const pay1 = calcPayout('1.png', 3, betAmount);
+    const pay2 = calcPayout('2.png', 5, betAmount);
+    const payK = calcPayout('K.png', 4, betAmount);
     const wildCount = countWilds(grid);
-    const wildPay = calcWildPay(wildCount, betAmount);
     return {
         grid,
-        winAmount: wildPay,
-        lineWins: [],
+        winAmount: pay1 + pay2 + payK,
+        lineWins: [
+            { lineIndex: 0, symbol: '1.png', count: 3, payout: pay1 },
+            { lineIndex: 1, symbol: '2.png', count: 5, payout: pay2 },
+            { lineIndex: 2, symbol: 'K.png', count: 4, payout: payK },
+        ],
         wildCount,
-        bonusTriggered: wildCount >= 3,
-        wildPay,
+        bonusTriggered: false,
+        wildPay: 0,
     };
 }
 
@@ -115,12 +121,16 @@ export function createDebugWildLineWin(betAmount: number): SpinResultWithWins {
     ];
 
     const linePayout = calcPayout('1.png', 5, betAmount);
+    const line10Payout = calcPayout('1.png', 4, betAmount);
     const wildCount = countWilds(grid);
     const wildPay = calcWildPay(wildCount, betAmount);
     return {
         grid,
-        winAmount: linePayout + wildPay,
-        lineWins: [{ lineIndex: 0, symbol: '1.png', count: 5, payout: linePayout }],
+        winAmount: linePayout + line10Payout + wildPay,
+        lineWins: [
+            { lineIndex: 1, symbol: '1.png', count: 5, payout: linePayout },
+            { lineIndex: 9, symbol: '1.png', count: 4, payout: line10Payout },
+        ],
         wildCount,
         bonusTriggered: wildCount >= 3,
         wildPay,
@@ -139,7 +149,7 @@ export function createDebugKeyHandler(deps: DebugKeyDeps): { attach: () => () =>
             const handler = (event: KeyboardEvent): void => {
                 if (event.repeat || deps.getIsSpinning()) return;
 
-                const map: Partial<Record<string, { type: 'lineWin'; lineIndex: number; symbol: SymbolId } | { type: 'bonus' } | { type: 'wildLine' } | { type: 'tensionTest' }>> = {
+                const map: Partial<Record<string, { type: 'lineWin'; lineIndex: number; symbol: SymbolId } | { type: 'multiLine' } | { type: 'wildLine' } | { type: 'tensionTest' }>> = {
                     Digit1: { type: 'lineWin', lineIndex: 0, symbol: '1.png' },
                     Digit2: { type: 'lineWin', lineIndex: 1, symbol: '2.png' },
                     Digit3: { type: 'lineWin', lineIndex: 2, symbol: '3.png' },
@@ -148,7 +158,7 @@ export function createDebugKeyHandler(deps: DebugKeyDeps): { attach: () => () =>
                     Digit6: { type: 'lineWin', lineIndex: 5, symbol: 'K.png' },
                     Digit7: { type: 'lineWin', lineIndex: 6, symbol: 'A.png' },
                     Digit8: { type: 'tensionTest' },
-                    Digit9: { type: 'bonus' },
+                    Digit9: { type: 'multiLine' },
                     Digit0: { type: 'wildLine' },
                 };
                 const debugPreset = map[event.code];
@@ -162,8 +172,8 @@ export function createDebugKeyHandler(deps: DebugKeyDeps): { attach: () => () =>
                     forced = createDebugWildLineWin(bet);
                 } else if (debugPreset.type === 'tensionTest') {
                     forced = createDebugTensionTest();
-                } else if (debugPreset.type === 'bonus') {
-                    forced = createDebugBonusTrigger(bet);
+                } else if (debugPreset.type === 'multiLine') {
+                    forced = createDebugMultiLineWin(bet);
                 } else {
                     forced = createDebugLineWin(debugPreset.lineIndex, debugPreset.symbol, bet);
                 }

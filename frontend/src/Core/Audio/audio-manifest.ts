@@ -78,7 +78,25 @@ export const AUDIO_MANIFEST: Record<string, AudioEntry> = {
   h2Sfx: {
     src: ['assets/audio/sfx/h2-sfx.mp3'],
     channel: 'sfx',
-    volume: 0.3,
+    volume: 0.5,
+  },
+
+  heartbeatSfx: {
+    src: ['assets/audio/sfx/heartbeat-sfx.mp3'],
+    channel: 'sfx',
+    volume: 0.5,
+  },
+
+  wildPopSfx: {
+    src: ['assets/audio/sfx/wild-pop-sfx.mp3'],
+    channel: 'sfx',
+    volume: 0.5,
+  },
+
+  wolfSfx: {
+    src: ['assets/audio/sfx/wolf-sfx.mp3'],
+    channel: 'sfx',
+    volume: 0.4,
   },
 
   reelFast: {
