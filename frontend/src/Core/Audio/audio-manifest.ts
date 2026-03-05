@@ -93,6 +93,18 @@ export const AUDIO_MANIFEST: Record<string, AudioEntry> = {
     volume: 0.5,
   },
 
+  chest: {
+    src: ['assets/audio/sfx/chest.mp3'],
+    channel: 'sfx',
+    volume: 0.9,
+  },
+
+  skull: {
+    src: ['assets/audio/sfx/skull.mp3'],
+    channel: 'sfx',
+    volume: 0.5,
+  },
+
   bats: {
     src: ['assets/audio/sfx/bats.mp3'],
     channel: 'sfx',

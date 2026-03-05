@@ -1,5 +1,6 @@
 import { AnimatedSprite, Assets, ColorMatrixFilter, Rectangle, Sprite, Texture, Ticker } from 'pixi.js';
 import { bundle, View } from '../../../../Abstractions/view';
+import { AudioManager } from '../../../../Audio/audio-manager';
 
 const SHIMMER_INTERVAL_MIN = 2000;
 const SHIMMER_INTERVAL_MAX = 5000;
@@ -138,6 +139,7 @@ export class ChestView extends View {
 
     playOpen(): Promise<void> {
         this._stopIdleEffects();
+        AudioManager.play('chest');
 
         return new Promise((resolve) => {
             this._isOpened = true;
@@ -168,6 +170,7 @@ export class ChestView extends View {
         const texture = sheet.textures?.['skull.png'];
         if (!texture) return Promise.resolve();
 
+        setTimeout(() => AudioManager.playFadeOut('skull', 2000), 500);
         return this._animatePrizeSprite(texture);
     }
 
