@@ -59,7 +59,7 @@ export class TransitionMask extends Container {
         this.addChild(holdLayer);
 
         // Phase 1 – bats gradually cover screen, revealing hold layer (loading bar)
-        setTimeout(() => AudioManager.play('bats'), 200);
+        setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
         await this._playMaskedVideo(coverVideo, width, height, COVER_SPEED, holdLayer);
 
         // Scene swap while loading bar progresses
@@ -78,7 +78,7 @@ export class TransitionMask extends Container {
         await this._delay(HOLD_DELAY_MS);
 
         // Phase 2 – bats leave, hiding hold layer and revealing new scene
-        setTimeout(() => AudioManager.play('bats'), 200);
+        setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
         await this._playMaskedVideo(revealVideo, width, height, REVEAL_SPEED, holdLayer, true);
 
         // Clean up
