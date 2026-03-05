@@ -69,10 +69,22 @@ export const AUDIO_MANIFEST: Record<string, AudioEntry> = {
     volume: 0.3,
   },
 
+  h1Sfx: {
+    src: ['assets/audio/sfx/h1-sfx.mp3'],
+    channel: 'sfx',
+    volume: 0.5,
+  },
+
+  h2Sfx: {
+    src: ['assets/audio/sfx/h2-sfx.mp3'],
+    channel: 'sfx',
+    volume: 0.3,
+  },
+
   reelFast: {
     src: ['assets/audio/sfx/reel-fast.wav'],
     channel: 'sfx',
-    volume: 0.3,
+    volume: 0.15,
     loop: true,
   },
 

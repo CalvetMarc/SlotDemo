@@ -74,7 +74,7 @@ class AudioManagerClass {
 
   /* ── Playback ───────────────────────────────────────── */
 
-  play(ref: string, overrideVolume?: number): number | undefined {
+  play(ref: string, overrideVolume?: number, rate?: number): number | undefined {
     const { key, sprite } = resolveSoundRef(ref);
     const howl = this._getOrLoad(key);
     const entry = AUDIO_MANIFEST[key];
@@ -82,14 +82,9 @@ class AudioManagerClass {
     const channelVolume = this._channelVolumes[entry.channel];
     const finalVolume = entryVolume * channelVolume;
 
-    if (sprite) {
-      const id = howl.play(sprite);
-      howl.volume(finalVolume, id);
-      return id;
-    }
-
-    const id = howl.play();
+    const id = sprite ? howl.play(sprite) : howl.play();
     howl.volume(finalVolume, id);
+    if (rate && rate !== 1) howl.rate(rate, id);
     return id;
   }
 

@@ -9,6 +9,11 @@ import { AudioManager } from '../../Audio/audio-manager';
 /** Maps SymbolId → { asset: bundle asset key, anim: animation key inside the spritesheet }. */
 const LOW_SYMBOLS: ReadonlySet<SymbolId> = new Set(['J.png', 'Q.png', 'K.png', 'A.png'] as SymbolId[]);
 
+const HIGH_SYMBOL_SFX: Partial<Record<SymbolId, 'h1Sfx' | 'h2Sfx'>> = {
+    '1.png': 'h1Sfx',
+    '2.png': 'h2Sfx',
+};
+
 const ANIMATED_SYMBOL_MAP: Partial<Record<SymbolId, { asset: string; anim: string }>> = {
     '1.png':           { asset: 'king_animated',    anim: 'king' },
     '2.png':           { asset: 'queen_animated',   anim: 'queen' },
@@ -405,6 +410,14 @@ export class SymbolView {
                         setTimeout(() => {
                             AudioManager.stop('lowWin');
                             AudioManager.play('lowWin');
+                        }, 200);
+                    }
+                    const highSfx = HIGH_SYMBOL_SFX[this.symbolId];
+                    if (highSfx) {
+                        const rate = 1.3;
+                        setTimeout(() => {
+                            AudioManager.stop(highSfx);
+                            AudioManager.play(highSfx, undefined, rate);
                         }, 200);
                     }
                 }
