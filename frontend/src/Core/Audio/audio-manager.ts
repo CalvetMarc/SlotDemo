@@ -16,6 +16,8 @@ class AudioManagerClass {
   private _isUnlocked: boolean = false;
   private _pendingActions: Array<() => void> = [];
   private _currentMusic: SoundId | null = null;
+  private _currentMusicInstanceId: number | undefined = undefined;
+  private _activeFades: Map<Howl, Map<number | undefined, ReturnType<typeof setInterval>>> = new Map();
 
   /* ── Public getters ─────────────────────────────────── */
 
@@ -43,11 +45,18 @@ class AudioManagerClass {
   }
 
   dispose(): void {
+    for (const fades of this._activeFades.values()) {
+      for (const interval of fades.values()) {
+        clearInterval(interval);
+      }
+    }
+    this._activeFades.clear();
     for (const howl of this._howls.values()) {
       howl.unload();
     }
     this._howls.clear();
     this._currentMusic = null;
+    this._currentMusicInstanceId = undefined;
     this._pendingActions.length = 0;
   }
 
@@ -72,8 +81,6 @@ class AudioManagerClass {
     const entryVolume = overrideVolume ?? entry.volume ?? 1;
     const channelVolume = this._channelVolumes[entry.channel];
     const finalVolume = entryVolume * channelVolume;
-
-    howl.volume(finalVolume);
 
     if (sprite) {
       const id = howl.play(sprite);
@@ -104,7 +111,7 @@ class AudioManagerClass {
       setTimeout(() => {
         this._manualFade(howl, finalVolume, 0, fadeOutMs, id, () => {
           howl.stop(id);
-          howl.volume(finalVolume);
+          howl.volume(finalVolume, id);
         });
       }, duration - fadeOutMs);
     }
@@ -119,15 +126,25 @@ class AudioManagerClass {
     }
   }
 
-  fade(ref: string, from: number, to: number, durationMs: number): void {
+  fade(ref: string, from: number, to: number, durationMs: number, instanceId?: number): void {
     const { key } = resolveSoundRef(ref);
     const howl = this._howls.get(key);
     if (howl) {
-      this._manualFade(howl, from, to, durationMs);
+      this._manualFade(howl, from, to, durationMs, instanceId);
     }
   }
 
   private _manualFade(howl: Howl, from: number, to: number, durationMs: number, id?: number, onComplete?: () => void): void {
+    // Cancel any existing fade on this howl+id pair
+    const howlFades = this._activeFades.get(howl);
+    if (howlFades) {
+      const existing = howlFades.get(id);
+      if (existing !== undefined) {
+        clearInterval(existing);
+        howlFades.delete(id);
+      }
+    }
+
     const steps = 20;
     const stepMs = durationMs / steps;
     let step = 0;
@@ -139,6 +156,12 @@ class AudioManagerClass {
       if (id !== undefined) howl.volume(vol, id); else howl.volume(vol);
       if (step >= steps) {
         clearInterval(interval);
+        // Remove from tracking
+        const fades = this._activeFades.get(howl);
+        if (fades) {
+          fades.delete(id);
+          if (fades.size === 0) this._activeFades.delete(howl);
+        }
         if (onComplete) {
           onComplete();
         } else if (to === 0) {
@@ -146,6 +169,12 @@ class AudioManagerClass {
         }
       }
     }, stepMs);
+
+    // Track the new interval
+    if (!this._activeFades.has(howl)) {
+      this._activeFades.set(howl, new Map());
+    }
+    this._activeFades.get(howl)!.set(id, interval);
   }
 
   /* ── Music ──────────────────────────────────────────── */
@@ -172,8 +201,9 @@ class AudioManagerClass {
     const targetVolume = entryVolume * channelVolume;
 
     const howl = this._getOrLoad(key);
-    howl.volume(0);
     const id = howl.play();
+    howl.volume(0, id);
+    this._currentMusicInstanceId = id;
 
     if (fadeInMs <= 0) {
       howl.volume(targetVolume, id);
@@ -185,14 +215,16 @@ class AudioManagerClass {
   stopMusic(fadeMs?: number): void {
     if (!this._currentMusic) return;
     const howl = this._howls.get(this._currentMusic);
+    const id = this._currentMusicInstanceId;
     if (howl) {
-      if (fadeMs && fadeMs > 0) {
-        this._manualFade(howl, howl.volume() as number, 0, fadeMs);
+      if (fadeMs && fadeMs > 0 && id !== undefined) {
+        this._manualFade(howl, howl.volume(id) as number, 0, fadeMs, id);
       } else {
-        howl.stop();
+        id !== undefined ? howl.stop(id) : howl.stop();
       }
     }
     this._currentMusic = null;
+    this._currentMusicInstanceId = undefined;
   }
 
   crossFadeMusic(newKey: SoundId, durationMs: number = 1000): void {
@@ -201,8 +233,9 @@ class AudioManagerClass {
 
     if (oldKey) {
       const oldHowl = this._howls.get(oldKey);
-      if (oldHowl) {
-        this._manualFade(oldHowl, oldHowl.volume() as number, 0, durationMs);
+      const oldId = this._currentMusicInstanceId;
+      if (oldHowl && oldId !== undefined) {
+        this._manualFade(oldHowl, oldHowl.volume(oldId) as number, 0, durationMs, oldId);
       }
     }
 
@@ -222,9 +255,10 @@ class AudioManagerClass {
     // Fade out and pause old track (preserves position)
     if (oldKey) {
       const oldHowl = this._howls.get(oldKey);
-      if (oldHowl) {
-        this._manualFade(oldHowl, oldHowl.volume() as number, 0, fadeMs, undefined, () => {
-          oldHowl.pause();
+      const oldId = this._currentMusicInstanceId;
+      if (oldHowl && oldId !== undefined) {
+        this._manualFade(oldHowl, oldHowl.volume(oldId) as number, 0, fadeMs, oldId, () => {
+          oldHowl.pause(oldId);
         });
       }
     }
@@ -238,10 +272,11 @@ class AudioManagerClass {
     const targetVolume = entryVolume * channelVolume;
 
     const howl = this._getOrLoad(newKey);
-    howl.volume(0);
-    howl.play(); // resumes from paused position, or starts fresh
+    const id = howl.play(); // resumes from paused position, or starts fresh
+    howl.volume(0, id);
+    this._currentMusicInstanceId = id;
 
-    this._manualFade(howl, 0, targetVolume, fadeMs);
+    this._manualFade(howl, 0, targetVolume, fadeMs, id);
   }
 
   /* ── Mute ───────────────────────────────────────────── */

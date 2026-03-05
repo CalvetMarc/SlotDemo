@@ -64,9 +64,9 @@ export const AUDIO_MANIFEST: Record<string, AudioEntry> = {
 
   /* ── Standalone SFX ───────────────────────────────────── */
   lowWin: {
-    src: ['assets/audio/sfx/low-win.wav'],
+    src: ['assets/audio/sfx/low-win.mp3'],
     channel: 'sfx',
-    volume: 0.4,
+    volume: 0.3,
   },
 
   reelFast: {

@@ -402,7 +402,10 @@ export class SymbolView {
                     this._animSprite.visible = true;
                     this._animSprite.gotoAndPlay(0);
                     if (LOW_SYMBOLS.has(this.symbolId)) {
-                        AudioManager.play('lowWin');
+                        setTimeout(() => {
+                            AudioManager.stop('lowWin');
+                            AudioManager.play('lowWin');
+                        }, 200);
                     }
                 }
             }
