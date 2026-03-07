@@ -101,7 +101,9 @@ export class SlotMachineView extends View {
             reelContainer: this._reelContainer,
         });
         this._winController.onBonusDismissed = () => {
+            const entryResult = this._bonusEntryResult;
             this._clearAll();
+            this._bonusEntryResult = entryResult;
             gameSignals.requestBonusTransition.emit();
         };
 
@@ -269,8 +271,8 @@ export class SlotMachineView extends View {
             const bonusWin = GameModel.pendingBonusWin;
             GameModel.setPendingBonusWin(0);
             console.log('[BaseTransition]', { bonusWin, hasEntry: !!entryResult, wildCount: entryResult?.wildCount, lineWins: entryResult?.lineWins.length });
-            // Always celebrate on return — entry line wins even if bonus paid 0
-            if (bonusWin > 0 || entryResult) {
+            // Always show bonus total on return — even if bonus paid 0 (skull on first chest)
+            if (entryResult) {
                 this._pendingBonusCelebration = bonusWin;
                 this._bonusEntryResult = entryResult;
             }
