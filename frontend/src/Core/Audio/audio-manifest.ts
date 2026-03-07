@@ -142,6 +142,12 @@ export const AUDIO_MANIFEST: Record<string, AudioEntry> = {
     volume: 1.5,
   },
 
+  bonusRoundAnnounce: {
+    src: ['assets/audio/sfx/bonus-round-announce.mp3'],
+    channel: 'sfx',
+    volume: 0.5,
+  },
+
   wolfSfx: {
     src: ['assets/audio/sfx/wolf-sfx.mp3'],
     channel: 'sfx',

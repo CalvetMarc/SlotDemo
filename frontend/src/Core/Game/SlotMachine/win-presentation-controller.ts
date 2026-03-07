@@ -244,6 +244,9 @@ export class WinPresentationController {
         }
 
         AudioManager.play('totalWin');
+        if (this._wildSource) {
+            AudioManager.play('bonusRoundAnnounce');
+        }
 
         this.onLinePresented?.({
             lineIndex: -1,
