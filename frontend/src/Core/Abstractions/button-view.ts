@@ -1,5 +1,6 @@
 import { View, bundle } from "./view";
 import { Graphics, Rectangle, Circle, Ellipse, Polygon } from "pixi.js";
+import { AudioManager } from "../Audio/audio-manager";
 
 /** Interface for button mouse events - implement to customize behavior */
 export interface IButtonEvents {
@@ -41,7 +42,13 @@ export abstract class ButtonView extends View implements IButtonEvents {
     }
 
     private handleMouseClick(): void {
+        this.playClickSfx();
         this.onMouseClick?.();
+    }
+
+    /** Plays the click sound effect. Override in subclasses for toggle behavior. */
+    protected playClickSfx(): void {
+        AudioManager.play('positiveClick');
     }
 
     /** Override to apply tint to specific elements (default: tints this container) */

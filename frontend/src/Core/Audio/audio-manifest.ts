@@ -62,6 +62,37 @@ export const AUDIO_MANIFEST: Record<string, AudioEntry> = {
     },
   } as AudioSpriteEntry,
 
+  /* ── UI clicks ──────────────────────────────────────────── */
+  positiveClick: {
+    src: ['assets/audio/sfx/positive-click.wav'],
+    channel: 'sfx',
+    volume: 0.5,
+  },
+
+  negativeClick: {
+    src: ['assets/audio/sfx/negative-click.wav'],
+    channel: 'sfx',
+    volume: 0.5,
+  },
+
+  spinMagic: {
+    src: ['assets/audio/sfx/spin-magic.wav'],
+    channel: 'sfx',
+    volume: 0.5,
+  },
+
+  buyBonus: {
+    src: ['assets/audio/sfx/buy-bonus.wav'],
+    channel: 'sfx',
+    volume: 0.5,
+  },
+
+  symbolLand: {
+    src: ['assets/audio/sfx/spin-cancel.mp3'],
+    channel: 'sfx',
+    volume: 0.3,
+  },
+
   /* ── Standalone SFX ───────────────────────────────────── */
   lowWin: {
     src: ['assets/audio/sfx/low-win.mp3'],

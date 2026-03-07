@@ -1,5 +1,6 @@
 import { Sprite, Container, Graphics, Ticker } from 'pixi.js';
 import { View, bundle } from '../../../../Abstractions/view';
+import { AudioManager } from '../../../../Audio/audio-manager';
 import { Reel } from '../../../SlotMachine/reel';
 import {
     RemoteSpinResultProvider,

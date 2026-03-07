@@ -1,6 +1,7 @@
 import { ButtonView } from "../../Abstractions/button-view";
 import { bundle } from "../../Abstractions/view";
 import { Sprite, Assets, Rectangle } from "pixi.js";
+import { AudioManager } from "../../Audio/audio-manager";
 
 export type ArrowDirection = 'up' | 'down';
 
@@ -67,6 +68,12 @@ export class ArrowButtonView extends ButtonView {
 
         this.showDebugBounds(ArrowButtonView.DEBUG_BOUNDS);
         this.setupInteractivity();
+    }
+
+    protected playClickSfx(): void {
+        if (!this._isDisabled) {
+            AudioManager.play(this._direction === 'up' ? 'positiveClick' : 'negativeClick');
+        }
     }
 
     onMouseClick(): void {

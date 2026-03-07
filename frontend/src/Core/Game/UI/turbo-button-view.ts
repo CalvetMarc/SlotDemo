@@ -2,6 +2,7 @@ import { ButtonView } from "../../Abstractions/button-view";
 import { bundle } from "../../Abstractions/view";
 import { Sprite, Assets } from "pixi.js";
 import { GameModel } from "../SlotMachine/game-model";
+import { AudioManager } from "../../Audio/audio-manager";
 
 export class TurboButtonView extends ButtonView {
     private iconSprite!: Sprite;
@@ -24,6 +25,10 @@ export class TurboButtonView extends ButtonView {
 
         this.showDebugBounds(TurboButtonView.DEBUG_BOUNDS);
         this.setupInteractivity();
+    }
+
+    protected playClickSfx(): void {
+        AudioManager.play(GameModel.isTurbo ? 'negativeClick' : 'positiveClick');
     }
 
     onMouseClick(): void {

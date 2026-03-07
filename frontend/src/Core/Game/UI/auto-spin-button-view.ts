@@ -2,6 +2,7 @@ import { ButtonView } from "../../Abstractions/button-view";
 import { bundle } from "../../Abstractions/view";
 import { Sprite, Assets, Graphics, Container, Text, TextStyle } from "pixi.js";
 import { GameModel } from "../SlotMachine/game-model";
+import { AudioManager } from "../../Audio/audio-manager";
 
 const PICKER_VALUES = [0, 10, 20, 50, 100, 250, 500] as const;
 const ACTIVE_COLOR = 0x00e8b8;
@@ -49,6 +50,11 @@ export class AutoSpinButtonView extends ButtonView {
 
     protected removeHoverTint(): void {
         this.iconSprite.alpha = 1;
+    }
+
+    protected playClickSfx(): void {
+        // Cancelling active autospin → negative, otherwise positive
+        AudioManager.play(GameModel.autoSpinRemaining > 0 ? 'negativeClick' : 'positiveClick');
     }
 
     onMouseClick(): void {
@@ -300,6 +306,7 @@ export class AutoSpinButtonView extends ButtonView {
     }
 
     private _selectValue(val: number): void {
+        AudioManager.play(val === 0 ? 'negativeClick' : 'positiveClick');
         this._selectedCount = val;
         this._highlightSelected();
     }

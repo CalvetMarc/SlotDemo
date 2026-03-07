@@ -2,6 +2,7 @@ import { Assets, BlurFilter, Container, Graphics, Sprite, Spritesheet, Text, Tex
 import { TweenManager, type TweenHandle } from '../../Animation/tween';
 import { easeOutCubic, easeInCubic } from '../../Animation/easing';
 import { GameModel } from '../SlotMachine/game-model';
+import { AudioManager } from '../../Audio/audio-manager';
 
 // ── Constants ────────────────────────────────────────────────────
 
@@ -126,6 +127,7 @@ export class InfoPanelView extends Container {
         if (!this._isOpen) return;
         this._isOpen = false;
 
+        AudioManager.play('negativeClick');
         this._killActiveTweens();
         this._animateOut();
     }
@@ -368,6 +370,7 @@ export class InfoPanelView extends Container {
 
     private _switchTab(index: number): void {
         if (index === this._activeTab) return;
+        AudioManager.play('positiveClick');
         this._activeTab = index;
 
         // Update tab visuals

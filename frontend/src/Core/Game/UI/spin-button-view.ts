@@ -3,6 +3,7 @@ import { bundle } from "../../Abstractions/view";
 import { Sprite, Assets, Graphics } from "pixi.js";
 import { gameSignals } from "../../Signals/game-signals";
 import { GameModel } from "../SlotMachine/game-model";
+import { AudioManager } from "../../Audio/audio-manager";
 
 export class SpinButtonView extends ButtonView {
     private background!: Graphics;
@@ -29,6 +30,16 @@ export class SpinButtonView extends ButtonView {
         this.addChild(this.iconSprite);
 
         this.setupInteractivity();
+    }
+
+    protected playClickSfx(): void {
+        if (this._isAutoMode) {
+            AudioManager.play('negativeClick');
+        } else if (this._isSkipMode) {
+            // Land SFX handled by global pointerdown in slot-machine-view
+        } else {
+            AudioManager.play('spinMagic');
+        }
     }
 
     onMouseClick(): void {

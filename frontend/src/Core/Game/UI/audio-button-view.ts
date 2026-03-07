@@ -43,6 +43,11 @@ export class AudioButtonView extends ButtonView {
         this.setupInteractivity();
     }
 
+    protected playClickSfx(): void {
+        // Will mute → negative, will unmute → positive
+        AudioManager.play(this._isOn ? 'negativeClick' : 'positiveClick');
+    }
+
     onMouseClick(): void {
         const isMuted = AudioManager.toggleMute();
         this.setOn(!isMuted);

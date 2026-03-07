@@ -3,6 +3,7 @@ import { bundle } from "../../Abstractions/view";
 import { Text, TextStyle, Graphics, Ticker } from "pixi.js";
 import { gameSignals } from "../../Signals/game-signals";
 import { GameModel } from "../SlotMachine/game-model";
+import { AudioManager } from "../../Audio/audio-manager";
 
 export class BuyBonusButtonView extends ButtonView {
     private background!: Graphics;
@@ -71,6 +72,10 @@ export class BuyBonusButtonView extends ButtonView {
 
         this._unsubSpinning = GameModel.spinningChanged.connect(() => this._refreshDisabled());
         this._unsubAutoSpin = GameModel.autoSpinRemainingChanged.connect(() => this._refreshDisabled());
+    }
+
+    protected playClickSfx(): void {
+        if (!this._isDisabled) AudioManager.play('positiveClick');
     }
 
     onMouseClick(): void {

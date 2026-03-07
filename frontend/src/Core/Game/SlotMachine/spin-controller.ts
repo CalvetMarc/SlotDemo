@@ -151,6 +151,7 @@ export class SpinController {
         this._pendingResult = undefined;
         this._settledReels.clear();
         this._stopReelSound();
+        AudioManager.play('symbolLand');
         const bounceTimeout = setTimeout(() => {
             this.onAllReelsStopped?.(result, false);
         }, BOUNCE_DURATION);

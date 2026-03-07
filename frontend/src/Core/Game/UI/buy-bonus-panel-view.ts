@@ -2,6 +2,7 @@ import { Assets, BlurFilter, Container, FederatedPointerEvent, Graphics, Sprite,
 import { TweenManager, type TweenHandle } from '../../Animation/tween';
 import { easeOutCubic, easeInCubic } from '../../Animation/easing';
 import { GameModel } from '../SlotMachine/game-model';
+import { AudioManager } from '../../Audio/audio-manager';
 
 // ── Constants ────────────────────────────────────────────────────
 
@@ -113,6 +114,7 @@ export class BuyBonusPanelView extends Container {
         if (!this._isOpen) return;
         this._isOpen = false;
 
+        AudioManager.play('negativeClick');
         this._unsubBetChanged?.();
         this._unsubBetChanged = undefined;
 
@@ -708,7 +710,7 @@ export class BuyBonusPanelView extends Container {
         // Left arrow (decrease)
         this._betDownBtn = this._createBetArrow('left', arrowW, scale);
         this._betDownBtn.position.set(x + arrowW / 2, rowH / 2);
-        this._betDownBtn.on('pointertap', () => GameModel.decreaseBet());
+        this._betDownBtn.on('pointertap', () => { AudioManager.play('negativeClick'); GameModel.decreaseBet(); });
         row.addChild(this._betDownBtn);
         x += arrowW + arrowPad;
 
@@ -725,7 +727,7 @@ export class BuyBonusPanelView extends Container {
         // Right arrow (increase)
         this._betUpBtn = this._createBetArrow('right', arrowW, scale);
         this._betUpBtn.position.set(x + arrowW / 2, rowH / 2);
-        this._betUpBtn.on('pointertap', () => GameModel.increaseBet());
+        this._betUpBtn.on('pointertap', () => { AudioManager.play('positiveClick'); GameModel.increaseBet(); });
         row.addChild(this._betUpBtn);
 
         this._refreshBetButtons();
@@ -936,7 +938,7 @@ class OptionCard extends Container {
         this._buyButton.cursor = 'pointer';
         this._buyButton.on('pointerover', () => { if (this._isAffordable) this._buyBg.tint = COLORS.buyButtonHover; });
         this._buyButton.on('pointerout', () => { this._buyBg.tint = 0xffffff; });
-        this._buyButton.on('pointertap', () => { if (this._isAffordable) onBuy(); });
+        this._buyButton.on('pointertap', () => { if (this._isAffordable) { AudioManager.play('buyBonus'); onBuy(); } });
         this.addChild(this._buyButton);
     }
 
