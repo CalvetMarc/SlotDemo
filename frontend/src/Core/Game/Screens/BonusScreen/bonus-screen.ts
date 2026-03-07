@@ -56,6 +56,12 @@ export class BonusScreen extends GameScreen {
         await this._startBonus();
     }
 
+    onTransitionComplete(): void {
+        for (const chest of this._chests) {
+            chest.enable();
+        }
+    }
+
     onUpdate(_deltaMS: number): void {
         // No per-frame logic needed
     }

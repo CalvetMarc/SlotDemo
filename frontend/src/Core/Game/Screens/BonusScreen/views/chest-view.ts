@@ -118,8 +118,8 @@ export class ChestView extends View {
         this._closedSprite.visible = true;
         this._openAnim.visible = false;
         this._openAnim.gotoAndStop(0);
-        this.eventMode = 'static';
-        this.cursor = 'pointer';
+        this.eventMode = 'none';
+        this.cursor = 'default';
         this.alpha = 1;
 
         this._baseScaleX = this.scale.x;
@@ -185,6 +185,12 @@ export class ChestView extends View {
         return new Promise<void>((resolve) => {
             this._prizeResolve = resolve;
         });
+    }
+
+    enable(): void {
+        if (this._isOpened || this._isDisabled) return;
+        this.eventMode = 'static';
+        this.cursor = 'pointer';
     }
 
     disable(): void {

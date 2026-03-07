@@ -36,6 +36,11 @@ export abstract class GameScreen implements IGameScreen {
     abstract onUpdate(deltaMS: number): void;
     abstract onExit(): Promise<void>;
 
+    /** Called after the transition animation (e.g. mask reveal) has fully completed. */
+    onTransitionComplete(): void {
+        // Override in subclasses if needed
+    }
+
     constructor(){
         this.assetLoader = new AssetLoader();
         this.viewInitializer = new ViewInitializer();

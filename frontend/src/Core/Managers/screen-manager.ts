@@ -140,6 +140,7 @@ export class ScreenManager extends SingletonBase {
         await loadPromise;
         await this._swapScene(transitionFrom, transitionTo, destroyCurrent);
       });
+      this._currentScreen?.onTransitionComplete();
     } else {
       await this._swapScene(transitionFrom, transitionTo, destroyCurrent);
     }
