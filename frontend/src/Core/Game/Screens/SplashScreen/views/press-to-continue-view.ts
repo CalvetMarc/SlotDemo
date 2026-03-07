@@ -13,6 +13,10 @@ export class PressToContinueView extends View {
     }
 
     appear(): void {
+        this.alpha = 0;
+    }
+
+    show(): void {
         this._text = new Text({
             text: 'Press anywhere to continue',
             style: {
@@ -24,12 +28,6 @@ export class PressToContinueView extends View {
         });
         this._text.anchor.set(0.5);
         this.addChild(this._text);
-        this.alpha = 0;
-    }
-
-    show(): void {
-        // Re-assign text to force glyph re-measurement with the now-loaded font
-        this._text.text = this._text.text;
         this.alpha = 1;
     }
 
