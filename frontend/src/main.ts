@@ -71,7 +71,7 @@ async function main() {
   await ScreenManager.I.start();
 
   // Fire-and-forget preload of core SFX (non-blocking)
-  AudioManager.preload(['uiSprites', 'reelSprites', 'winChime', 'baseMusic', 'bonusMusic', 'lowWin', 'h1Sfx', 'h2Sfx', 'wolfSfx', 'heartbeatSfx', 'wildPopSfx', 'chest', 'skull', 'bats', 'totalWin', 'normalWin', 'wildWin']);
+  AudioManager.preload(['uiSprites', 'reelSprites', 'winChime', 'baseMusic', 'bonusMusic', 'lowWin', 'h1Sfx', 'h2Sfx', 'wolfSfx', 'heartbeatSfx', 'wildPopSfx', 'chest', 'skull', 'bats', 'totalWin', 'normalWin', 'wildWin', 'winLoop', 'winLoopSuper', 'winLoopMega']);
 
   layoutManager.onCanvasChanged = (canvas) => {
     ScreenManager.I.onLayoutChanged(canvas);
@@ -134,6 +134,7 @@ async function main() {
         layerManager.toggleLayoutDebug();
       }
     });
+
   }
 }
 

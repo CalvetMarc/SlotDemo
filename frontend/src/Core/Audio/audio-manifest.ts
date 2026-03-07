@@ -184,6 +184,27 @@ export const AUDIO_MANIFEST: Record<string, AudioEntry> = {
     volume: 0.8,
   },
 
+  winLoop: {
+    src: ['assets/audio/sfx/win-loop.wav'],
+    channel: 'sfx',
+    volume: 0.6,
+    loop: true,
+  },
+
+  winLoopSuper: {
+    src: ['assets/audio/sfx/win-loop-super.wav'],
+    channel: 'sfx',
+    volume: 0.6,
+    loop: true,
+  },
+
+  winLoopMega: {
+    src: ['assets/audio/sfx/win-loop-mega.wav'],
+    channel: 'sfx',
+    volume: 0.6,
+    loop: true,
+  },
+
   /* ── Music ────────────────────────────────────────────── */
   baseMusic: {
     src: ['assets/audio/music/base-theme.mp3'],

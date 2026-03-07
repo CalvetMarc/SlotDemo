@@ -2,6 +2,7 @@ import { Container, Text, TextStyle } from 'pixi.js';
 import { TweenManager, type TweenHandle } from '../../Animation/tween';
 import { easeOutCubic, easeOutElastic } from '../../Animation/easing';
 import { GRID_WIDTH, GRID_HEIGHT } from './slot-config';
+import { AudioManager } from '../../Audio/audio-manager';
 
 // ── Thresholds (multiples of total bet) ─────────────────────────
 
@@ -43,6 +44,8 @@ export class BigWinView extends Container {
     private _entranceTween: TweenHandle | null = null;
     private _exitTween: TweenHandle | null = null;
     private _holdTimeout: ReturnType<typeof setTimeout> | undefined;
+    private _winLoopId: number | undefined;
+    private _currentTier = 0;
 
     private _isActive = false;
     private _targetAmount = 0;
@@ -98,10 +101,11 @@ export class BigWinView extends Container {
         this.scale.set(0.5);
 
         // Initial state
-        this._tierLabel.text = this._getTierLabel(BIG_WIN_MULTIPLIER);
+        this._tierLabel.text = TIER_LABELS[0];
         this._updateColors(BIG_WIN_MULTIPLIER);
         this._updateSizes(BIG_WIN_MULTIPLIER);
         this._amountText.text = '0.00\u20AC';
+        this._currentTier = 0;
         this._redrawBackdrop();
 
         // Entrance: fade + scale bounce
@@ -118,6 +122,9 @@ export class BigWinView extends Container {
             waitTime: ENTRANCE_MS,
             context: { view: this, target: winAmount, bet: betAmount },
             tweenFn: (t, ctx) => {
+                if (ctx.view._winLoopId === undefined) {
+                    ctx.view._winLoopId = AudioManager.play('winLoop');
+                }
                 const currentValue = t * ctx.target;
                 const currentMult = currentValue / ctx.bet;
                 ctx.view._updateDisplay(currentValue, currentMult);
@@ -125,6 +132,7 @@ export class BigWinView extends Container {
             easing: easeOutCubic,
             onComplete: (ctx) => {
                 ctx.view._updateDisplay(ctx.target, ctx.target / ctx.bet);
+                ctx.view._stopWinLoop();
                 ctx.view._countUpTween = null;
                 ctx.view._holdTimeout = setTimeout(() => {
                     ctx.view._holdTimeout = undefined;
@@ -154,12 +162,22 @@ export class BigWinView extends Container {
 
     hide(): void {
         this._killAnimations();
+        this._stopWinLoop();
         this._isActive = false;
         this.visible = false;
         this.alpha = 0;
     }
 
+    private _stopWinLoop(): void {
+        if (this._winLoopId !== undefined) {
+            const loopKeys = ['winLoop', 'winLoopSuper', 'winLoopMega'] as const;
+            AudioManager.fade(loopKeys[this._currentTier], 0.6, 0, EXIT_MS, this._winLoopId);
+            this._winLoopId = undefined;
+        }
+    }
+
     private _startExit(): void {
+        this._stopWinLoop();
         this._exitTween = TweenManager.fadeTo(this, 0, EXIT_MS);
         this._exitTween.finished.then(() => {
             this._exitTween = null;
@@ -186,7 +204,8 @@ export class BigWinView extends Container {
         this._amountText.text = `${currentValue.toFixed(2)}\u20AC`;
 
         // Upgrade tier label if threshold crossed
-        const newLabel = this._getTierLabel(currentMultiplier);
+        const newTier = this._getTier(currentMultiplier);
+        const newLabel = TIER_LABELS[newTier];
         if (this._tierLabel.text !== newLabel) {
             this._tierLabel.text = newLabel;
             this._tierLabel.scale.set(1);
@@ -195,6 +214,14 @@ export class BigWinView extends Container {
                 context: this._tierLabel,
                 tweenFn: (t, lbl) => { lbl.scale.set(1.2 - 0.2 * t); },
             });
+
+            // Switch to tier-specific loop
+            if (newTier > this._currentTier && this._winLoopId !== undefined) {
+                const loopKeys = ['winLoop', 'winLoopSuper', 'winLoopMega'] as const;
+                AudioManager.stop(loopKeys[this._currentTier], this._winLoopId);
+                this._winLoopId = AudioManager.play(loopKeys[newTier]);
+            }
+            this._currentTier = newTier;
         }
 
         this._updateColors(currentMultiplier);
@@ -247,9 +274,9 @@ export class BigWinView extends Container {
         ), 1);
     }
 
-    private _getTierLabel(multiplier: number): string {
-        if (multiplier >= MEGA_WIN_MULTIPLIER) return TIER_LABELS[2];
-        if (multiplier >= SUPER_WIN_MULTIPLIER) return TIER_LABELS[1];
-        return TIER_LABELS[0];
+    private _getTier(multiplier: number): number {
+        if (multiplier >= MEGA_WIN_MULTIPLIER) return 2;
+        if (multiplier >= SUPER_WIN_MULTIPLIER) return 1;
+        return 0;
     }
 }
