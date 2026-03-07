@@ -28,6 +28,8 @@ export class PressToContinueView extends View {
     }
 
     show(): void {
+        // Re-assign text to force glyph re-measurement with the now-loaded font
+        this._text.text = this._text.text;
         this.alpha = 1;
     }
 
