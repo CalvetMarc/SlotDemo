@@ -42,6 +42,7 @@ class AudioManagerClass {
     this._isMuted = stored === 'true';
     Howler.mute(this._isMuted);
     this._setupUnlockListener();
+    this._setupVisibilityListener();
   }
 
   dispose(): void {
@@ -350,6 +351,16 @@ class AudioManagerClass {
     }
 
     return new Howl(opts);
+  }
+
+  private _setupVisibilityListener(): void {
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        Howler.mute(true);
+      } else {
+        Howler.mute(this._isMuted);
+      }
+    });
   }
 
   private _setupUnlockListener(): void {
