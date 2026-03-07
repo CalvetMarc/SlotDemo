@@ -10,11 +10,6 @@ import { AudioManager } from './Core/Audio/audio-manager';
 
 async function main() {
 
-  // Start backend session — must complete before BASE screen so balance is available
-  await SessionManager.init().catch(() => {
-    console.warn('Backend not available — running in offline mode');
-  });
-
   const app = new Application();
   await app.init({
     resizeTo: window,
@@ -26,21 +21,9 @@ async function main() {
 
   document.body.appendChild(app.canvas);
 
-  AudioManager.init();
-
   await Assets.init({
     manifest: 'assets_manifest.json'
   });
-
-  // Ensure custom fonts are fully loaded before any Text object measures glyphs
-  await Promise.all([
-    document.fonts.load('bold 1em "Birch Std"'),
-    document.fonts.load('bold 1em "Forte"'),
-    document.fonts.load('600 1em "Poppins"'),
-    document.fonts.load('700 1em "Poppins"'),
-    document.fonts.load('400 1em "Inter"'),
-    document.fonts.load('500 1em "Inter"'),
-  ]);
 
   // Initialize canvas selection manager
   const layoutManager = new LayoutManager([
@@ -69,6 +52,26 @@ async function main() {
 
   ScreenManager.I.init(app, layoutManager.root);
   await ScreenManager.I.start();
+
+  // --- Splash is now visible --- deferred work runs in parallel ---
+
+  const deferredWork = Promise.all([
+    SessionManager.init().catch(() => {
+      console.warn('Backend not available — running in offline mode');
+    }),
+    Promise.all([
+      document.fonts.load('bold 1em "Birch Std"'),
+      document.fonts.load('bold 1em "Forte"'),
+      document.fonts.load('600 1em "Poppins"'),
+      document.fonts.load('700 1em "Poppins"'),
+      document.fonts.load('400 1em "Inter"'),
+      document.fonts.load('500 1em "Inter"'),
+    ]),
+  ]).then(() => {});
+
+  ScreenManager.I.setDeferredWork(deferredWork);
+
+  AudioManager.init();
 
   // Fire-and-forget preload of core SFX (non-blocking)
   AudioManager.preload(['uiSprites', 'reelSprites', 'winChime', 'baseMusic', 'bonusMusic', 'lowWin', 'h1Sfx', 'h2Sfx', 'wolfSfx', 'heartbeatSfx', 'wildPopSfx', 'chest', 'skull', 'bats', 'totalWin', 'normalWin', 'wildWin', 'winLoop', 'winLoopSuper', 'winLoopMega', 'bonusRoundAnnounce']);

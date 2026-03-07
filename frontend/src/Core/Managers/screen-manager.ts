@@ -29,6 +29,9 @@ export class ScreenManager extends SingletonBase {
   private _root!: Container;
   private _transitionMask!: TransitionMask;
 
+  private _deferredWork: Promise<void>;
+  private _resolveDeferredWork!: () => void;
+
   private _sceneMap: Record<ScreenTypes, GameScreen | null> = {
     "SPLASH": null,
     "BASE": null,
@@ -43,6 +46,9 @@ export class ScreenManager extends SingletonBase {
 
   protected constructor() {
     super();
+    this._deferredWork = new Promise(resolve => {
+      this._resolveDeferredWork = resolve;
+    });
   }
 
   public static get I(): ScreenManager {
@@ -62,6 +68,10 @@ export class ScreenManager extends SingletonBase {
     gameSignals.requestBaseTransition.connect(() => this.transitionMap.BONUS());
   }
 
+  public setDeferredWork(promise: Promise<void>): void {
+    promise.then(this._resolveDeferredWork);
+  }
+
   public get transitionMask(): TransitionMask {
     return this._transitionMask;
   }
@@ -78,7 +88,7 @@ export class ScreenManager extends SingletonBase {
     const preloadPromise = this.preloadScene("BASE");
     const minTimePromise = this.delay(2000);
 
-    Promise.all([preloadPromise, minTimePromise]).then(() => {
+    Promise.all([preloadPromise, minTimePromise, this._deferredWork]).then(() => {
       // Hide the loading spinner and show "press to continue"
       const splash = this._currentScreen as SplashScreen;
       splash.showPressToContinue();
@@ -214,6 +224,9 @@ export class ScreenManager extends SingletonBase {
 
     // Reset game state that persists across screens
     GameModel.setSpinning(false);
+
+    // Reset deferred work (session + fonts already loaded on re-init)
+    this._deferredWork = Promise.resolve();
 
     // Create a fresh session and restart from splash
     await SessionManager.init();
