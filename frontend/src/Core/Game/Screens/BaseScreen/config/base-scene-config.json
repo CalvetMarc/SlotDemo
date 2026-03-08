@@ -291,7 +291,7 @@
             "anchor": "top-right",
             "origin": { "x": 0.5, "y": 0 },
             "offset": { "x": 0, "y": "8h%" },
-            "scale": { "x": "21.7h%", "y": "21.7h%" },
+            "scale": { "x": "18.2h%", "y": "18.2h%" },
             "minMargin": { "x": 10 }
           }
         }
@@ -354,7 +354,7 @@
             "anchor": "bottom-right",
             "origin": { "x": 0.5, "y": 1 },
             "offset": { "x": 0, "y": "-8h%" },
-            "scale": { "x": "33h%", "y": "33h%" },
+            "scale": { "x": "34.7h%", "y": "34.7h%" },
             "minMargin": { "x": 10, "y": 10 }
           }
         }
@@ -414,7 +414,7 @@
             "relativeOffset": { "x": "20w%" },
             "anchor": "bottom-right",
             "origin": { "x": 0.5, "y": 1 },
-            "offset": { "x": 0, "y": "-43h%" },
+            "offset": { "x": 0, "y": "-45.8h%" },
             "scale": { "x": "25h%", "y": "25h%" },
             "minMargin": { "x": 10, "y": 10 }
           }

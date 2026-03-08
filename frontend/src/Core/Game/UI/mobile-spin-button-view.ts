@@ -20,20 +20,19 @@ export class MobileSpinButtonView extends ButtonView {
     }
 
     appear(): void {
-        const w = 285;
-        const h = 144;
+        const r = 72;
 
         this.background = new Graphics();
-        this.background.roundRect(-w / 2, -h / 2, w, h, 16);
+        this.background.circle(0, 0, r);
         this.background.fill({ color: 0x00d4aa });
-        this.background.stroke({ color: 0x00a88a, width: 4, join: 'round', cap: 'round' });
+        this.background.stroke({ color: 0x00a88a, width: 4 });
         this.addChild(this.background);
 
         const sheet = Assets.get('ui_icons');
         this.iconSprite = new Sprite(sheet.textures['play.png']);
         this.iconSprite.anchor.set(0.5);
         this.iconSprite.tint = 0x0a1520;
-        this.iconSprite.scale.set(0.85);
+        this.iconSprite.scale.set(0.65);
         this.addChild(this.iconSprite);
 
         this.setupInteractivity();

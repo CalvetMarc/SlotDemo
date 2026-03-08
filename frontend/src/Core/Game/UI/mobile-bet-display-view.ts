@@ -26,8 +26,8 @@ class PlusMinusButton extends ButtonView {
 
     appear(): void {
         const w = 125;
-        const h = 44;
-        const r = 22;
+        const h = 54;
+        const r = 27;
 
         this._bg = new Graphics();
         if (this._side === 'left') {
@@ -56,7 +56,7 @@ class PlusMinusButton extends ButtonView {
 
         const style = new TextStyle({
             fontFamily: 'Inter, Arial, sans-serif',
-            fontSize: 36,
+            fontSize: 42,
             fill: 0xc8cdd8,
             fontWeight: '500'
         });
@@ -111,7 +111,7 @@ export class MobileBetDisplayView extends View {
     appear(): void {
         // Background (285x190)
         this.background = new Graphics();
-        this.background.roundRect(0, 0, 285, 190, 12);
+        this.background.roundRect(0, 0, 285, 200, 12);
         this.background.fill({ color: 0x1a1f2e });
         this.background.stroke({ color: 0x2a3345, width: 3 });
         this.addChild(this.background);
@@ -159,7 +159,7 @@ export class MobileBetDisplayView extends View {
 
         // Row 3: progress bar
         this.progressBar = new Graphics();
-        this.progressBar.roundRect(18, 155, 249, 10, 5);
+        this.progressBar.roundRect(18, 165, 249, 10, 5);
         this.progressBar.fill({ color: 0x141824 });
         this.addChild(this.progressBar);
 
@@ -191,7 +191,7 @@ export class MobileBetDisplayView extends View {
         this.progressFill.clear();
         const progress = index / (BET_STEPS.length - 1);
         const width = Math.max(10, progress * 249);
-        this.progressFill.roundRect(18, 155, width, 10, 5);
+        this.progressFill.roundRect(18, 165, width, 10, 5);
         this.progressFill.fill({ color: 0x00d4aa });
     }
 

@@ -18,7 +18,7 @@ export class MobileBalanceDisplayView extends View {
     appear(): void {
         // Background rectangle (285x125)
         this.background = new Graphics();
-        this.background.roundRect(0, 0, 285, 125, 12);
+        this.background.roundRect(0, 0, 285, 105, 12);
         this.background.fill({ color: 0x1a1f2e });
         this.background.stroke({ color: 0x2a3345, width: 3 });
         this.addChild(this.background);
@@ -33,7 +33,7 @@ export class MobileBalanceDisplayView extends View {
         });
         this.labelText = new Text({ text: 'DEMO BALANCE', style: labelStyle });
         this.labelText.anchor.set(0.5, 0);
-        this.labelText.position.set(142, 16);
+        this.labelText.position.set(142, 10);
         this.addChild(this.labelText);
 
         // Value - centered
@@ -45,7 +45,7 @@ export class MobileBalanceDisplayView extends View {
         });
         this.valueText = new Text({ text: '€99,999.00', style: valueStyle });
         this.valueText.anchor.set(0.5, 0.5);
-        this.valueText.position.set(142, 78);
+        this.valueText.position.set(142, 64);
         this.addChild(this.valueText);
 
         this._unsubscribeBalance = gameSignals.balanceUpdated.connect(({ value }) => {
