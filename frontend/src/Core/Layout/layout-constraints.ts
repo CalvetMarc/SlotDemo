@@ -1,4 +1,5 @@
 import { DesignCanvas } from "./design-canvas";
+import { isMobileDevice } from "../Utils/device";
 
 export type LayoutAnchor =
   | "center"
@@ -28,7 +29,7 @@ export interface LayoutConstraint {
   relativeAxis?: 'x' | 'y' | 'xy';  // Which axis to position relative to target (default: 'xy' = both)
 }
 
-export type LayoutAspectKey = "16:9" | "9:16" | "4:3";
+export type LayoutAspectKey = "16:9" | "9:16" | "4:3" | "16:9-mobile";
 
 export interface LayoutConfig {
   default: LayoutConstraint;
@@ -65,7 +66,9 @@ export class LayoutResolver {
   static getAspectKey(canvas: DesignCanvas): LayoutAspectKey {
     const aspect = canvas.aspect;
 
-    if (Math.abs(aspect - 16/9) < 0.01) return "16:9";
+    if (Math.abs(aspect - 16/9) < 0.01) {
+      return isMobileDevice() ? "16:9-mobile" : "16:9";
+    }
     if (Math.abs(aspect - 9/16) < 0.01) return "9:16";
     if (Math.abs(aspect - 4/3) < 0.01) return "4:3";
 
@@ -76,7 +79,9 @@ export class LayoutResolver {
       "4:3": Math.abs(aspect - 4/3)
     };
 
-    return Object.entries(distances).sort(([,a], [,b]) => a - b)[0][0] as LayoutAspectKey;
+    const closest = Object.entries(distances).sort(([,a], [,b]) => a - b)[0][0] as LayoutAspectKey;
+    if (closest === "16:9" && isMobileDevice()) return "16:9-mobile";
+    return closest;
   }
 
   static resolveConstraint(layout: LayoutConfig, canvas: DesignCanvas): LayoutConstraint {

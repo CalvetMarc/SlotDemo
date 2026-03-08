@@ -63,6 +63,12 @@
             "origin": { "x": 0.5, "y": 0.5 },
             "scale": { "x": 0.55, "y": 0.55 },
             "offset": { "x": 0, "y": 0 }
+          },
+          "16:9-mobile": {
+            "anchor": "center",
+            "origin": { "x": 0.5, "y": 0.5 },
+            "scale": { "x": 0.8, "y": 0.8 },
+            "offset": { "x": 0, "y": "2h%" }
           }
         }
       }
@@ -118,6 +124,13 @@
             "origin": { "x": 0.5, "y": 0 },
             "offset": { "x": "-25w%", "y": "-7h%" },
             "scale": { "x": "25h%", "y": "25h%" }
+          },
+          "16:9-mobile": {
+            "anchor": "top-center",
+            "origin": { "x": 0.5, "y": 0 },
+            "scale": { "x": "50h%", "y": "50h%" },
+            "offset": { "x": "-88h%", "y": "-12h%" },
+            "minMargin": { "x": 1, "y": 0 }
           }
         }
       }
@@ -151,6 +164,35 @@
             "offset": { "x": 0, "y": 0 },
             "scale": { "x": "12h%", "y": "12h%" },
             "minMargin": { "x": 15, "y": 20 }
+          },
+          "16:9-mobile": {
+            "anchor": "center",
+            "scale": { "x": 0, "y": 0 }
+          }
+        }
+      }
+    },
+    {
+      "id": "ui_buy_bonus_mobile",
+      "type": "MobileBuyBonusButtonView",
+      "layer": "ui",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "scale": { "x": 0, "y": 0 }
+        },
+        "overrides": {
+          "16:9-mobile": {
+            "relativeTo": "slot_machine",
+            "relativeAnchor": "middle-left",
+            "relativeAxis": "x",
+            "relativeOffset": { "x": "-1.5w%" },
+            "anchor": "middle-left",
+            "origin": { "x": 1, "y": 0.5 },
+            "offset": { "x": 0, "y": "-5h%" },
+            "scale": { "x": "19h%", "y": "19h%" },
+            "minMargin": { "x": 10 }
           }
         }
       }
@@ -184,6 +226,10 @@
             "offset": { "x": 0, "y": 0 },
             "scale": { "x": "25h%", "y": "25h%" },
             "minMargin": {"x": 15}
+          },
+          "16:9-mobile": {
+            "anchor": "center",
+            "scale": { "x": 0, "y": 0 }
           }
         }
       }
@@ -218,6 +264,35 @@
             "scale": { "x": "14h%", "y": "14h%" },
             "offset": { "x": 0, "y": "-18.5h%" },
             "maxScale": 2.1
+          },
+          "16:9-mobile": {
+            "anchor": "center",
+            "scale": { "x": 0, "y": 0 }
+          }
+        }
+      }
+    },
+    {
+      "id": "ui_balance_mobile",
+      "type": "MobileBalanceDisplayView",
+      "layer": "ui",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "scale": { "x": 0, "y": 0 }
+        },
+        "overrides": {
+          "16:9-mobile": {
+            "relativeTo": "slot_machine",
+            "relativeAnchor": "middle-right",
+            "relativeAxis": "x",
+            "relativeOffset": { "x": "20w%" },
+            "anchor": "top-right",
+            "origin": { "x": 0.5, "y": 0 },
+            "offset": { "x": 0, "y": "8h%" },
+            "scale": { "x": "21.7h%", "y": "21.7h%" },
+            "minMargin": { "x": 10 }
           }
         }
       }
@@ -252,6 +327,35 @@
             "scale": { "x": "14h%", "y": "14h%" },
             "offset": { "x": 0, "y": "-18.5h%" },
             "maxScale": 2.1
+          },
+          "16:9-mobile": {
+            "anchor": "center",
+            "scale": { "x": 0, "y": 0 }
+          }
+        }
+      }
+    },
+    {
+      "id": "ui_bet_mobile",
+      "type": "MobileBetDisplayView",
+      "layer": "ui",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "scale": { "x": 0, "y": 0 }
+        },
+        "overrides": {
+          "16:9-mobile": {
+            "relativeTo": "slot_machine",
+            "relativeAnchor": "middle-right",
+            "relativeAxis": "x",
+            "relativeOffset": { "x": "20w%" },
+            "anchor": "bottom-right",
+            "origin": { "x": 0.5, "y": 1 },
+            "offset": { "x": 0, "y": "-8h%" },
+            "scale": { "x": "33h%", "y": "33h%" },
+            "minMargin": { "x": 10, "y": 10 }
           }
         }
       }
@@ -284,6 +388,35 @@
             "offset": { "x": 0, "y": 0 },
             "scale": { "x": "13.78h%", "y": "13.78h%" },
             "minMargin": { "y": 12 }
+          },
+          "16:9-mobile": {
+            "anchor": "center",
+            "scale": { "x": 0, "y": 0 }
+          }
+        }
+      }
+    },
+    {
+      "id": "ui_spin_controls_mobile",
+      "type": "MobileSpinControlsView",
+      "layer": "ui",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "scale": { "x": 0, "y": 0 }
+        },
+        "overrides": {
+          "16:9-mobile": {
+            "relativeTo": "slot_machine",
+            "relativeAnchor": "middle-right",
+            "relativeAxis": "x",
+            "relativeOffset": { "x": "20w%" },
+            "anchor": "bottom-right",
+            "origin": { "x": 0.5, "y": 1 },
+            "offset": { "x": 0, "y": "-43h%" },
+            "scale": { "x": "25h%", "y": "25h%" },
+            "minMargin": { "x": 10, "y": 10 }
           }
         }
       }
@@ -317,6 +450,71 @@
             "offset": { "x": 0, "y": 0 },
             "scale": { "x": "25h%", "y": "25h%" },
             "minMargin": { "x": 15 }
+          },
+          "16:9-mobile": {
+            "anchor": "center",
+            "scale": { "x": 0, "y": 0 }
+          }
+        }
+      }
+    },
+    {
+      "id": "ui_secondary_controls_mobile",
+      "type": "MobileSecondaryControlsView",
+      "layer": "ui",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "scale": { "x": 0, "y": 0 }
+        },
+        "overrides": {
+          "16:9-mobile": {
+            "anchor": "center",
+            "scale": { "x": 0, "y": 0 }
+          }
+        }
+      }
+    },
+    {
+      "id": "ui_auto_turbo_mobile",
+      "type": "MobileAutoTurboView",
+      "layer": "ui",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "scale": { "x": 0, "y": 0 }
+        },
+        "overrides": {
+          "16:9-mobile": {
+            "anchor": "center",
+            "scale": { "x": 0, "y": 0 }
+          }
+        }
+      }
+    },
+    {
+      "id": "ui_controls_panel_mobile",
+      "type": "MobileControlsPanelView",
+      "layer": "ui",
+      "layout": {
+        "default": {
+          "anchor": "center",
+          "origin": { "x": 0.5, "y": 0.5 },
+          "scale": { "x": 0, "y": 0 }
+        },
+        "overrides": {
+          "16:9-mobile": {
+            "relativeTo": "slot_machine",
+            "relativeAnchor": "middle-left",
+            "relativeAxis": "x",
+            "relativeOffset": { "x": "-1.5w%" },
+            "anchor": "bottom-left",
+            "origin": { "x": 1, "y": 1 },
+            "offset": { "x": 0, "y": "-8.5h%" },
+            "scale": { "x": "28.5h%", "y": "28.5h%" },
+            "minMargin": { "x": 10 }
           }
         }
       }

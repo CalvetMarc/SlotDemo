@@ -8,6 +8,13 @@ import { BatsView } from "../views/bats-view";
 
 // UI Components
 import { SpinControlsView } from "../../../UI/spin-controls-view";
+import { MobileSpinControlsView } from "../../../UI/mobile-spin-controls-view";
+import { MobileSecondaryControlsView } from "../../../UI/mobile-secondary-controls-view";
+import { MobileBalanceDisplayView } from "../../../UI/mobile-balance-display-view";
+import { MobileBuyBonusButtonView } from "../../../UI/mobile-buy-bonus-button-view";
+import { MobileBetDisplayView } from "../../../UI/mobile-bet-display-view";
+import { MobileAutoTurboView } from "../../../UI/mobile-auto-turbo-view";
+import { MobileControlsPanelView } from "../../../UI/mobile-controls-panel-view";
 import { BetDisplayView } from "../../../UI/bet-display-view";
 import { BalanceDisplayView } from "../../../UI/balance-display-view";
 import { BuyBonusButtonView } from "../../../UI/buy-bonus-button-view";
@@ -23,6 +30,13 @@ export const BASE_VIEW_REGISTRY: ViewRegistry = {
     BatsView,
     // UI Components
     SpinControlsView,
+    MobileSpinControlsView,
+    MobileSecondaryControlsView,
+    MobileBalanceDisplayView,
+    MobileBuyBonusButtonView,
+    MobileBetDisplayView,
+    MobileAutoTurboView,
+    MobileControlsPanelView,
     BetDisplayView,
     BalanceDisplayView,
     BuyBonusButtonView,
