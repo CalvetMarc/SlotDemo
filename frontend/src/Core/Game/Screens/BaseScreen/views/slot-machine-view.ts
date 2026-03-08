@@ -43,6 +43,8 @@ export class SlotMachineView extends View {
     private _waitingForCelebration = false;
     private _pendingBonusCelebration = -1;
     private _bonusEntryResult: SpinResultWithWins | null = null;
+    private _bonusCelebrationTimeout?: ReturnType<typeof setTimeout>;
+    private _bonusAdvanceTimeout?: ReturnType<typeof setTimeout>;
 
     private _spinController!: SpinController;
     private _winController!: WinPresentationController;
@@ -328,7 +330,7 @@ export class SlotMachineView extends View {
         if (this._pendingBonusCelebration >= 0 && this.parent) {
             const bonusWin = this._pendingBonusCelebration;
             this._pendingBonusCelebration = -1;
-            setTimeout(() => this._showBonusCelebration(bonusWin), 3000);
+            this._bonusCelebrationTimeout = setTimeout(() => this._showBonusCelebration(bonusWin), 3000);
         }
     }
 
@@ -452,7 +454,7 @@ export class SlotMachineView extends View {
                 lineIndex: -1, payout: totalWin, totalWin, isBonusPay: true,
             });
             if (GameModel.autoSpinRemaining > 0) {
-                setTimeout(() => {
+                this._bonusAdvanceTimeout = setTimeout(() => {
                     this._winTextOverlay.hide();
                     this._fireNextAutoSpin();
                 }, 2000);
@@ -477,6 +479,14 @@ export class SlotMachineView extends View {
         if (this._winPresentationTimeout) {
             clearTimeout(this._winPresentationTimeout);
             this._winPresentationTimeout = undefined;
+        }
+        if (this._bonusCelebrationTimeout) {
+            clearTimeout(this._bonusCelebrationTimeout);
+            this._bonusCelebrationTimeout = undefined;
+        }
+        if (this._bonusAdvanceTimeout) {
+            clearTimeout(this._bonusAdvanceTimeout);
+            this._bonusAdvanceTimeout = undefined;
         }
         this._pendingBonusCelebration = -1;
         this._bonusEntryResult = null;

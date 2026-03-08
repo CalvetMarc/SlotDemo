@@ -331,9 +331,11 @@ export class SymbolView {
             this._dimFilter = undefined;
         }
 
-        // VFX sprite is removed from vfxLayer via removeChildren(),
-        // so we just drop the reference here
-        this._vfxSprite = undefined;
+        // Destroy VFX sprite to free GPU memory
+        if (this._vfxSprite) {
+            this._vfxSprite.destroy();
+            this._vfxSprite = undefined;
+        }
     }
 
     // ── Private: VFX sub-phase ───────────────────────────────────

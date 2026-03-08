@@ -21,6 +21,16 @@ async function main() {
 
   document.body.appendChild(app.canvas);
 
+  // Handle WebGL context loss (iOS Safari under memory pressure)
+  const canvas = app.canvas as HTMLCanvasElement;
+  canvas.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      console.warn('[WebGL] Context lost');
+  });
+  canvas.addEventListener('webglcontextrestored', () => {
+      console.warn('[WebGL] Context restored');
+  });
+
   await Assets.init({
     manifest: 'assets_manifest.json'
   });

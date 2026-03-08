@@ -42,6 +42,7 @@ export class ChestView extends View {
     private _prizeAnimating = false;
     private _prizeProgress = 0;
     private _prizeResolve?: () => void;
+    private _skullSoundTimeout?: ReturnType<typeof setTimeout>;
 
     bundleNeeded(): bundle {
         return 'bonus';
@@ -170,7 +171,7 @@ export class ChestView extends View {
         const texture = sheet.textures?.['skull.png'];
         if (!texture) return Promise.resolve();
 
-        setTimeout(() => AudioManager.playFadeOut('skull', 2000), 500);
+        this._skullSoundTimeout = setTimeout(() => AudioManager.playFadeOut('skull', 2000), 500);
         return this._animatePrizeSprite(texture);
     }
 
@@ -291,8 +292,16 @@ export class ChestView extends View {
         this._currentHoverMul = 1;
     }
 
-    protected dispose(): void {
+    stopTicker(): void {
         Ticker.shared.remove(this._onTick, this);
+    }
+
+    protected dispose(): void {
+        this.stopTicker();
+        if (this._skullSoundTimeout) {
+            clearTimeout(this._skullSoundTimeout);
+            this._skullSoundTimeout = undefined;
+        }
         this.off('pointertap', this._handleTap, this);
         this.off('pointerover', this._onPointerOver, this);
         this.off('pointerout', this._onPointerOut, this);

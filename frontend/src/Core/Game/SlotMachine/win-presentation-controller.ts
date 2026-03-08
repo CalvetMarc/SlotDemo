@@ -205,6 +205,7 @@ export class WinPresentationController {
 
     dispose(): void {
         this.clear();
+        this._vfxLayer.destroy({ children: true });
     }
 
     private _presentAllWins(): void {
@@ -338,6 +339,9 @@ export class WinPresentationController {
     private _clearLineVisuals(): void {
         for (const reel of this._reels) {
             reel.clearCelebration();
+        }
+        for (const child of this._vfxLayer.children) {
+            child.destroy();
         }
         this._vfxLayer.removeChildren();
     }

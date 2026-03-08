@@ -19,6 +19,7 @@ export class BonusScreen extends GameScreen {
     private _pickIndex = 0;
     private _totalBonusWin = 0;
     private _pendingBalance = 0;
+    private _endBonusTimeout?: ReturnType<typeof setTimeout>;
 
     constructor() {
         super();
@@ -67,8 +68,15 @@ export class BonusScreen extends GameScreen {
     }
 
     async onExit(): Promise<void> {
-        // Fade out bonus, resume base music from where it was
         AudioManager.switchMusic('baseMusic', 1000);
+
+        if (this._endBonusTimeout) {
+            clearTimeout(this._endBonusTimeout);
+            this._endBonusTimeout = undefined;
+        }
+        for (const chest of this._chests) {
+            chest.stopTicker();
+        }
 
         this._chests = [];
         this._sequence = [];
@@ -141,7 +149,7 @@ export class BonusScreen extends GameScreen {
         GameModel.setBalance(this._pendingBalance);
 
         // Wait then transition back to base
-        setTimeout(() => {
+        this._endBonusTimeout = setTimeout(() => {
             gameSignals.requestBaseTransition.emit();
         }, 2000);
     }
