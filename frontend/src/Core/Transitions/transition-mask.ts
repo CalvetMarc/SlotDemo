@@ -1,4 +1,4 @@
-import { Assets, Container, Graphics, Sprite, Spritesheet, Texture, Ticker } from 'pixi.js';
+import { Assets, Container, Graphics, Sprite, Spritesheet, Texture, Ticker, VideoSource } from 'pixi.js';
 import { VideoAlphaFilter } from '../Filters/video-alpha-filter';
 import { AudioManager } from '../Audio/audio-manager';
 
@@ -206,16 +206,16 @@ export class TransitionMask extends Container {
         target: Container,
         hideOnComplete = false,
     ): Promise<void> {
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth || 1;
-        canvas.height = video.videoHeight || 1;
-        const ctx = canvas.getContext('2d')!;
+        this._videoAspect = (video.videoWidth || 1280) / (video.videoHeight || 720);
 
-        this._videoAspect = canvas.width / canvas.height;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        const texture = Texture.from(canvas, true);
-        const source = texture.source;
+        // Use PixiJS native VideoSource — uploads video directly to GPU
+        // without an intermediate canvas copy (avoids ~3.7MB RGBA allocation per frame)
+        const videoSource = new VideoSource({
+            resource: video,
+            autoPlay: false,
+            updateFPS: 0,
+        });
+        const texture = new Texture({ source: videoSource });
 
         const maskSprite = new Sprite(texture);
         this._applyCover(maskSprite, w, h);
@@ -224,12 +224,6 @@ export class TransitionMask extends Container {
         this.addChild(maskSprite);
         target.mask = maskSprite;
 
-        const drawFrame = () => {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            source.update();
-        };
-        Ticker.shared.add(drawFrame);
-
         video.playbackRate = speed;
         await new Promise<void>((resolve) => {
             let resolved = false;
@@ -237,8 +231,6 @@ export class TransitionMask extends Container {
                 if (resolved) return;
                 resolved = true;
                 clearTimeout(safetyTimer);
-                drawFrame();
-                Ticker.shared.remove(drawFrame);
                 resolve();
             };
 
@@ -261,7 +253,6 @@ export class TransitionMask extends Container {
         if (hideOnComplete) target.visible = false;
         target.mask = null;
         this.removeChild(maskSprite);
-        Ticker.shared.remove(drawFrame);
         this._filter.maskMode = false;
         maskSprite.destroy({ texture: true, textureSource: true });
     }
