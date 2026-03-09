@@ -64,8 +64,10 @@ export class TransitionMask extends Container {
 
         // Phase 1 – cover
         // holdLayer stays hidden until the mask is applied inside the play methods
+        console.log(`[TransitionMask] mobile=${mobile}, w=${width}, h=${height}, minDim=${Math.min(width, height)}, touch=${navigator.maxTouchPoints}`);
         if (mobile) {
             const coverSheet = await this._loadSheet(COVER_SHEET_PATH);
+            console.log(`[TransitionMask] coverSheet=${!!coverSheet}, textures=${coverSheet ? Object.keys(coverSheet.textures).length : 0}`);
             if (coverSheet) {
                 setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
                 await this._playSpriteMasked(coverSheet, width, height, COVER_SPEED, holdLayer);
