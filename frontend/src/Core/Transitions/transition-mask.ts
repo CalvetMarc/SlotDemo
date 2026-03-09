@@ -68,7 +68,7 @@ export class TransitionMask extends Container {
             const coverSheet = await this._loadSheet(COVER_SHEET_PATH);
             if (coverSheet) {
                 setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
-                await this._playSpriteOverlay(coverSheet, width, height, COVER_SPEED, holdLayer);
+                await this._playSpriteMasked(coverSheet, width, height, COVER_SPEED, holdLayer);
                 await Assets.unload(COVER_SHEET_PATH);
             } else {
                 holdLayer.visible = true;
@@ -105,7 +105,7 @@ export class TransitionMask extends Container {
             const revealSheet = await this._loadSheet(REVEAL_SHEET_PATH);
             if (revealSheet) {
                 setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
-                await this._playSpriteMask(revealSheet, width, height, REVEAL_SPEED, holdLayer);
+                await this._playSpriteMasked(revealSheet, width, height, REVEAL_SPEED, holdLayer, true);
                 await Assets.unload(REVEAL_SHEET_PATH);
             } else {
                 holdLayer.visible = false;
@@ -230,76 +230,56 @@ export class TransitionMask extends Container {
     }
 
     /**
-     * Plays a spritesheet animation as a direct overlay on top of the scene.
-     * Used for cover: bats appear as black shapes covering the game.
-     * When complete, shows the target (holdLayer) which is seamlessly black.
+     * Plays spritesheet frames as a mask on `target` using a regular Sprite
+     * with manual frame updates via ticker (same approach as the desktop video mask).
+     *
+     * For cover: holdLayer starts hidden, mask progressively shows it
+     *   (bats opaque → holdLayer visible through bat shapes).
+     * For reveal (hideOnComplete): holdLayer starts visible, mask progressively hides it
+     *   (bats recede → holdLayer hidden → new scene visible).
      */
-    private async _playSpriteOverlay(
+    private async _playSpriteMasked(
         sheet: Spritesheet,
         w: number,
         h: number,
         speed: number,
         target: Container,
+        hideOnComplete = false,
     ): Promise<void> {
-        const textures = this._getSheetTextures(sheet);
-        if (textures.length === 0) return;
-
-        const anim = new AnimatedSprite(textures);
-        anim.animationSpeed = (SOURCE_FPS * speed) / 60;
-        anim.loop = false;
-        this._applyCover(anim, w, h);
-        this.addChild(anim);
-
-        await new Promise<void>((resolve) => {
-            anim.onComplete = () => resolve();
-            anim.play();
-        });
-
-        // Bats fully cover the screen → show holdLayer (also black, seamless)
-        target.visible = true;
-        this.removeChild(anim);
-        anim.destroy();
-    }
-
-    /**
-     * Plays a spritesheet animation as a mask on `target`.
-     * Used for reveal: bats recede, progressively hiding the holdLayer
-     * to reveal the new scene underneath.
-     */
-    private async _playSpriteMask(
-        sheet: Spritesheet,
-        w: number,
-        h: number,
-        speed: number,
-        target: Container,
-    ): Promise<void> {
-        const textures = this._getSheetTextures(sheet);
-        if (textures.length === 0) return;
-
-        const anim = new AnimatedSprite(textures);
-        anim.animationSpeed = (SOURCE_FPS * speed) / 60;
-        anim.loop = false;
-        this._applyCover(anim, w, h);
-        this.addChild(anim);
-        target.mask = anim;
-
-        await new Promise<void>((resolve) => {
-            anim.onComplete = () => resolve();
-            anim.play();
-        });
-
-        target.visible = false;
-        target.mask = null;
-        this.removeChild(anim);
-        anim.destroy();
-    }
-
-    private _getSheetTextures(sheet: Spritesheet): Texture[] {
         const frameKeys = Object.keys(sheet.textures).sort();
-        if (frameKeys.length > 0) {
-            this._videoAspect = sheet.textures[frameKeys[0]].width / sheet.textures[frameKeys[0]].height;
-        }
-        return frameKeys.map((k) => sheet.textures[k]);
+        if (frameKeys.length === 0) return;
+
+        this._videoAspect = sheet.textures[frameKeys[0]].width / sheet.textures[frameKeys[0]].height;
+        const textures = frameKeys.map((k) => sheet.textures[k]);
+
+        const maskSprite = new Sprite(textures[0]);
+        this._applyCover(maskSprite, w, h);
+        this.addChild(maskSprite);
+        target.mask = maskSprite;
+        target.visible = true;
+
+        // Manually advance frames via ticker (like the desktop canvas approach)
+        let frameIndex = 0;
+        const framesPerTick = (SOURCE_FPS * speed) / 60;
+
+        await new Promise<void>((resolve) => {
+            const advance = () => {
+                frameIndex += framesPerTick;
+                const idx = Math.min(Math.floor(frameIndex), textures.length - 1);
+                maskSprite.texture = textures[idx];
+
+                if (idx >= textures.length - 1) {
+                    Ticker.shared.remove(advance);
+                    resolve();
+                }
+            };
+            Ticker.shared.add(advance);
+        });
+
+        if (hideOnComplete) target.visible = false;
+        target.mask = null;
+        this.removeChild(maskSprite);
+        maskSprite.destroy();
     }
 
     // -- video mask (desktop) --------------------------------------------------
