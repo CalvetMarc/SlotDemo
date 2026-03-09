@@ -66,11 +66,9 @@ export class TransitionMask extends Container {
         // holdLayer stays hidden until the mask is applied inside the play methods
         if (mobile) {
             const coverSheet = await this._loadSheet(COVER_SHEET_PATH);
-            console.log(`[TransitionMask] cover sheet loaded: ${!!coverSheet}, textures: ${coverSheet ? Object.keys(coverSheet.textures).length : 0}`);
             if (coverSheet) {
                 setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
-                await this._playSpriteAnimation(coverSheet, width, height, COVER_SPEED, holdLayer);
-                // Unload to free VRAM and avoid texture name collisions with reveal sheet
+                await this._playSpriteOverlay(coverSheet, width, height, COVER_SPEED, holdLayer);
                 await Assets.unload(COVER_SHEET_PATH);
             } else {
                 holdLayer.visible = true;
@@ -107,7 +105,7 @@ export class TransitionMask extends Container {
             const revealSheet = await this._loadSheet(REVEAL_SHEET_PATH);
             if (revealSheet) {
                 setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
-                await this._playSpriteAnimation(revealSheet, width, height, REVEAL_SPEED, holdLayer, true);
+                await this._playSpriteMask(revealSheet, width, height, REVEAL_SPEED, holdLayer);
                 await Assets.unload(REVEAL_SHEET_PATH);
             } else {
                 holdLayer.visible = false;
@@ -232,26 +230,51 @@ export class TransitionMask extends Container {
     }
 
     /**
-     * Plays a spritesheet animation as a mask on `target`.
-     * The spritesheet frames have real alpha (bats opaque, bg transparent),
-     * so PixiJS native masking works directly — no shader needed.
+     * Plays a spritesheet animation as a direct overlay on top of the scene.
+     * Used for cover: bats appear as black shapes covering the game.
+     * When complete, shows the target (holdLayer) which is seamlessly black.
      */
-    private async _playSpriteAnimation(
+    private async _playSpriteOverlay(
         sheet: Spritesheet,
         w: number,
         h: number,
         speed: number,
         target: Container,
-        hideOnComplete = false,
     ): Promise<void> {
-        const frameKeys = Object.keys(sheet.textures).sort();
-        const textures = frameKeys.map((k) => sheet.textures[k]);
-
-        console.log(`[TransitionMask] sprite anim: ${frameKeys.length} frames, speed=${speed}, hide=${hideOnComplete}, first=${frameKeys[0]}, last=${frameKeys[frameKeys.length - 1]}`);
-
+        const textures = this._getSheetTextures(sheet);
         if (textures.length === 0) return;
 
-        this._videoAspect = textures[0].width / textures[0].height;
+        const anim = new AnimatedSprite(textures);
+        anim.animationSpeed = (SOURCE_FPS * speed) / 60;
+        anim.loop = false;
+        this._applyCover(anim, w, h);
+        this.addChild(anim);
+
+        await new Promise<void>((resolve) => {
+            anim.onComplete = () => resolve();
+            anim.play();
+        });
+
+        // Bats fully cover the screen → show holdLayer (also black, seamless)
+        target.visible = true;
+        this.removeChild(anim);
+        anim.destroy();
+    }
+
+    /**
+     * Plays a spritesheet animation as a mask on `target`.
+     * Used for reveal: bats recede, progressively hiding the holdLayer
+     * to reveal the new scene underneath.
+     */
+    private async _playSpriteMask(
+        sheet: Spritesheet,
+        w: number,
+        h: number,
+        speed: number,
+        target: Container,
+    ): Promise<void> {
+        const textures = this._getSheetTextures(sheet);
+        if (textures.length === 0) return;
 
         const anim = new AnimatedSprite(textures);
         anim.animationSpeed = (SOURCE_FPS * speed) / 60;
@@ -259,20 +282,24 @@ export class TransitionMask extends Container {
         this._applyCover(anim, w, h);
         this.addChild(anim);
         target.mask = anim;
-        target.visible = true;
 
         await new Promise<void>((resolve) => {
-            anim.onComplete = () => {
-                console.log(`[TransitionMask] sprite anim complete (hide=${hideOnComplete})`);
-                resolve();
-            };
+            anim.onComplete = () => resolve();
             anim.play();
         });
 
-        if (hideOnComplete) target.visible = false;
+        target.visible = false;
         target.mask = null;
         this.removeChild(anim);
         anim.destroy();
+    }
+
+    private _getSheetTextures(sheet: Spritesheet): Texture[] {
+        const frameKeys = Object.keys(sheet.textures).sort();
+        if (frameKeys.length > 0) {
+            this._videoAspect = sheet.textures[frameKeys[0]].width / sheet.textures[frameKeys[0]].height;
+        }
+        return frameKeys.map((k) => sheet.textures[k]);
     }
 
     // -- video mask (desktop) --------------------------------------------------
