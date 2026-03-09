@@ -69,6 +69,8 @@ export class TransitionMask extends Container {
             if (coverSheet) {
                 setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
                 await this._playSpriteAnimation(coverSheet, width, height, COVER_SPEED, holdLayer);
+                // Unload to free VRAM and avoid texture name collisions with reveal sheet
+                await Assets.unload(COVER_SHEET_PATH);
             } else {
                 holdLayer.visible = true;
             }
@@ -105,6 +107,7 @@ export class TransitionMask extends Container {
             if (revealSheet) {
                 setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
                 await this._playSpriteAnimation(revealSheet, width, height, REVEAL_SPEED, holdLayer, true);
+                await Assets.unload(REVEAL_SHEET_PATH);
             } else {
                 holdLayer.visible = false;
             }
