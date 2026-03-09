@@ -9,6 +9,8 @@ const LOADING_BAR_PATH = 'assets/bonus/loadingBar/loadingBar.json';
 const COVER_SPEED = 0.8;
 const REVEAL_SPEED = 0.75;
 const HOLD_DELAY_MS = 1000;
+const VIDEO_CANPLAY_TIMEOUT_MS = 5000;
+const VIDEO_ENDED_SAFETY_MARGIN_MS = 2000;
 
 /** How fast the fake progress creeps toward 90% while loading (fraction/ms). */
 const PROGRESS_SPEED = 0.0004;
@@ -42,15 +44,10 @@ export class TransitionMask extends Container {
             try { sheet = await Assets.load(LOADING_BAR_PATH) as Spritesheet; } catch { /* skip */ }
         }
 
-        const coverVideo = this._createVideoElement(COVER_PATH);
-        const revealVideo = this._createVideoElement(REVEAL_PATH);
-        await Promise.all([
-            this._waitCanPlay(coverVideo),
-            this._waitCanPlay(revealVideo),
-        ]);
-
         // Hold layer: black bg + loading bar — masked by bats video
+        // Starts hidden to prevent a flash before the cover mask is applied
         const holdLayer = new Container();
+        holdLayer.visible = false;
         const bg = new Graphics();
         bg.rect(0, 0, width, height);
         bg.fill(0x000000);
@@ -58,9 +55,17 @@ export class TransitionMask extends Container {
         this._buildLoadingBar(holdLayer, width, height, sheet);
         this.addChild(holdLayer);
 
-        // Phase 1 – bats gradually cover screen, revealing hold layer (loading bar)
-        setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
-        await this._playMaskedVideo(coverVideo, width, height, COVER_SPEED, holdLayer);
+        // Phase 1 – load cover video, play it, then clean it up
+        // Sequential loading avoids hitting iOS Safari's hardware decoder limit
+        const coverVideo = this._createVideoElement(COVER_PATH);
+        const coverReady = await this._waitCanPlay(coverVideo);
+        holdLayer.visible = true;
+
+        if (coverReady) {
+            setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
+            await this._playMaskedVideo(coverVideo, width, height, COVER_SPEED, holdLayer);
+        }
+        this._cleanupVideo(coverVideo);
 
         // Scene swap while loading bar progresses
         try {
@@ -77,9 +82,17 @@ export class TransitionMask extends Container {
         await this._completeLoadingBar();
         await this._delay(HOLD_DELAY_MS);
 
-        // Phase 2 – bats leave, hiding hold layer and revealing new scene
-        setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
-        await this._playMaskedVideo(revealVideo, width, height, REVEAL_SPEED, holdLayer, true);
+        // Phase 2 – load reveal video after hold, play it, then clean it up
+        const revealVideo = this._createVideoElement(REVEAL_PATH);
+        const revealReady = await this._waitCanPlay(revealVideo);
+
+        if (revealReady) {
+            setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
+            await this._playMaskedVideo(revealVideo, width, height, REVEAL_SPEED, holdLayer, true);
+        } else {
+            holdLayer.visible = false;
+        }
+        this._cleanupVideo(revealVideo);
 
         // Clean up
         this._stopLoadingBar();
@@ -219,16 +232,29 @@ export class TransitionMask extends Container {
 
         video.playbackRate = speed;
         await new Promise<void>((resolve) => {
-            video.addEventListener('ended', () => {
+            let resolved = false;
+            const done = () => {
+                if (resolved) return;
+                resolved = true;
+                clearTimeout(safetyTimer);
                 drawFrame();
                 Ticker.shared.remove(drawFrame);
                 resolve();
-            }, { once: true });
+            };
+
+            // Safety timeout: video duration / speed + margin
+            const duration = (video.duration || 3) * 1000;
+            const safetyMs = duration / speed + VIDEO_ENDED_SAFETY_MARGIN_MS;
+            const safetyTimer = setTimeout(() => {
+                console.warn(`[TransitionMask] video ended safety timeout (${safetyMs}ms)`);
+                done();
+            }, safetyMs);
+
+            video.addEventListener('ended', done, { once: true });
 
             video.play().catch((err) => {
                 console.warn('[TransitionMask] video.play() REJECTED:', err);
-                Ticker.shared.remove(drawFrame);
-                resolve();
+                done();
             });
         });
 
@@ -262,14 +288,40 @@ export class TransitionMask extends Container {
         sprite.y = (vh - sh) / 2;
     }
 
-    private _waitCanPlay(video: HTMLVideoElement): Promise<void> {
-        return new Promise<void>((resolve) => {
+    /** Waits for the video to be ready. Returns false if it fails or times out. */
+    private _waitCanPlay(video: HTMLVideoElement): Promise<boolean> {
+        return new Promise<boolean>((resolve) => {
             if (video.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
-                resolve();
+                resolve(true);
                 return;
             }
-            video.addEventListener('canplaythrough', () => resolve(), { once: true });
+
+            let settled = false;
+            const settle = (ok: boolean) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                resolve(ok);
+            };
+
+            video.addEventListener('canplaythrough', () => settle(true), { once: true });
+            video.addEventListener('error', () => {
+                console.warn('[TransitionMask] video error:', video.error?.message);
+                settle(false);
+            }, { once: true });
+
+            const timer = setTimeout(() => {
+                console.warn('[TransitionMask] video canplay timeout');
+                settle(false);
+            }, VIDEO_CANPLAY_TIMEOUT_MS);
         });
+    }
+
+    /** Forces iOS Safari to release the hardware video decoder. */
+    private _cleanupVideo(video: HTMLVideoElement): void {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
     }
 
     private _delay(ms: number): Promise<void> {
