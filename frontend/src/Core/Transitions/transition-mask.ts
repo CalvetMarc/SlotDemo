@@ -1,5 +1,4 @@
-import { Assets, Container, Graphics, Sprite, Spritesheet, Texture, Ticker, VideoSource } from 'pixi.js';
-import { VideoAlphaFilter } from '../Filters/video-alpha-filter';
+import { Assets, Container, Graphics, Sprite, Spritesheet, Ticker } from 'pixi.js';
 import { AudioManager } from '../Audio/audio-manager';
 
 const COVER_PATH = 'assets/bonus/transiotionMask/fadeOut.mp4';
@@ -16,7 +15,6 @@ const VIDEO_ENDED_SAFETY_MARGIN_MS = 2000;
 const PROGRESS_SPEED = 0.0004;
 
 export class TransitionMask extends Container {
-    private _filter: VideoAlphaFilter;
     private _videoAspect = 16 / 9;
 
     // Loading bar state
@@ -27,7 +25,6 @@ export class TransitionMask extends Container {
 
     constructor() {
         super();
-        this._filter = new VideoAlphaFilter();
         this.visible = false;
     }
 
@@ -44,8 +41,7 @@ export class TransitionMask extends Container {
             try { sheet = await Assets.load(LOADING_BAR_PATH) as Spritesheet; } catch { /* skip */ }
         }
 
-        // Hold layer: black bg + loading bar — masked by bats video
-        // Starts hidden to prevent a flash before the cover mask is applied
+        // Hold layer: black bg + loading bar
         const holdLayer = new Container();
         holdLayer.visible = false;
         const bg = new Graphics();
@@ -55,8 +51,16 @@ export class TransitionMask extends Container {
         this._buildLoadingBar(holdLayer, width, height, sheet);
         this.addChild(holdLayer);
 
-        // DEBUG: skip videos entirely to isolate iOS Safari crash
+        // Phase 1 – cover with HTML video overlay
+        const coverVideo = this._createVideoElement(COVER_PATH);
+        const coverReady = await this._waitCanPlay(coverVideo);
         holdLayer.visible = true;
+
+        if (coverReady) {
+            setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
+            await this._playHtmlVideoOverlay(coverVideo, COVER_SPEED);
+        }
+        this._cleanupVideo(coverVideo);
 
         // Scene swap while loading bar progresses
         try {
@@ -73,8 +77,18 @@ export class TransitionMask extends Container {
         await this._completeLoadingBar();
         await this._delay(HOLD_DELAY_MS);
 
-        // DEBUG: just hide holdLayer directly (no reveal video)
-        holdLayer.visible = false;
+        // Phase 2 – reveal with HTML video overlay
+        const revealVideo = this._createVideoElement(REVEAL_PATH);
+        const revealReady = await this._waitCanPlay(revealVideo);
+
+        if (revealReady) {
+            holdLayer.visible = false;
+            setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
+            await this._playHtmlVideoOverlay(revealVideo, REVEAL_SPEED);
+        } else {
+            holdLayer.visible = false;
+        }
+        this._cleanupVideo(revealVideo);
 
         // Clean up
         this._stopLoadingBar();
@@ -169,42 +183,29 @@ export class TransitionMask extends Container {
         this._barFill = null;
     }
 
-    // -- masked video playback ------------------------------------------------
+    // -- HTML video overlay ----------------------------------------------------
 
     /**
-     * Plays a video and uses it as a sprite mask on `target`.
-     * The filter in mask mode outputs r = (1 - videoRed), so:
-     *   Black pixels (bats) → r=1 → target visible
-     *   White pixels         → r=0 → target hidden
-     *
-     * @param hideOnComplete  Hide the target before removing the mask
-     *                        to prevent a flash (used for fadeOut).
+     * Plays a video as an HTML element overlaid on top of the PixiJS canvas.
+     * This avoids feeding the video into WebGL (which crashes iOS Safari).
+     * The video covers the entire viewport — bats animate over a white/black bg.
      */
-    private async _playMaskedVideo(
+    private async _playHtmlVideoOverlay(
         video: HTMLVideoElement,
-        w: number,
-        h: number,
         speed: number,
-        target: Container,
-        hideOnComplete = false,
     ): Promise<void> {
-        this._videoAspect = (video.videoWidth || 1280) / (video.videoHeight || 720);
-
-        // Use PixiJS native VideoSource — uploads video directly to GPU
-        // without an intermediate canvas copy (avoids ~3.7MB RGBA allocation per frame)
-        const videoSource = new VideoSource({
-            resource: video,
-            autoPlay: false,
-            updateFPS: 0,
+        // Style video to cover the entire viewport on top of the canvas
+        Object.assign(video.style, {
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            width: '100vw',
+            height: '100vh',
+            objectFit: 'cover',
+            zIndex: '9999',
+            pointerEvents: 'none',
         });
-        const texture = new Texture({ source: videoSource });
-
-        const maskSprite = new Sprite(texture);
-        this._applyCover(maskSprite, w, h);
-        this._filter.maskMode = true;
-        maskSprite.filters = [this._filter];
-        this.addChild(maskSprite);
-        target.mask = maskSprite;
+        document.body.appendChild(video);
 
         video.playbackRate = speed;
         await new Promise<void>((resolve) => {
@@ -216,7 +217,6 @@ export class TransitionMask extends Container {
                 resolve();
             };
 
-            // Safety timeout: video duration / speed + margin
             const duration = (video.duration || 3) * 1000;
             const safetyMs = duration / speed + VIDEO_ENDED_SAFETY_MARGIN_MS;
             const safetyTimer = setTimeout(() => {
@@ -232,34 +232,13 @@ export class TransitionMask extends Container {
             });
         });
 
-        if (hideOnComplete) target.visible = false;
-        target.mask = null;
-        this.removeChild(maskSprite);
-        this._filter.maskMode = false;
-        maskSprite.destroy({ texture: true, textureSource: true });
+        // Remove from DOM
+        if (video.parentNode) {
+            video.parentNode.removeChild(video);
+        }
     }
 
     // -- internals ---------------------------------------------------------
-
-    /** Scale sprite to cover the viewport while keeping the video aspect ratio. */
-    private _applyCover(sprite: Sprite, vw: number, vh: number): void {
-        const viewportAspect = vw / vh;
-        let sw: number;
-        let sh: number;
-
-        if (viewportAspect > this._videoAspect) {
-            sw = vw;
-            sh = vw / this._videoAspect;
-        } else {
-            sh = vh;
-            sw = vh * this._videoAspect;
-        }
-
-        sprite.width = sw;
-        sprite.height = sh;
-        sprite.x = (vw - sw) / 2;
-        sprite.y = (vh - sh) / 2;
-    }
 
     /** Waits for the video to be ready. Returns false if it fails or times out. */
     private _waitCanPlay(video: HTMLVideoElement): Promise<boolean> {
@@ -292,6 +271,9 @@ export class TransitionMask extends Container {
 
     /** Forces iOS Safari to release the hardware video decoder. */
     private _cleanupVideo(video: HTMLVideoElement): void {
+        if (video.parentNode) {
+            video.parentNode.removeChild(video);
+        }
         video.pause();
         video.removeAttribute('src');
         video.load();
@@ -313,7 +295,6 @@ export class TransitionMask extends Container {
 
     destroy(): void {
         this._stopLoadingBar();
-        this._filter.destroy();
         super.destroy({ children: true });
     }
 }
