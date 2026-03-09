@@ -69,7 +69,6 @@ export class TransitionMask extends Container {
             if (coverSheet) {
                 setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
                 await this._playSpriteMasked(coverSheet, width, height, COVER_SPEED, holdLayer);
-                await Assets.unload(COVER_SHEET_PATH);
             } else {
                 holdLayer.visible = true;
             }
@@ -106,7 +105,6 @@ export class TransitionMask extends Container {
             if (revealSheet) {
                 setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
                 await this._playSpriteMasked(revealSheet, width, height, REVEAL_SPEED, holdLayer, true);
-                await Assets.unload(REVEAL_SHEET_PATH);
             } else {
                 holdLayer.visible = false;
             }
