@@ -277,7 +277,8 @@ export class TransitionMask extends Container {
         if (hideOnComplete) target.visible = false;
         target.mask = null;
         this.removeChild(maskSprite);
-        maskSprite.destroy();
+        // Don't destroy textures — they belong to the cached spritesheet
+        maskSprite.destroy({ texture: false, textureSource: false });
     }
 
     // -- video mask (desktop) --------------------------------------------------
