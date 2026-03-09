@@ -66,6 +66,7 @@ export class TransitionMask extends Container {
         // holdLayer stays hidden until the mask is applied inside the play methods
         if (mobile) {
             const coverSheet = await this._loadSheet(COVER_SHEET_PATH);
+            console.log(`[TransitionMask] cover sheet loaded: ${!!coverSheet}, textures: ${coverSheet ? Object.keys(coverSheet.textures).length : 0}`);
             if (coverSheet) {
                 setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
                 await this._playSpriteAnimation(coverSheet, width, height, COVER_SPEED, holdLayer);
@@ -245,6 +246,9 @@ export class TransitionMask extends Container {
     ): Promise<void> {
         const frameKeys = Object.keys(sheet.textures).sort();
         const textures = frameKeys.map((k) => sheet.textures[k]);
+
+        console.log(`[TransitionMask] sprite anim: ${frameKeys.length} frames, speed=${speed}, hide=${hideOnComplete}, first=${frameKeys[0]}, last=${frameKeys[frameKeys.length - 1]}`);
+
         if (textures.length === 0) return;
 
         this._videoAspect = textures[0].width / textures[0].height;
@@ -258,7 +262,10 @@ export class TransitionMask extends Container {
         target.visible = true;
 
         await new Promise<void>((resolve) => {
-            anim.onComplete = () => resolve();
+            anim.onComplete = () => {
+                console.log(`[TransitionMask] sprite anim complete (hide=${hideOnComplete})`);
+                resolve();
+            };
             anim.play();
         });
 
