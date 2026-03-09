@@ -55,17 +55,8 @@ export class TransitionMask extends Container {
         this._buildLoadingBar(holdLayer, width, height, sheet);
         this.addChild(holdLayer);
 
-        // Phase 1 – load cover video, play it, then clean it up
-        // Sequential loading avoids hitting iOS Safari's hardware decoder limit
-        const coverVideo = this._createVideoElement(COVER_PATH);
-        const coverReady = await this._waitCanPlay(coverVideo);
+        // DEBUG: skip videos entirely to isolate iOS Safari crash
         holdLayer.visible = true;
-
-        if (coverReady) {
-            setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
-            await this._playMaskedVideo(coverVideo, width, height, COVER_SPEED, holdLayer);
-        }
-        this._cleanupVideo(coverVideo);
 
         // Scene swap while loading bar progresses
         try {
@@ -82,17 +73,8 @@ export class TransitionMask extends Container {
         await this._completeLoadingBar();
         await this._delay(HOLD_DELAY_MS);
 
-        // Phase 2 – load reveal video after hold, play it, then clean it up
-        const revealVideo = this._createVideoElement(REVEAL_PATH);
-        const revealReady = await this._waitCanPlay(revealVideo);
-
-        if (revealReady) {
-            setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
-            await this._playMaskedVideo(revealVideo, width, height, REVEAL_SPEED, holdLayer, true);
-        } else {
-            holdLayer.visible = false;
-        }
-        this._cleanupVideo(revealVideo);
+        // DEBUG: just hide holdLayer directly (no reveal video)
+        holdLayer.visible = false;
 
         // Clean up
         this._stopLoadingBar();
