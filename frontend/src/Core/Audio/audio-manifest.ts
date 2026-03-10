@@ -154,6 +154,12 @@ export const AUDIO_MANIFEST: Record<string, AudioEntry> = {
     volume: 0.4,
   },
 
+  spotlightSfx: {
+    src: ['assets/audio/sfx/spotlight-sfx.wav'],
+    channel: 'sfx',
+    volume: 0.5,
+  },
+
   reelFast: {
     src: ['assets/audio/sfx/reel-fast.wav'],
     channel: 'sfx',

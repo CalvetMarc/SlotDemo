@@ -190,6 +190,7 @@ export class SpinController {
                     if (i < REEL_COUNT - 1 && hasTensionAfter[i]) {
                         const applySpotlight = () => {
                             if (this._reels.every(r => r.isIdle)) return;
+                            AudioManager.play('spotlightSfx');
                             for (let j = 0; j < REEL_COUNT; j++) {
                                 this._reels[j].setDim(j !== i + 1);
                             }
