@@ -190,11 +190,11 @@ export class BuyBonusPanelView extends Container {
     // ── Side Panel (landscape) ───────────────────────────────────
 
     private _buildSidePanel(viewportW: number, viewportH: number): void {
-        const s = viewportH / 600;
-
-        const gutterW = Math.round(60 * s);
-        const contentW = Math.round(420 * s);
-        const panelW = gutterW + contentW;
+        const isMobile = navigator.maxTouchPoints > 0;
+        const panelW = isMobile ? Math.round(viewportW * 0.5) : Math.round(480 * (viewportH / 600));
+        const gutterW = Math.round(panelW * 0.125);
+        const contentW = panelW - gutterW;
+        const s = contentW / 420;
 
         // Arrow gutter — darker strip on the left (draggable)
         const gutter = new Graphics();
