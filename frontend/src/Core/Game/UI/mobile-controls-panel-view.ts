@@ -52,9 +52,10 @@ export class MobileControlsPanelView extends View {
         this.turboButton.position.set(cx + spacing, topY);
         this.addChild(this.turboButton);
 
-        // Picker positioned above auto button
+        // Picker positioned above auto button — scaled up for mobile readability
         this._pickerContainer = this.autoButton.getPickerContainer();
-        this._pickerContainer.position.set(cx - spacing, topY - 35);
+        this._pickerContainer.scale.set(1.7);
+        this._pickerContainer.position.set(cx - spacing, topY - 40);
         this.addChild(this._pickerContainer);
 
         // Separator line

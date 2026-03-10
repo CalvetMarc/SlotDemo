@@ -41,9 +41,10 @@ export class MobileAutoTurboView extends View {
         this.turboButton.position.set(27, 0);
         this.addChild(this.turboButton);
 
-        // Picker positioned above auto button
+        // Picker positioned above auto button — scaled up for mobile readability
         this._pickerContainer = this.autoButton.getPickerContainer();
-        this._pickerContainer.position.set(-27, -35);
+        this._pickerContainer.scale.set(1 / 0.6);
+        this._pickerContainer.position.set(-27, -40);
         this.addChild(this._pickerContainer);
 
         this._unsubSpinning = GameModel.spinningChanged.connect(({ isSpinning }) => {
