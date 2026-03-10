@@ -147,6 +147,15 @@ async function main() {
   doResize(initialVp.width, initialVp.height);
   ScreenManager.I.onLayoutChanged(layoutManager.getCanvas());
 
+  // Pause the entire app when the tab loses focus
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      app.ticker.stop();
+    } else {
+      app.ticker.start();
+    }
+  });
+
   if (IS_DEBUG) {
     window.addEventListener('keydown', (e) => {
       if (e.key === 'd' || e.key === 'D') {
