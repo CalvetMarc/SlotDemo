@@ -294,7 +294,9 @@ export class TransitionMask extends Container {
     /** Waits for the video to be ready. Returns false if it fails or times out. */
     private _waitCanPlay(video: HTMLVideoElement): Promise<boolean> {
         return new Promise<boolean>((resolve) => {
+            console.log(`[TransitionMask] waitCanPlay: readyState=${video.readyState}, src=${video.src}`);
             if (video.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
+                console.log('[TransitionMask] video already ready');
                 resolve(true);
                 return;
             }
@@ -325,6 +327,7 @@ export class TransitionMask extends Container {
         video.pause();
         video.removeAttribute('src');
         video.load();
+        video.parentElement?.removeChild(video);
     }
 
     private _delay(ms: number): Promise<void> {
@@ -333,11 +336,19 @@ export class TransitionMask extends Container {
 
     private _createVideoElement(src: string): HTMLVideoElement {
         const video = document.createElement('video');
-        video.src = src;
         video.crossOrigin = 'anonymous';
         video.playsInline = true;
         video.muted = true;
         video.preload = 'auto';
+        // iOS Safari needs the element in-DOM and an explicit load() call
+        video.style.position = 'fixed';
+        video.style.opacity = '0';
+        video.style.pointerEvents = 'none';
+        video.style.width = '1px';
+        video.style.height = '1px';
+        document.body.appendChild(video);
+        video.src = src;
+        video.load();
         return video;
     }
 
