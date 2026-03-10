@@ -18,6 +18,8 @@ class AudioManagerClass {
   private _currentMusic: SoundId | null = null;
   private _currentMusicInstanceId: number | undefined = undefined;
   private _activeFades: Map<Howl, Map<number | undefined, ReturnType<typeof setInterval>>> = new Map();
+  private _visibilityHandler?: () => void;
+  private _unlockHandlers?: { handler: () => void; events: string[] };
 
   /* ── Public getters ─────────────────────────────────── */
 
@@ -59,6 +61,17 @@ class AudioManagerClass {
     this._currentMusic = null;
     this._currentMusicInstanceId = undefined;
     this._pendingActions.length = 0;
+
+    if (this._visibilityHandler) {
+      document.removeEventListener('visibilitychange', this._visibilityHandler);
+      this._visibilityHandler = undefined;
+    }
+    if (this._unlockHandlers) {
+      for (const event of this._unlockHandlers.events) {
+        document.removeEventListener(event, this._unlockHandlers.handler, true);
+      }
+      this._unlockHandlers = undefined;
+    }
   }
 
   /* ── Preloading ─────────────────────────────────────── */
@@ -354,38 +367,50 @@ class AudioManagerClass {
   }
 
   private _setupVisibilityListener(): void {
-    document.addEventListener('visibilitychange', () => {
+    if (this._visibilityHandler) {
+      document.removeEventListener('visibilitychange', this._visibilityHandler);
+    }
+    this._visibilityHandler = () => {
       if (document.hidden) {
         Howler.mute(true);
       } else {
         Howler.mute(this._isMuted);
       }
-    });
+    };
+    document.addEventListener('visibilitychange', this._visibilityHandler);
   }
 
   private _setupUnlockListener(): void {
+    // Remove previous unlock handlers if init() is called again
+    if (this._unlockHandlers) {
+      for (const event of this._unlockHandlers.events) {
+        document.removeEventListener(event, this._unlockHandlers.handler, true);
+      }
+      this._unlockHandlers = undefined;
+    }
+
     // Check if already unlocked (e.g. desktop with autoplay allowed)
     if (Howler.ctx && Howler.ctx.state === 'running') {
       this._onUnlock();
       return;
     }
 
+    const events = ['click', 'touchstart', 'keydown'];
     const unlock = () => {
-      // Run pending actions synchronously within the user gesture
-      // so HTML5 Audio elements get autoplay permission
       this._onUnlock();
-      // Also resume WebAudio context for SFX
       if (Howler.ctx && Howler.ctx.state !== 'running') {
         Howler.ctx.resume();
       }
-      document.removeEventListener('click', unlock, true);
-      document.removeEventListener('touchstart', unlock, true);
-      document.removeEventListener('keydown', unlock, true);
+      for (const event of events) {
+        document.removeEventListener(event, unlock, true);
+      }
+      this._unlockHandlers = undefined;
     };
 
-    document.addEventListener('click', unlock, true);
-    document.addEventListener('touchstart', unlock, true);
-    document.addEventListener('keydown', unlock, true);
+    for (const event of events) {
+      document.addEventListener(event, unlock, true);
+    }
+    this._unlockHandlers = { handler: unlock, events };
   }
 
   private _onUnlock(): void {

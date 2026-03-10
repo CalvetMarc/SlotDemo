@@ -28,11 +28,22 @@ export class BaseScreen extends GameScreen{
         super();
     }
 
+    private _winBundleLoaded = false;
+
     async load(): Promise<void> {
-        await Promise.all([
-            this.loadConfig(baseConfig as ScreenConfig, BASE_VIEW_REGISTRY),
-            Assets.loadBundle('win'),
-        ]);
+        await this.loadConfig(baseConfig as ScreenConfig, BASE_VIEW_REGISTRY);
+        // Win bundle is loaded lazily on first win to reduce initial memory
+        this._preloadWinBundle();
+    }
+
+    /** Fire-and-forget preload of win bundle — doesn't block screen load. */
+    private _preloadWinBundle(): void {
+        if (this._winBundleLoaded) return;
+        Assets.loadBundle('win').then(() => {
+            this._winBundleLoaded = true;
+        }).catch(() => {
+            console.warn('[BaseScreen] win bundle preload failed');
+        });
     }
 
     async onEnter(): Promise<void> {

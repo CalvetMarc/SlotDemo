@@ -152,6 +152,7 @@ export class BuyBonusPanelView extends Container {
     // ── Build ────────────────────────────────────────────────────
 
     private _build(viewportW: number, viewportH: number): void {
+        for (const child of this.children) child.destroy({ children: true });
         this.removeChildren();
         this._cards = [];
         this._scrollContent = null;
@@ -440,12 +441,11 @@ export class BuyBonusPanelView extends Container {
     private _animateIn(viewportW: number, viewportH: number): void {
         const isPortrait = viewportW / viewportH < 1;
 
-        // Scale proportionally to viewport height (ref: Nest Hub 600px) and DPR
         const refH = 600;
-        const dpr = window.devicePixelRatio || 1;
-        this._blurStrength = BLUR_STRENGTH * (viewportH / refH) * dpr;
+        this._blurStrength = Math.min(BLUR_STRENGTH * (viewportH / refH), 8);
 
-        this._applyBlur(0);
+        const blurQuality = (navigator.maxTouchPoints > 0) ? 2 : 3;
+        this._applyBlur(0, blurQuality);
         this._activeTweens.push(TweenManager.fadeTo(this._backdrop, BACKDROP_ALPHA, 200));
         this._activeTweens.push(this._tweenBlur(0, this._blurStrength, 200));
 
@@ -596,6 +596,7 @@ export class BuyBonusPanelView extends Container {
 
     private _onHideComplete(): void {
         this.visible = false;
+        for (const child of this.children) child.destroy({ children: true });
         this.removeChildren();
         this._cards = [];
         this._scrollContent = null;
@@ -605,9 +606,9 @@ export class BuyBonusPanelView extends Container {
 
     // ── Blur ─────────────────────────────────────────────────────
 
-    private _applyBlur(initialStrength: number): void {
+    private _applyBlur(initialStrength: number, quality = 3): void {
         if (!this.parent) return;
-        this._blurFilter = new BlurFilter({ strength: initialStrength, quality: 3 });
+        this._blurFilter = new BlurFilter({ strength: initialStrength, quality });
         this._blurredSiblings = [];
         for (const child of this.parent.children) {
             if (child !== this) {

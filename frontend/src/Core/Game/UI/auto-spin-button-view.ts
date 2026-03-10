@@ -92,6 +92,10 @@ export class AutoSpinButtonView extends ButtonView {
         this._miniPill.visible = true;
     }
 
+    protected override dispose(): void {
+        this._removeDismissHandler();
+    }
+
     public resetState(): void {
         this._selectedCount = 0;
         this.iconSprite.tint = ICON_MUTED;

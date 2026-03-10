@@ -1,4 +1,4 @@
-import { Application, Assets, Container } from 'pixi.js';
+import { Application, Container } from 'pixi.js';
 import { Ticker } from 'pixi.js';
 
 import { SingletonBase } from '../Abstractions/singleton-base';

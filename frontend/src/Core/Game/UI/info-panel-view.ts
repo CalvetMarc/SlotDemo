@@ -150,6 +150,7 @@ export class InfoPanelView extends Container {
     // ── Build ────────────────────────────────────────────────────
 
     private _build(viewportW: number, viewportH: number): void {
+        for (const child of this.children) child.destroy({ children: true });
         this.removeChildren();
         this._tabTexts = [];
         this._tabUnderlines = [];
@@ -448,6 +449,7 @@ export class InfoPanelView extends Container {
     // ── Tab content builders ─────────────────────────────────────
 
     private _buildTabContent(): void {
+        for (const child of this._scrollContent.children) child.destroy({ children: true });
         this._scrollContent.removeChildren();
         this._scrollY = 0;
         this._scrollContent.y = 0;
@@ -707,10 +709,10 @@ export class InfoPanelView extends Container {
         const isPortrait = viewportW / viewportH < 1;
 
         const refH = 600;
-        const dpr = window.devicePixelRatio || 1;
-        this._blurStrength = BLUR_STRENGTH * (viewportH / refH) * dpr;
+        this._blurStrength = Math.min(BLUR_STRENGTH * (viewportH / refH), 8);
 
-        this._applyBlur(0);
+        const blurQuality = (navigator.maxTouchPoints > 0) ? 2 : 3;
+        this._applyBlur(0, blurQuality);
         this._activeTweens.push(TweenManager.fadeTo(this._backdrop, BACKDROP_ALPHA, 200));
         this._activeTweens.push(this._tweenBlur(0, this._blurStrength, 200));
 
@@ -816,6 +818,7 @@ export class InfoPanelView extends Container {
 
     private _onHideComplete(): void {
         this.visible = false;
+        for (const child of this.children) child.destroy({ children: true });
         this.removeChildren();
         this._tabTexts = [];
         this._tabUnderlines = [];
@@ -823,9 +826,9 @@ export class InfoPanelView extends Container {
 
     // ── Blur ─────────────────────────────────────────────────────
 
-    private _applyBlur(initialStrength: number): void {
+    private _applyBlur(initialStrength: number, quality = 3): void {
         if (!this.parent) return;
-        this._blurFilter = new BlurFilter({ strength: initialStrength, quality: 3 });
+        this._blurFilter = new BlurFilter({ strength: initialStrength, quality });
         this._blurredSiblings = [];
         for (const child of this.parent.children) {
             if (child !== this) {

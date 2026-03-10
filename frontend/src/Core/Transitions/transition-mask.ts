@@ -11,8 +11,8 @@ const COVER_SHEET_PATH = 'assets/bonus/transiotionMask/mobile/fadeoutBats.json';
 const REVEAL_SHEET_PATH = 'assets/bonus/transiotionMask/mobile/fadeinBats.json';
 const LOADING_BAR_PATH = 'assets/bonus/loadingBar/loadingBar.json';
 
-const COVER_SPEED = 1.35;
-const REVEAL_SPEED = 1.4;
+const COVER_SPEED = 1;
+const REVEAL_SPEED = 1.1;
 const HOLD_DELAY_MS = 1000;
 const VIDEO_CANPLAY_TIMEOUT_MS = 5000;
 const VIDEO_ENDED_SAFETY_MARGIN_MS = 2000;
@@ -51,6 +51,22 @@ export class TransitionMask extends Container {
         this.visible = true;
         const mobile = isPhoneScreen();
 
+        // On-screen debug overlay
+        const debugEl = document.createElement('div');
+        Object.assign(debugEl.style, {
+            position: 'fixed', top: '10px', left: '10px', zIndex: '99999',
+            background: 'rgba(0,0,0,0.85)', color: '#0f0', fontFamily: 'monospace',
+            fontSize: '13px', padding: '8px 12px', borderRadius: '6px',
+            pointerEvents: 'none', whiteSpace: 'pre-line', lineHeight: '1.5',
+        });
+        const debugLines: string[] = [
+            `mobile: ${mobile} | touch: ${navigator.maxTouchPoints} | screen: ${screen.width}x${screen.height}`,
+            `cachedSheets: cover=${!!this._coverTextures} reveal=${!!this._revealTextures}`,
+        ];
+        const updateDebug = () => { debugEl.textContent = debugLines.join('\n'); };
+        updateDebug();
+        document.body.appendChild(debugEl);
+
         // Pre-load loading bar sheet (tiny, loads fast)
         let sheet: Spritesheet | undefined = Assets.get('loadingBar');
         if (!sheet) {
@@ -77,6 +93,8 @@ export class TransitionMask extends Container {
         // holdLayer stays hidden until the mask is applied inside the play methods
         if (this._coverTextures) {
 
+            debugLines.push(`COVER: spritesheet (${this._coverTextures.length} frames, speed=${COVER_SPEED})`);
+            updateDebug();
             setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
             await this._playSpriteMasked(this._coverTextures, width, height, COVER_SPEED, holdLayer);
 
@@ -85,14 +103,20 @@ export class TransitionMask extends Container {
             const coverVideo = this._createVideoElement(COVER_PATH);
             const coverReady = await this._waitCanPlay(coverVideo);
             if (coverReady) {
+                debugLines.push(`COVER: video (dur=${coverVideo.duration.toFixed(2)}s, rate=${COVER_SPEED})`);
+                updateDebug();
                 setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
                 await this._playMaskedVideo(coverVideo, width, height, COVER_SPEED, holdLayer);
             } else {
+                debugLines.push('COVER: video FAILED — instant cut');
+                updateDebug();
                 holdLayer.visible = true;
             }
             this._cleanupVideo(coverVideo);
         } else {
 
+            debugLines.push(`COVER: no assets — instant cut`);
+            updateDebug();
             holdLayer.visible = true;
         }
 
@@ -114,6 +138,8 @@ export class TransitionMask extends Container {
         // Phase 2 – reveal
         if (this._revealTextures) {
 
+            debugLines.push(`REVEAL: spritesheet (${this._revealTextures.length} frames, speed=${REVEAL_SPEED})`);
+            updateDebug();
             setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
             await this._playSpriteMasked(this._revealTextures, width, height, REVEAL_SPEED, holdLayer, true);
 
@@ -122,13 +148,19 @@ export class TransitionMask extends Container {
             const revealVideo = this._createVideoElement(REVEAL_PATH);
             const revealReady = await this._waitCanPlay(revealVideo);
             if (revealReady) {
+                debugLines.push(`REVEAL: video (dur=${revealVideo.duration.toFixed(2)}s, rate=${REVEAL_SPEED})`);
+                updateDebug();
                 setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
                 await this._playMaskedVideo(revealVideo, width, height, REVEAL_SPEED, holdLayer, true);
             } else {
+                debugLines.push('REVEAL: video FAILED — instant cut');
+                updateDebug();
                 holdLayer.visible = false;
             }
             this._cleanupVideo(revealVideo);
         } else {
+            debugLines.push('REVEAL: no assets — instant cut');
+            updateDebug();
             holdLayer.visible = false;
         }
 
@@ -136,6 +168,13 @@ export class TransitionMask extends Container {
         this._stopLoadingBar();
         holdLayer.destroy({ children: true });
         this.visible = false;
+
+        // Keep debug overlay visible for 4s then fade out
+        setTimeout(() => {
+            debugEl.style.transition = 'opacity 0.5s';
+            debugEl.style.opacity = '0';
+            setTimeout(() => debugEl.remove(), 500);
+        }, 4000);
     }
 
     resize(width: number, height: number): void {

@@ -80,6 +80,65 @@ function getGoldFilter(): ColorMatrixFilter {
 
 type VfxSubPhase = 'fadingIn' | 'playing' | 'fadingOut';
 
+// ── Object pools (reduce allocations per win cycle) ──────────────
+
+const VFX_POOL: AnimatedSprite[] = [];
+const VFX_POOL_MAX = 15;
+
+function acquireVfx(frames: import('pixi.js').Texture[]): AnimatedSprite {
+    const vfx = VFX_POOL.pop();
+    if (vfx) {
+        vfx.textures = frames;
+        vfx.visible = true;
+        return vfx;
+    }
+    return new AnimatedSprite(frames, false);
+}
+
+function releaseVfx(vfx: AnimatedSprite): void {
+    vfx.stop();
+    vfx.visible = false;
+    vfx.alpha = 1;
+    vfx.filters = [];
+    if (vfx.parent) vfx.parent.removeChild(vfx);
+    if (VFX_POOL.length < VFX_POOL_MAX) {
+        VFX_POOL.push(vfx);
+    } else {
+        vfx.destroy();
+    }
+}
+
+const ANIM_POOL: Map<string, AnimatedSprite[]> = new Map();
+const ANIM_POOL_MAX_PER_KEY = 5;
+
+function acquireAnimSprite(assetKey: string, frames: import('pixi.js').Texture[]): AnimatedSprite {
+    const pool = ANIM_POOL.get(assetKey);
+    const sprite = pool?.pop();
+    if (sprite) {
+        sprite.textures = frames;
+        sprite.visible = true;
+        return sprite;
+    }
+    return new AnimatedSprite(frames);
+}
+
+function releaseAnimSprite(assetKey: string, sprite: AnimatedSprite): void {
+    sprite.stop();
+    sprite.visible = false;
+    sprite.onComplete = undefined;
+    if (sprite.parent) sprite.parent.removeChild(sprite);
+    let pool = ANIM_POOL.get(assetKey);
+    if (!pool) {
+        pool = [];
+        ANIM_POOL.set(assetKey, pool);
+    }
+    if (pool.length < ANIM_POOL_MAX_PER_KEY) {
+        pool.push(sprite);
+    } else {
+        sprite.destroy();
+    }
+}
+
 // ── Helper: load VFX frames from spritesheet ─────────────────────
 
 /** Extracts the win VFX animation frames from the 'win_vfx' spritesheet. */
@@ -127,13 +186,20 @@ export class SymbolView {
     private _animRefFrameWidth = 0;
     private _animRefFrameHeight = 0;
 
+    // Animated overlay asset key (for pooling)
+    private _animAssetKey?: string;
+
     // VFX
     private _vfxSprite?: AnimatedSprite;
     private _vfxPhase: VfxSubPhase = 'fadingIn';
     private _vfxElapsed = 0;
 
-    // Dim (shared filter, not owned by this view)
+    // Pending timeouts (for audio SFX delays)
+    private _pendingTimeouts: ReturnType<typeof setTimeout>[] = [];
+
+    // Dim (shared celebration filter for B&W effect, not owned by this view)
     private _dimFilter?: ColorMatrixFilter;
+    private _isDimmed = false;
 
     constructor(reel: number, row: number, symbolId: SymbolId, staticSprite: Sprite) {
         this.reel = reel;
@@ -190,7 +256,8 @@ export class SymbolView {
             return;
         }
 
-        const anim = new AnimatedSprite(sheet.animations[mapping.anim]);
+        this._animAssetKey = mapping.asset;
+        const anim = acquireAnimSprite(mapping.asset, sheet.animations[mapping.anim]);
         anim.anchor.set(0.5);
         anim.animationSpeed = 0.3;
         anim.loop = false;
@@ -231,7 +298,7 @@ export class SymbolView {
     showVfx(vfxLayer: Container, frames: import('pixi.js').Texture[], gold = false): void {
         if (frames.length === 0) return;
 
-        const vfx = new AnimatedSprite(frames, false);
+        const vfx = acquireVfx(frames);
         vfx.anchor.set(0.5);
         vfx.animationSpeed = 0.45;
         vfx.loop = false;
@@ -252,9 +319,10 @@ export class SymbolView {
         this._vfxElapsed = 0;
     }
 
-    /** Apply a shared dim filter to the static sprite. */
+    /** Dim the static sprite. Uses shared ColorMatrixFilter for B&W celebration effect. */
     dim(sharedFilter: ColorMatrixFilter): void {
         this._dimFilter = sharedFilter;
+        this._isDimmed = true;
         this.staticSprite.filters = [sharedFilter];
     }
 
@@ -311,29 +379,35 @@ export class SymbolView {
     clear(): void {
         this._isWinning = false;
 
-        // Clean up animated overlay
+        // Clear pending audio timeouts
+        for (const t of this._pendingTimeouts) clearTimeout(t);
+        this._pendingTimeouts.length = 0;
+
+        // Return animated overlay to pool
         if (this._animSprite) {
-            this._animSprite.onComplete = undefined;
-            this._animSprite.visible = false;
-            if (this._animSprite.parent) this._animSprite.parent.removeChild(this._animSprite);
-            this._animSprite.stop();
-            this._animSprite.destroy();
+            if (this._animAssetKey) {
+                releaseAnimSprite(this._animAssetKey, this._animSprite);
+            } else {
+                this._animSprite.destroy();
+            }
             this._animSprite = undefined;
+            this._animAssetKey = undefined;
         }
 
         // Restore static sprite
         this.staticSprite.visible = true;
         this.staticSprite.scale.set(this._staticBaseScaleX, this._staticBaseScaleY);
 
-        // Remove dim filter reference (shared, not owned — don't destroy)
-        if (this._dimFilter) {
+        // Remove dim filter (shared, not owned — don't destroy)
+        if (this._isDimmed) {
             this.staticSprite.filters = [];
             this._dimFilter = undefined;
+            this._isDimmed = false;
         }
 
-        // Destroy VFX sprite to free GPU memory
+        // Return VFX sprite to pool
         if (this._vfxSprite) {
-            this._vfxSprite.destroy();
+            releaseVfx(this._vfxSprite);
             this._vfxSprite = undefined;
         }
     }
@@ -410,25 +484,25 @@ export class SymbolView {
                     this._animSprite.visible = true;
                     this._animSprite.gotoAndPlay(0);
                     if (LOW_SYMBOLS.has(this.symbolId)) {
-                        setTimeout(() => {
+                        this._pendingTimeouts.push(setTimeout(() => {
                             AudioManager.stop('lowWin');
                             AudioManager.play('lowWin');
-                        }, 200);
+                        }, 200));
                     }
                     const highSfx = HIGH_SYMBOL_SFX[this.symbolId];
                     if (highSfx) {
                         const rate = highSfx === 'h2Sfx' ? 0.9 : highSfx === 'wolfSfx' ? 1 : 1.3;
                         const delay = highSfx === 'wolfSfx' ? 100 : 200;
-                        setTimeout(() => {
+                        this._pendingTimeouts.push(setTimeout(() => {
                             AudioManager.stop(highSfx);
                             AudioManager.play(highSfx, undefined, rate);
-                        }, delay);
+                        }, delay));
                     }
                 } else if (this.symbolId === 'Wild_01.png' as SymbolId) {
-                    setTimeout(() => {
+                    this._pendingTimeouts.push(setTimeout(() => {
                         AudioManager.stop('heartbeatSfx');
                         AudioManager.play('heartbeatSfx');
-                    }, 200);
+                    }, 200));
                 }
             }
         } else if (this._pulsePhase === 'playing') {

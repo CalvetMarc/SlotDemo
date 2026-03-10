@@ -1,4 +1,4 @@
-import { BlurFilter, Container, Sprite, Assets, Spritesheet, ColorMatrixFilter, type Texture } from 'pixi.js';
+import { BlurFilter, ColorMatrixFilter, Container, Sprite, Assets, Spritesheet, type Texture } from 'pixi.js';
 import {
     CELL_SIZE, SYMBOL_SIZE, VISIBLE_ROWS,
     SPIN_SPEED, OVERSHOOT_PX, BOUNCE_DURATION,
@@ -75,11 +75,12 @@ export class Reel extends Container {
     private _skipBounceElapsed = 0;
     private _skipBounceBaseY = 0;
 
-    // Spin blur
+    // Spin blur (shared across reels at full speed, private during landing)
+    private _sharedBlurFilter: BlurFilter | null = null;
     private _blurFilter: BlurFilter | null = null;
+    private _ownsBlurFilter = false;
 
-    // Tension dim
-    private _dimFilter: ColorMatrixFilter | null = null;
+    // Tension dim (via tint — no GPU filter needed)
     private _dimTarget = 0;
     private _dimAmount = 0;
     private _isDimAnimating = false;
@@ -108,6 +109,11 @@ export class Reel extends Container {
     /** Callback invoked once this reel has fully settled after stopping. */
     public onSettled?: () => void;
 
+    /** Set a shared blur filter to use during full-speed spinning. */
+    setSharedBlurFilter(filter: BlurFilter): void {
+        this._sharedBlurFilter = filter;
+    }
+
     constructor(index: number) {
         super();
         this.index = index;
@@ -119,6 +125,8 @@ export class Reel extends Container {
         for (let i = 0; i < VISIBLE_ROWS; i++) {
             this._symbolViewPool.push(new SymbolView(this.index, i, 'J.png', dummySprite));
         }
+
+        // Shared celebration dim filter (brightness + desaturate = B&W dim effect)
         this._celebrationDimFilter = new ColorMatrixFilter();
         this._celebrationDimFilter.brightness(0.35, false);
         this._celebrationDimFilter.desaturate();
@@ -378,6 +386,16 @@ export class Reel extends Container {
             sv.clear();
         }
         this._celebrationViews.length = 0;
+
+        // If dim finished while celebrating, tints were never restored — clean up now
+        if (this._dimAmount === 0) {
+            for (let i = 0; i < this._symbols.length; i++) {
+                if (this._symbolDimmed[i]) {
+                    this._symbols[i].tint = 0xFFFFFF;
+                    this._symbolDimmed[i] = false;
+                }
+            }
+        }
     }
 
     get isCelebrating(): boolean {
@@ -393,9 +411,6 @@ export class Reel extends Container {
     setDim(dimmed: boolean): void {
         this._dimTarget = dimmed ? 1 : 0;
         this._isDimAnimating = true;
-        if (!this._dimFilter) {
-            this._dimFilter = new ColorMatrixFilter();
-        }
     }
 
     private _updateDim(ms: number): void {
@@ -410,27 +425,30 @@ export class Reel extends Container {
             this._isDimAnimating = false;
         }
 
-        // Celebrations manage their own per-symbol filters — don't overwrite them
-        if (this.isCelebrating) return;
+        // Celebrations manage their own per-symbol filters — don't apply new tint
+        // But still allow restoring tint to white when dim is fading out
+        if (this.isCelebrating && this._dimTarget === 1) return;
 
-        if (this._dimAmount > 0) {
+        if (this._dimAmount > 0 && !this.isCelebrating) {
+            // Interpolate tint from white (0xFFFFFF) to dim color based on brightness
             const brightness = 1.0 + (TENSION_DIM_BRIGHTNESS - 1.0) * this._dimAmount;
-            this._dimFilter!.brightness(brightness, false);
+            const channel = Math.round(brightness * 255);
+            const tint = (channel << 16) | (channel << 8) | channel;
             const exemptWilds = this._state === 'idle';
             for (let i = 0; i < this._symbols.length; i++) {
                 const shouldDim = !(exemptWilds && this._symbolIds[i] === WILD_ID);
-                if (shouldDim && !this._symbolDimmed[i]) {
-                    this._symbols[i].filters = [this._dimFilter!];
+                if (shouldDim) {
+                    this._symbols[i].tint = tint;
                     this._symbolDimmed[i] = true;
-                } else if (!shouldDim && this._symbolDimmed[i]) {
-                    this._symbols[i].filters = [];
+                } else if (this._symbolDimmed[i]) {
+                    this._symbols[i].tint = 0xFFFFFF;
                     this._symbolDimmed[i] = false;
                 }
             }
         } else {
             for (let i = 0; i < this._symbols.length; i++) {
                 if (this._symbolDimmed[i]) {
-                    this._symbols[i].filters = [];
+                    this._symbols[i].tint = 0xFFFFFF;
                     this._symbolDimmed[i] = false;
                 }
             }
@@ -571,22 +589,40 @@ export class Reel extends Container {
     }
 
     private _applyBlur(): void {
-        if (!this._blurFilter) {
+        // Use shared filter for full-speed spinning
+        if (this._sharedBlurFilter) {
+            this._blurFilter = this._sharedBlurFilter;
+            this._ownsBlurFilter = false;
+        } else {
             this._blurFilter = new BlurFilter({ strengthX: 0, strengthY: 0, quality: SPIN_BLUR_QUALITY });
+            this._ownsBlurFilter = true;
         }
         this._blurFilter.strengthY = 0;
         this.filters = [this._blurFilter];
     }
 
     private _updateBlur(ratio: number): void {
-        if (this._blurFilter) {
-            this._blurFilter.strengthY = SPIN_BLUR_STRENGTH * ratio;
+        if (!this._blurFilter) return;
+
+        // During landing (ratio < 1), need our own filter to not affect other reels
+        if (ratio < 1 && !this._ownsBlurFilter) {
+            this._blurFilter = new BlurFilter({
+                strengthX: 0,
+                strengthY: SPIN_BLUR_STRENGTH * ratio,
+                quality: SPIN_BLUR_QUALITY,
+            });
+            this._ownsBlurFilter = true;
+            this.filters = [this._blurFilter];
         }
+
+        this._blurFilter.strengthY = SPIN_BLUR_STRENGTH * ratio;
     }
 
     private _removeBlur(): void {
         if (this._blurFilter) {
             this.filters = [];
+            this._blurFilter = null;
+            this._ownsBlurFilter = false;
         }
     }
 

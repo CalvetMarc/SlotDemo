@@ -10,13 +10,17 @@ import { AudioManager } from './Core/Audio/audio-manager';
 
 async function main() {
 
+  const IS_TOUCH_DEVICE = navigator.maxTouchPoints > 0;
+  const maxDpr = IS_TOUCH_DEVICE ? 1.5 : 2;
+  const resolution = Math.min(window.devicePixelRatio || 1, maxDpr);
+
   const app = new Application();
   await app.init({
     resizeTo: window,
     backgroundColor: 0x000000,
-    resolution: window.devicePixelRatio || 1,
+    resolution,
     autoDensity: true,
-    antialias: true,
+    antialias: !IS_TOUCH_DEVICE,
   });
 
   document.body.appendChild(app.canvas);
@@ -25,10 +29,15 @@ async function main() {
   const canvas = app.canvas as HTMLCanvasElement;
   canvas.addEventListener('webglcontextlost', (e) => {
       e.preventDefault();
-      console.warn('[WebGL] Context lost');
+      console.warn('[WebGL] Context lost — saving state');
+      try {
+          sessionStorage.setItem('webgl_context_lost', 'true');
+      } catch { /* storage may be full */ }
   });
   canvas.addEventListener('webglcontextrestored', () => {
-      console.warn('[WebGL] Context restored');
+      console.warn('[WebGL] Context restored — reloading');
+      sessionStorage.removeItem('webgl_context_lost');
+      window.location.reload();
   });
 
   await Assets.init({

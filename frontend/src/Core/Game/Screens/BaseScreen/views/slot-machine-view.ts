@@ -1,4 +1,4 @@
-import { Sprite, Container, Graphics, Ticker } from 'pixi.js';
+import { BlurFilter, Sprite, Container, Graphics, Ticker } from 'pixi.js';
 import { View, bundle } from '../../../../Abstractions/view';
 import { AudioManager } from '../../../../Audio/audio-manager';
 import { Reel } from '../../../SlotMachine/reel';
@@ -77,10 +77,14 @@ export class SlotMachineView extends View {
         this._reelContainer.addChild(this._reelMask);
         this._reelContainer.mask = this._reelMask;
 
+        // Create shared blur filter for spin animation (saves ~30 MB GPU vs per-reel filters)
+        const sharedBlur = new BlurFilter({ strengthX: 0, strengthY: 0, quality: 2 });
+
         // Create reels
         for (let i = 0; i < REEL_COUNT; i++) {
             const reel = new Reel(i);
             reel.x = i * CELL_SIZE;
+            reel.setSharedBlurFilter(sharedBlur);
             this._reelContainer.addChild(reel);
             this._reels.push(reel);
         }
