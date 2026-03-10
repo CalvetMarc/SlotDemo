@@ -1,14 +1,9 @@
 import { Assets, Container, Graphics, Sprite, Spritesheet, Texture, Ticker } from 'pixi.js';
 import { VideoAlphaFilter } from '../Filters/video-alpha-filter';
 import { AudioManager } from '../Audio/audio-manager';
-/** Stable mobile check using screen dimensions (immune to viewport meta). */
-const isPhoneScreen = (): boolean =>
-    navigator.maxTouchPoints > 0 && Math.min(screen.width, screen.height) <= 500;
 
 const COVER_PATH = 'assets/bonus/transiotionMask/fadeOut.mp4';
 const REVEAL_PATH = 'assets/bonus/transiotionMask/fadeIn.mp4';
-const COVER_SHEET_PATH = 'assets/bonus/transiotionMask/mobile/fadeoutBats.json';
-const REVEAL_SHEET_PATH = 'assets/bonus/transiotionMask/mobile/fadeinBats.json';
 const LOADING_BAR_PATH = 'assets/bonus/loadingBar/loadingBar.json';
 
 const COVER_SPEED = 1;
@@ -16,9 +11,6 @@ const REVEAL_SPEED = 1.1;
 const HOLD_DELAY_MS = 1000;
 const VIDEO_CANPLAY_TIMEOUT_MS = 5000;
 const VIDEO_ENDED_SAFETY_MARGIN_MS = 2000;
-
-/** Original video FPS — used to compute sprite mask speed from playback rate. */
-const SOURCE_FPS = 30;
 
 /** How fast the fake progress creeps toward 90% while loading (fraction/ms). */
 const PROGRESS_SPEED = 0.0004;
@@ -33,10 +25,6 @@ export class TransitionMask extends Container {
     private _progress = 0;
     private _targetProgress = 0;
 
-    // Cached spritesheet textures (mobile) — kept alive to prevent GC
-    private _coverTextures: Texture[] | null = null;
-    private _revealTextures: Texture[] | null = null;
-
     constructor() {
         super();
         this._filter = new VideoAlphaFilter();
@@ -49,18 +37,11 @@ export class TransitionMask extends Container {
         onCovered: () => Promise<void>,
     ): Promise<void> {
         this.visible = true;
-        const mobile = isPhoneScreen();
-
 
         // Pre-load loading bar sheet (tiny, loads fast)
         let sheet: Spritesheet | undefined = Assets.get('loadingBar');
         if (!sheet) {
             try { sheet = await Assets.load(LOADING_BAR_PATH) as Spritesheet; } catch { /* skip */ }
-        }
-
-        // On mobile, preload both spritesheets once and cache textures
-        if (mobile && !this._coverTextures) {
-            await this._preloadSheets();
         }
 
         // Hold layer: black bg + loading bar — masked by bats
@@ -75,27 +56,15 @@ export class TransitionMask extends Container {
         this.addChild(holdLayer);
 
         // Phase 1 – cover
-        // holdLayer stays hidden until the mask is applied inside the play methods
-        if (this._coverTextures) {
-
+        const coverVideo = this._createVideoElement(COVER_PATH);
+        const coverReady = await this._waitCanPlay(coverVideo);
+        if (coverReady) {
             setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
-            await this._playSpriteMasked(this._coverTextures, width, height, COVER_SPEED, holdLayer);
-
-        } else if (!mobile) {
-
-            const coverVideo = this._createVideoElement(COVER_PATH);
-            const coverReady = await this._waitCanPlay(coverVideo);
-            if (coverReady) {
-                setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
-                await this._playMaskedVideo(coverVideo, width, height, COVER_SPEED, holdLayer);
-            } else {
-                holdLayer.visible = true;
-            }
-            this._cleanupVideo(coverVideo);
+            await this._playMaskedVideo(coverVideo, width, height, COVER_SPEED, holdLayer);
         } else {
-
             holdLayer.visible = true;
         }
+        this._cleanupVideo(coverVideo);
 
         // Scene swap while loading bar progresses
         try {
@@ -113,31 +82,20 @@ export class TransitionMask extends Container {
         await this._delay(HOLD_DELAY_MS);
 
         // Phase 2 – reveal
-        if (this._revealTextures) {
-
+        const revealVideo = this._createVideoElement(REVEAL_PATH);
+        const revealReady = await this._waitCanPlay(revealVideo);
+        if (revealReady) {
             setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
-            await this._playSpriteMasked(this._revealTextures, width, height, REVEAL_SPEED, holdLayer, true);
-
-        } else if (!mobile) {
-
-            const revealVideo = this._createVideoElement(REVEAL_PATH);
-            const revealReady = await this._waitCanPlay(revealVideo);
-            if (revealReady) {
-                setTimeout(() => AudioManager.playFadeOut('bats', 500), 200);
-                await this._playMaskedVideo(revealVideo, width, height, REVEAL_SPEED, holdLayer, true);
-            } else {
-                holdLayer.visible = false;
-            }
-            this._cleanupVideo(revealVideo);
+            await this._playMaskedVideo(revealVideo, width, height, REVEAL_SPEED, holdLayer, true);
         } else {
             holdLayer.visible = false;
         }
+        this._cleanupVideo(revealVideo);
 
         // Clean up
         this._stopLoadingBar();
         holdLayer.destroy({ children: true });
         this.visible = false;
-
     }
 
     resize(width: number, height: number): void {
@@ -227,126 +185,7 @@ export class TransitionMask extends Container {
         this._barFill = null;
     }
 
-    // -- spritesheet mask (mobile) ---------------------------------------------
-
-    /** Preloads both spritesheets and caches the texture arrays. */
-    private async _preloadSheets(): Promise<void> {
-        try {
-            const [coverSheet, revealSheet] = await Promise.all([
-                Assets.load(COVER_SHEET_PATH) as Promise<Spritesheet>,
-                Assets.load(REVEAL_SHEET_PATH) as Promise<Spritesheet>,
-            ]);
-            this._coverTextures = this._extractTextures(coverSheet);
-            this._revealTextures = this._extractTextures(revealSheet);
-            // Pin atlas sources so PixiJS GC won't unload the CPU image data
-            this._pinSources(this._coverTextures);
-            this._pinSources(this._revealTextures);
-        } catch (err) {
-            console.warn('[TransitionMask] failed to preload sheets:', err);
-        }
-    }
-
-    /** Prevents GC from unloading the atlas image data. */
-    private _pinSources(textures: Texture[]): void {
-        const seen = new Set<typeof textures[0]['source']>();
-        for (const tex of textures) {
-            if (tex.source && !seen.has(tex.source)) {
-                seen.add(tex.source);
-                tex.source.autoGarbageCollect = false;
-            }
-        }
-    }
-
-    /** Extracts sorted texture array from a spritesheet. */
-    private _extractTextures(sheet: Spritesheet): Texture[] {
-        const keys = Object.keys(sheet.textures).sort();
-        if (keys.length > 0) {
-            this._videoAspect = sheet.textures[keys[0]].width / sheet.textures[keys[0]].height;
-        }
-        return keys.map((k) => sheet.textures[k]);
-    }
-
-    /**
-     * Plays spritesheet frames as a mask on `target` using an offscreen
-     * canvas. Each tick draws the current frame from the atlas image and
-     * re-uploads the small canvas to the GPU, avoiding atlas UV issues
-     * with PixiJS sprite masks.
-     */
-    private async _playSpriteMasked(
-        textures: Texture[],
-        w: number,
-        h: number,
-        speed: number,
-        target: Container,
-        hideOnComplete = false,
-    ): Promise<void> {
-        if (textures.length === 0) return;
-
-        const frameW = textures[0].frame.width;
-        const frameH = textures[0].frame.height;
-        this._videoAspect = frameW / frameH;
-
-        const atlasImg = textures[0].source.resource as HTMLImageElement | ImageBitmap;
-
-        const canvas = document.createElement('canvas');
-        canvas.width = frameW;
-        canvas.height = frameH;
-        const ctx = canvas.getContext('2d')!;
-
-        // Draw first frame with INVERTED alpha: opaque white everywhere
-        // EXCEPT where the bats are (transparent). This way the mask hides
-        // the holdLayer where bats are, letting the game show through.
-        const f0 = textures[0].frame;
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, frameW, frameH);
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.drawImage(atlasImg, f0.x, f0.y, f0.width, f0.height, 0, 0, frameW, frameH);
-        ctx.globalCompositeOperation = 'source-over';
-
-        const texture = Texture.from(canvas, true);
-        const source = texture.source;
-
-        const maskSprite = new Sprite(texture);
-        this._applyCover(maskSprite, w, h);
-        this.addChild(maskSprite);
-        target.mask = maskSprite;
-        target.visible = true;
-
-        let frameIndex = 0;
-        const framesPerTick = (SOURCE_FPS * speed) / 60;
-
-        await new Promise<void>((resolve) => {
-            const advance = () => {
-                frameIndex += framesPerTick;
-                const idx = Math.min(Math.floor(frameIndex), textures.length - 1);
-
-                const frame = textures[idx].frame;
-                ctx.globalCompositeOperation = 'source-over';
-                ctx.clearRect(0, 0, frameW, frameH);
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, frameW, frameH);
-                ctx.globalCompositeOperation = 'destination-out';
-                ctx.drawImage(atlasImg, frame.x, frame.y, frame.width, frame.height, 0, 0, frameW, frameH);
-                source.update();
-
-                if (idx >= textures.length - 1) {
-                    Ticker.shared.remove(advance);
-                    resolve();
-                }
-            };
-            Ticker.shared.add(advance);
-        });
-
-        if (hideOnComplete) target.visible = false;
-        target.mask = null;
-        this.removeChild(maskSprite);
-        maskSprite.destroy({ texture: true, textureSource: true });
-        // Release canvas backing store
-        canvas.width = 0;
-        canvas.height = 0;
-    }
-
-    // -- video mask (desktop) --------------------------------------------------
+    // -- video mask ------------------------------------------------------------
 
     /**
      * Plays a video and uses it as a sprite mask on `target`.
@@ -505,20 +344,6 @@ export class TransitionMask extends Container {
     destroy(): void {
         this._stopLoadingBar();
         this._filter.destroy();
-        if (this._coverTextures) this._unpinSources(this._coverTextures);
-        if (this._revealTextures) this._unpinSources(this._revealTextures);
-        this._coverTextures = null;
-        this._revealTextures = null;
         super.destroy({ children: true });
-    }
-
-    private _unpinSources(textures: Texture[]): void {
-        const seen = new Set<typeof textures[0]['source']>();
-        for (const tex of textures) {
-            if (tex.source && !seen.has(tex.source)) {
-                seen.add(tex.source);
-                tex.source.autoGarbageCollect = true;
-            }
-        }
     }
 }
