@@ -390,18 +390,24 @@ class AudioManagerClass {
         audioDebugLog(`HIDE music=${this._currentMusic} ctx=${Howler.ctx?.state}`);
       } else {
         const ctx = Howler.ctx;
-        audioDebugLog(`SHOW ctx=${ctx?.state} music=${this._currentMusic} isMuted=${this._isMuted}`);
+        const state = ctx?.state ?? 'no-ctx';
+        audioDebugLog(`SHOW ctx=${state} music=${this._currentMusic} isMuted=${this._isMuted}`);
         Howler.mute(this._isMuted);
-        if (ctx && ctx.state !== 'running') {
-          ctx.resume().catch(() => {});
-        }
-        // Check if music that should be playing is actually playing.
-        // On desktop it will be; on iOS after interruption it won't.
-        if (this._currentMusic && !this._isMuted) {
+
+        if (state === 'suspended') {
+          // Normal suspend (desktop or mobile without interruption) — just resume
+          ctx!.resume().catch(() => {});
+          audioDebugLog('resumed suspended ctx');
+        } else if (state === 'interrupted') {
+          // iOS interrupted the context (video element was active) — needs nuclear recovery
+          ctx!.resume().catch(() => {});
+          this._startRecoverPoll();
+        } else if (state === 'running' && this._currentMusic && !this._isMuted) {
+          // ctx reports running but check if audio is actually working
           const howl = this._howls.get(this._currentMusic);
           const id = this._currentMusicInstanceId;
           const isPlaying = howl && id !== undefined && howl.playing(id);
-          audioDebugLog(`music check: ${this._currentMusic} playing=${isPlaying}`);
+          audioDebugLog(`music check: playing=${isPlaying}`);
           if (!isPlaying) {
             this._startRecoverPoll();
           }
