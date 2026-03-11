@@ -6,6 +6,7 @@ import {
   type AudioChannel,
   type SoundId,
 } from './audio-manifest';
+import { audioDebugLog } from '../Debug/audio-debug-overlay'; // TODO: remove
 
 const MUTE_STORAGE_KEY = 'slot_audio_muted';
 
@@ -20,6 +21,9 @@ class AudioManagerClass {
   private _activeFades: Map<Howl, Map<number | undefined, ReturnType<typeof setInterval>>> = new Map();
   private _visibilityHandler?: () => void;
   private _unlockHandlers?: { handler: () => void; events: string[] };
+  private _recoverTimer?: ReturnType<typeof setInterval>;
+  private _needsRecovery = false;
+  private _recoverTouchHandler?: () => void;
 
   /* ── Public getters ─────────────────────────────────── */
 
@@ -62,6 +66,8 @@ class AudioManagerClass {
     this._currentMusicInstanceId = undefined;
     this._pendingActions.length = 0;
 
+    this._stopRecoverPoll();
+    this._removeRecoverTouchHandler();
     if (this._visibilityHandler) {
       document.removeEventListener('visibilitychange', this._visibilityHandler);
       this._visibilityHandler = undefined;
@@ -258,6 +264,7 @@ class AudioManagerClass {
    * The new track is resumed from its previous position, or started fresh.
    */
   switchMusic(newKey: SoundId, fadeMs: number = 1000): void {
+    audioDebugLog(`switchMusic ${this._currentMusic} → ${newKey}`);
     const oldKey = this._currentMusic;
     if (oldKey === newKey) return;
 
@@ -291,7 +298,13 @@ class AudioManagerClass {
   /* ── Mute ───────────────────────────────────────────── */
 
   setMuted(muted: boolean): void {
+    audioDebugLog(`setMuted(${muted}) ctx=${Howler.ctx?.state} needsRecovery=${this._needsRecovery}`);
     this._isMuted = muted;
+    // If audio was interrupted (iOS), recover fully — setMuted is called from user gesture
+    if (this._needsRecovery) {
+      this._removeRecoverTouchHandler();
+      this._recoverAudio();
+    }
     Howler.mute(muted);
     localStorage.setItem(MUTE_STORAGE_KEY, String(muted));
   }
@@ -372,12 +385,131 @@ class AudioManagerClass {
     }
     this._visibilityHandler = () => {
       if (document.hidden) {
+        this._stopRecoverPoll();
         Howler.mute(true);
+        audioDebugLog(`HIDE music=${this._currentMusic} ctx=${Howler.ctx?.state}`);
       } else {
+        audioDebugLog(`SHOW ctx=${Howler.ctx?.state} music=${this._currentMusic} isMuted=${this._isMuted}`);
         Howler.mute(this._isMuted);
+        // Try to resume, then poll until ctx is running and audio is recovered
+        const ctx = Howler.ctx;
+        if (ctx && ctx.state !== 'running') {
+          ctx.resume().catch(() => {});
+        }
+        this._startRecoverPoll();
       }
     };
     document.addEventListener('visibilitychange', this._visibilityHandler);
+  }
+
+  /**
+   * Poll Howler.ctx.state after returning from background.
+   * iOS Safari may destroy and recreate the AudioContext, so we can't rely
+   * on statechange listeners (they're bound to the old, dead context).
+   * Instead, poll the current Howler.ctx until it's running, then recover audio.
+   */
+  private _startRecoverPoll(): void {
+    this._stopRecoverPoll();
+    // Mark that we need recovery — the actual fix happens on user gesture
+    // because iOS requires a user gesture to create a working AudioContext
+    this._needsRecovery = true;
+    this._installRecoverTouchHandler();
+    audioDebugLog('recovery: waiting for user gesture');
+  }
+
+  private _stopRecoverPoll(): void {
+    if (this._recoverTimer) {
+      clearInterval(this._recoverTimer);
+      this._recoverTimer = undefined;
+    }
+  }
+
+  /**
+   * Install a touch/click handler to recover audio on the first user gesture.
+   * iOS Safari requires a user gesture to create a functional AudioContext
+   * after the previous one was interrupted.
+   */
+  private _installRecoverTouchHandler(): void {
+    this._removeRecoverTouchHandler();
+    this._recoverTouchHandler = () => {
+      audioDebugLog('recover: user gesture received');
+      this._removeRecoverTouchHandler();
+      this._recoverAudio();
+    };
+    document.addEventListener('touchstart', this._recoverTouchHandler, true);
+    document.addEventListener('click', this._recoverTouchHandler, true);
+  }
+
+  private _removeRecoverTouchHandler(): void {
+    if (!this._recoverTouchHandler) return;
+    document.removeEventListener('touchstart', this._recoverTouchHandler, true);
+    document.removeEventListener('click', this._recoverTouchHandler, true);
+    this._recoverTouchHandler = undefined;
+  }
+
+  /**
+   * Full audio recovery: create a brand new AudioContext (must be called
+   * from a user gesture on iOS), replace Howler's dead context, and rebuild
+   * all audio.
+   */
+  private _recoverAudio(): void {
+    this._needsRecovery = false;
+    audioDebugLog(`recover: creating new AudioContext`);
+
+    const h = Howler as unknown as Record<string, unknown>;
+
+    // 1. Close the old broken context
+    const oldCtx = Howler.ctx;
+    if (oldCtx) {
+      try { oldCtx.close(); } catch { /* ignore */ }
+    }
+
+    // 2. Create a brand new AudioContext (inside user gesture = guaranteed to work on iOS)
+    const newCtx = new AudioContext();
+    h.ctx = newCtx;
+    audioDebugLog(`recover: new ctx state=${newCtx.state}`);
+
+    // 3. Create new masterGain connected to the new context
+    const newGain = newCtx.createGain();
+    newGain.gain.setValueAtTime(this._isMuted ? 0 : 1, newCtx.currentTime);
+    newGain.connect(newCtx.destination);
+    h.masterGain = newGain;
+
+    // 4. Cancel all active fades
+    for (const fades of this._activeFades.values()) {
+      for (const interval of fades.values()) {
+        clearInterval(interval);
+      }
+    }
+    this._activeFades.clear();
+
+    // 5. Unload all existing howls (their nodes point to the dead context)
+    const musicKey = this._currentMusic;
+    for (const howl of this._howls.values()) {
+      howl.unload();
+    }
+    this._howls.clear();
+    this._currentMusicInstanceId = undefined;
+
+    // 6. Recreate and play the current music track
+    if (musicKey && !this._isMuted) {
+      const entry = AUDIO_MANIFEST[musicKey];
+      const vol = (entry.volume ?? 1) * this._channelVolumes[entry.channel];
+      const howl = this._getOrLoad(musicKey);
+      const newId = howl.play();
+      howl.volume(vol, newId);
+      this._currentMusicInstanceId = newId;
+      audioDebugLog(`recover: playing ${musicKey} id=${newId} vol=${vol}`);
+    }
+
+    // 7. Re-preload SFX in background
+    const sfxKeys = (Object.keys(AUDIO_MANIFEST) as SoundId[]).filter(
+      (k) => k !== musicKey,
+    );
+    for (const key of sfxKeys) {
+      this._getOrLoad(key);
+    }
+    audioDebugLog(`recover: done, re-preloading ${sfxKeys.length} sfx`);
   }
 
   private _setupUnlockListener(): void {

@@ -7,6 +7,7 @@ import { GuideManager } from './Core/Debug/guide-manager';
 import { SessionManager } from './Core/Game/SlotMachine/session-manager';
 import { IS_DEBUG } from './Core/Utils/env';
 import { AudioManager } from './Core/Audio/audio-manager';
+import { initAudioDebugOverlay } from './Core/Debug/audio-debug-overlay'; // TODO: remove
 
 async function main() {
 
@@ -91,6 +92,7 @@ async function main() {
   ScreenManager.I.setDeferredWork(deferredWork);
 
   AudioManager.init();
+  initAudioDebugOverlay(); // TODO: remove
 
   // Fire-and-forget preload of core SFX (non-blocking)
   AudioManager.preload(['uiSprites', 'reelSprites', 'winChime', 'baseMusic', 'bonusMusic', 'lowWin', 'h1Sfx', 'h2Sfx', 'wolfSfx', 'heartbeatSfx', 'wildPopSfx', 'chest', 'skull', 'bats', 'totalWin', 'normalWin', 'wildWin', 'winLoop', 'winLoopSuper', 'winLoopMega', 'bonusRoundAnnounce']);
