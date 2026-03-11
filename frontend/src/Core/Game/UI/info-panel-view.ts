@@ -48,12 +48,6 @@ const PAYTABLE_FRAMES = [
     'J_pay.png',
 ];
 
-const WILD_BONUS_PAYS = [
-    { count: 3, multiplier: 8 },
-    { count: 4, multiplier: 21 },
-    { count: 5, multiplier: 83 },
-];
-
 // ── Panel ────────────────────────────────────────────────────────
 
 export class InfoPanelView extends Container {
@@ -522,7 +516,7 @@ export class InfoPanelView extends Container {
         const fs = Math.round(14 * s);
 
         // ── Wild substitution note ───────────────────────────────
-        const wildNote = this._createBodyText('Wild substitutes for all symbols and pays in any position.', fs);
+        const wildNote = this._createBodyText('Wild substitutes for all symbols.', fs);
         wildNote.style.wordWrap = true;
         wildNote.style.wordWrapWidth = w;
         wildNote.position.set(0, y);
@@ -567,7 +561,7 @@ export class InfoPanelView extends Container {
         this._scrollContent.addChild(bonusTitle);
         y += Math.round(28 * s);
 
-        const bonusIntro = this._createBodyText('3 or more Wild symbols trigger the Bonus Game. Pick chests to reveal multipliers applied to the triggering spin win.', fs);
+        const bonusIntro = this._createBodyText('3 or more Wild symbols trigger the Bonus Game. Pick chests to reveal multipliers of totalBet.', fs);
         bonusIntro.style.wordWrap = true;
         bonusIntro.style.wordWrapWidth = w;
         bonusIntro.position.set(0, y);
@@ -575,7 +569,7 @@ export class InfoPanelView extends Container {
         y += bonusIntro.getBounds().height + Math.round(14 * s);
 
         const tiers = [
-            '3 Wilds — x25, x75, x125 + 2 skulls',
+            '3 Wilds — x30, x75, x150 + 2 skulls',
             '4 Wilds — x30, x60, x90, x120 + 1 skull',
             '5 Wilds — x20, x40, x60, x80, x100',
         ];
@@ -632,14 +626,13 @@ export class InfoPanelView extends Container {
         y += rtpIntro.getBounds().height + Math.round(14 * s);
 
         const rtpLines = [
-            'Overall game RTP: 96.14%',
+            'Overall game RTP: 96.70%',
             '',
             'Base game (lines): 33.71%',
-            'Wild Pay: 6.21%',
-            'Bonus (chests): 56.22%',
+            'Bonus (chests): 62.99%',
             '',
-            'Buy Bonus Tier 1 (3 Wilds): 94.32%',
-            'Buy Bonus Tier 2 (4 Wilds): 95.00%',
+            'Buy Bonus Tier 1 (3 Wilds): 95.51%',
+            'Buy Bonus Tier 2 (4 Wilds): 94.94%',
         ];
         for (const line of rtpLines) {
             if (line === '') {

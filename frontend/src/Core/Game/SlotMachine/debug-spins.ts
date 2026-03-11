@@ -3,7 +3,7 @@ import { REEL_COUNT, VISIBLE_ROWS } from '@shared/types';
 import type { SpinResultWithWins } from './spin-result-provider';
 import { PAYLINES } from './slot-config';
 
-const WILD_PAYS: Readonly<Record<number, number>> = { 3: 8, 4: 21, 5: 83 };
+const WILD_PAYS: Readonly<Record<number, number>> = { 3: 0, 4: 0, 5: 0 };
 
 /** Paytable: symbol → [x3, x4, x5] multipliers of totalBet. */
 const PAYTABLE: ReadonlyMap<SymbolId, readonly [number, number, number]> = new Map([
@@ -22,10 +22,8 @@ function calcPayout(symbol: SymbolId, count: number, totalBet: number): number {
     return Math.round(pays[count - 3] * totalBet * 100) / 100;
 }
 
-function calcWildPay(wildCount: number, totalBet: number): number {
-    const mult = WILD_PAYS[wildCount];
-    if (!mult) return 0;
-    return Math.round(mult * totalBet * 100) / 100;
+function calcWildPay(_wildCount: number, _totalBet: number): number {
+    return 0;
 }
 
 export function countWilds(grid: SymbolId[][]): number {

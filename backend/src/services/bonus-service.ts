@@ -5,7 +5,7 @@ export interface BonusSequenceResult {
 }
 
 const PRIZE_POOLS: readonly (readonly number[])[] = [
-    [25, 75, 125],           // 3 wilds — 3 prizes, pool=225, EV=75x
+    [30, 75, 150],           // 3 wilds — 3 prizes, pool=255, EV=85x
     [30, 60, 90, 120],       // 4 wilds — 4 prizes, pool=300, EV=150x
     [20, 40, 60, 80, 100],   // 5 wilds — 5 prizes, pool=300, EV=300x
 ];

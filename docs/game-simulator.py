@@ -292,25 +292,25 @@ print(f"  VERIFICATION")
 print(f"{'='*60}")
 
 # EV checks
-expected_evs = [83, 171, 383]
+expected_evs = [85, 150, 300]
 all_ev_ok = True
 print(f"\n  EV totals:")
 for i, k in enumerate([3, 4, 5]):
     ev_bonus = bonus_evs[i]
-    ev_total = ev_bonus + wild_pays[k]
+    ev_total = ev_bonus
     expected = expected_evs[i]
     ok = abs(ev_total - expected) < 0.01
     status = "PASS" if ok else "FAIL"
     if not ok:
         all_ev_ok = False
-    print(f"    {k}W: {wild_pays[k]} + {ev_bonus:.0f} = {ev_total:.0f}  (expected {expected})  {status}")
+    print(f"    {k}W: bonus EV={ev_total:.0f}  (expected {expected})  {status}")
 
 # Analytical checks
 print(f"\n  Analytical RTP:")
 analytical_checks = [
-    ("Total RTP",          analytical_rtp,                              0.9614),
+    ("Total RTP",          analytical_rtp,                              0.9670),
     ("Line RTP",           total_line_rtp,                              0.3371),
-    ("WildPay + Bonus",    total_wild_pay_rtp + total_bonus_rtp,        0.6243),
+    ("Bonus",              total_bonus_rtp,                             0.6299),
 ]
 
 all_pass = all_ev_ok

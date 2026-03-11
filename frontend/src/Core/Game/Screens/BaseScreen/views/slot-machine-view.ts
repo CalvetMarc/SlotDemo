@@ -115,6 +115,10 @@ export class SlotMachineView extends View {
 
         this._tensionController = new TensionController({ reels: this._reels });
         this._tensionController.onTensionResolved = (result, shouldCelebrate) => {
+            // Apply balance when tension celebration starts
+            if (result.balance !== undefined) {
+                GameModel.setBalance(result.balance);
+            }
             if (shouldCelebrate) {
                 if (result.bonusTriggered) {
                     this._winController.show(result, result);
@@ -156,17 +160,14 @@ export class SlotMachineView extends View {
             if (info.isBonusEntry) {
                 this._winTextOverlay.showMessage('Enter Bonus Feature');
             } else if (info.isAllWins) {
-                // Bonus pending: always show text (BigWinView is not used for bonus entry)
-                if (this._winController.isBonusPending) {
-                    this._winTextOverlay.showBonusEnter(info.totalWin);
-                } else if (!info.isFirstCycle || !isBigWin(info.totalWin, GameModel.betAmount)) {
-                    // BigWinView handles big/super/mega on first cycle
+                if (this._winController.isBonusPending || !info.isFirstCycle || !isBigWin(info.totalWin, GameModel.betAmount)) {
                     this._winTextOverlay.showTotal(info.totalWin);
                 } else {
+                    // BigWinView handles big/super/mega on first cycle (non-bonus)
                     this._winTextOverlay.hide();
                 }
             } else if (info.isWildBonus) {
-                this._winTextOverlay.showWilds(info.payout);
+                this._winTextOverlay.showMessage('Tap to enter Bonus');
             } else {
                 this._winTextOverlay.showLine(info.lineIndex, info.payout);
             }
@@ -192,10 +193,12 @@ export class SlotMachineView extends View {
                 getIsSpinning: () => this._spinController.isSpinning,
                 getBetAmount: () => this._spinController.getBetAmount(),
                 triggerSpin: async (forced) => {
+                    const bet = this._spinController.getBetAmount();
+                    // Simulate balance: deduct bet, add win
+                    forced.balance = GameModel.balance - bet + forced.winAmount;
                     // Debug bonus spins bypass the server spin, so set up bonus on server via buy
                     if (forced.bonusTriggered) {
                         try {
-                            const bet = this._spinController.getBetAmount();
                             await ApiClient.post('/api/bonus/buy', { betAmount: bet, tier: 1 });
                         } catch { /* balance may be insufficient — bonus screen will handle */ }
                     }
@@ -272,16 +275,11 @@ export class SlotMachineView extends View {
 
         // Returning from bonus: clear stale celebrations and prepare bonus win celebration
         this._unsubBaseTransition = gameSignals.requestBaseTransition.connect(() => {
-            const entryResult = this._bonusEntryResult;
             this._clearAll();
             const bonusWin = GameModel.pendingBonusWin;
             GameModel.setPendingBonusWin(0);
-            console.log('[BaseTransition]', { bonusWin, hasEntry: !!entryResult, wildCount: entryResult?.wildCount, lineWins: entryResult?.lineWins.length });
-            // Always show bonus total on return — even if bonus paid 0 (skull on first chest)
-            if (entryResult) {
-                this._pendingBonusCelebration = bonusWin;
-                this._bonusEntryResult = entryResult;
-            }
+            console.log('[BaseTransition]', { bonusWin });
+            this._pendingBonusCelebration = bonusWin;
         });
 
         Ticker.shared.add(this._onTick, this);
@@ -341,9 +339,6 @@ export class SlotMachineView extends View {
     // ── Junction ─────────────────────────────────────────────────
 
     private _onAllReelsStopped(result: SpinResultWithWins, isTension: boolean): void {
-        if (result.balance !== undefined) {
-            GameModel.setBalance(result.balance);
-        }
         GameModel.setLastResult(result);
         const shouldCelebrate = result.winAmount > 0 || result.bonusTriggered;
 
@@ -372,22 +367,27 @@ export class SlotMachineView extends View {
             const delay = wildAnimDelay + WIN_REVEAL_PAUSE;
 
             this._winPresentationTimeout = setTimeout(() => {
-                if (result.bonusTriggered) {
-                    this._winController.show(result, result);
-                } else {
-                    if (isBigWin(result.winAmount, GameModel.betAmount)) {
-                        this._bigWinView.show(
-                            result.winAmount,
-                            GameModel.betAmount,
-                            GameModel.autoSpinRemaining > 0,
-                        );
-                        this._bigWinView.onComplete = () => {
-                            this._bigWinView.hide();
-                        };
-                    }
-                    this._winController.show(result, result);
+                // Apply balance when celebration starts (same timing as visual feedback)
+                if (result.balance !== undefined) {
+                    GameModel.setBalance(result.balance);
                 }
+                if (isBigWin(result.winAmount, GameModel.betAmount) && !result.bonusTriggered) {
+                    this._bigWinView.show(
+                        result.winAmount,
+                        GameModel.betAmount,
+                        GameModel.autoSpinRemaining > 0,
+                    );
+                    this._bigWinView.onComplete = () => {
+                        this._bigWinView.hide();
+                    };
+                }
+                this._winController.show(result, result);
             }, delay);
+        } else if (!shouldCelebrate) {
+            // No win — apply balance immediately (bet deduction)
+            if (result.balance !== undefined) {
+                GameModel.setBalance(result.balance);
+            }
         }
 
         if (!result.bonusTriggered) {
@@ -445,17 +445,22 @@ export class SlotMachineView extends View {
 
     private _showBonusCelebration(bonusWin: number): void {
         const bet = GameModel.betAmount;
-        const entryResult = this._bonusEntryResult;
         this._bonusEntryResult = null;
 
-        const entryWin = entryResult?.winAmount ?? 0;
-        const totalWin = bonusWin + entryWin;
-        console.log('[BonusCelebration]', { bonusWin, entryWin, totalWin });
+        console.log('[BonusCelebration]', { bonusWin });
+
+        if (bonusWin <= 0) {
+            // No bonus prizes collected (skull on first chest) — skip celebration
+            if (GameModel.autoSpinRemaining > 0) {
+                this._fireNextAutoSpin();
+            }
+            return;
+        }
 
         const showTotalAndAdvance = (): void => {
-            this._winTextOverlay.showBonusTotal(totalWin);
+            this._winTextOverlay.showBonusTotal(bonusWin);
             gameSignals.lineWinPresented.emit({
-                lineIndex: -1, payout: totalWin, totalWin, isBonusPay: true,
+                lineIndex: -1, payout: bonusWin, totalWin: bonusWin, isBonusPay: true,
             });
             if (GameModel.autoSpinRemaining > 0) {
                 this._bonusAdvanceTimeout = setTimeout(() => {
@@ -466,8 +471,8 @@ export class SlotMachineView extends View {
         };
 
         // Show big/super/mega overlay if threshold is met
-        if (isBigWin(totalWin, bet)) {
-            this._bigWinView.show(totalWin, bet, false);
+        if (isBigWin(bonusWin, bet)) {
+            this._bigWinView.show(bonusWin, bet, false);
             this._bigWinView.onComplete = () => {
                 this._bigWinView.hide();
                 showTotalAndAdvance();

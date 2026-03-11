@@ -53,10 +53,9 @@ router.post('/start', async (req, res) => {
 });
 
 /** Buy bonus: skip base game, go straight to bonus for a fixed price.
- *  Tier 3 (5 wilds) is not offered — 0 skulls makes it deterministic (always 383x for 403x cost). */
-const BUY_BONUS_PRICES: readonly [number, number] = [88, 180]; // × totalBet
+ *  Tier 3 (5 wilds) is not offered — 0 skulls makes it deterministic (always 300x for 316x cost). */
+const BUY_BONUS_PRICES: readonly [number, number] = [89, 158]; // × totalBet
 const BUY_BONUS_WILDS: readonly [number, number] = [3, 4];
-const BUY_BONUS_WILD_PAY: readonly [number, number] = [8, 21]; // × totalBet
 
 router.post('/buy', async (req, res) => {
     const sessionId = (req as AuthRequest).sessionId;
@@ -73,19 +72,17 @@ router.post('/buy', async (req, res) => {
 
     const tierIndex = tier - 1;
     const price = Math.round(BUY_BONUS_PRICES[tierIndex] * betAmount * 100) / 100;
-    const wildPay = Math.round(BUY_BONUS_WILD_PAY[tierIndex] * betAmount * 100) / 100;
-    const netDeduction = Math.round((price - wildPay) * 100) / 100;
     const wildCount = BUY_BONUS_WILDS[tierIndex];
 
     try {
         const deducted = await sql`
             UPDATE sessions
-            SET balance = balance - ${netDeduction},
+            SET balance = balance - ${price},
                 game_phase = 'bonus',
                 bonus_data = ${JSON.stringify({ wildCount, totalBet: betAmount })},
                 last_seen = now()
             WHERE id = ${sessionId}
-              AND balance >= ${netDeduction}
+              AND balance >= ${price}
               AND game_phase = 'base'
             RETURNING balance
         `;

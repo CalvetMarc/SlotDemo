@@ -40,11 +40,8 @@ const PAYTABLE: ReadonlyMap<SymbolId, readonly [number, number, number]> = new M
     ['J.png',       [0.14,  0.57,  2.85]],
 ]);
 
-/** Wild pays: wildCount → multiplier of totalBet */
-const WILD_PAYS: Readonly<Record<number, number>> = { 3: 8, 4: 21, 5: 83 };
-
 /** Expected bonus chest payout per trigger (multipliers of totalBet) */
-const BONUS_EXPECTED_CHEST_EV: readonly [number, number, number] = [75, 150, 300];
+const BONUS_EXPECTED_CHEST_EV: readonly [number, number, number] = [85, 150, 300];
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -114,10 +111,8 @@ function countWilds(grid: SymbolId[][]): number {
     return count;
 }
 
-function evaluateWildPay(wildCount: number, totalBet: number): number {
-    const mult = WILD_PAYS[wildCount];
-    if (!mult) return 0;
-    return Math.round(mult * totalBet * 100) / 100;
+function evaluateWildPay(_wildCount: number, _totalBet: number): number {
+    return 0;
 }
 
 /** Expected bonus chest payout for RTP calculation (wild pay tracked separately) */

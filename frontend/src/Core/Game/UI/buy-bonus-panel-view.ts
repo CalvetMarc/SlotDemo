@@ -7,8 +7,8 @@ import { AudioManager } from '../../Audio/audio-manager';
 // ── Constants ────────────────────────────────────────────────────
 
 const BUY_BONUS_TIERS = [
-    { tier: 1, title: 'Bonus Feature', multiplier: 88, wildCount: 3 },
-    { tier: 2, title: 'Super Bonus Feature', multiplier: 180, wildCount: 4 },
+    { tier: 1, title: 'Bonus Feature', multiplier: 89, wildCount: 3 },
+    { tier: 2, title: 'Super Bonus Feature', multiplier: 158, wildCount: 4 },
 ] as const;
 
 const COLORS = {

@@ -41,6 +41,7 @@ export class WinPresentationController {
     private _isFirstCycle = true;
     private _isShowingAll = false;
     private _isShowingWilds = false;
+    private _wildCycleCount = 0;
 
     private static readonly _LINE_PAUSE_MS = 800;
 
@@ -110,7 +111,9 @@ export class WinPresentationController {
         this._wildSource = (wildResult && wildResult.wildCount >= 3) ? wildResult : null;
         this._chainSource = this._wildSource ? result : null;
 
-        if (this._pendingLineWins.length > 0 || this._wildSource) {
+        if (this._wildSource) {
+            this._presentWildStep();
+        } else if (this._pendingLineWins.length > 0) {
             this._presentAllWins();
         }
     }
@@ -123,30 +126,26 @@ export class WinPresentationController {
             if (this._linePauseElapsed >= WinPresentationController._LINE_PAUSE_MS) {
                 this._linePauseElapsed = -1;
 
-                if (this._isShowingAll) {
-                    // All-wins phase done → wilds → individual lines → loop
-                    this._isShowingAll = false;
-                    if (this._wildSource) {
-                        console.log('[WPC] showAll done → wildStep (wildCount:', this._wildSource.wildCount, ')');
+                if (this._isShowingWilds) {
+                    // Wild step done → total (if lines) or loop wilds
+                    this._isShowingWilds = false;
+                    if (this._pendingLineWins.length > 0) {
+                        console.log('[WPC] wildStep done → allWins');
+                        this._presentAllWins();
+                    } else {
+                        console.log('[WPC] wildStep done → loop (no lines)');
+                        this._isFirstCycle = false;
                         this._presentWildStep();
-                    } else if (this._pendingLineWins.length > 0) {
+                    }
+                } else if (this._isShowingAll) {
+                    // All-wins phase done → individual lines
+                    this._isShowingAll = false;
+                    if (this._pendingLineWins.length > 0) {
                         console.log('[WPC] showAll done → line 0');
                         this._currentLineIndex = 0;
                         this._presentCurrentLine();
                     } else {
-                        console.log('[WPC] showAll done → loop (no wilds, no lines)');
-                        this._isFirstCycle = false;
-                        this._presentAllWins();
-                    }
-                } else if (this._isShowingWilds) {
-                    // Wild step done → individual lines, or loop back to total
-                    this._isShowingWilds = false;
-                    if (this._pendingLineWins.length > 0) {
-                        console.log('[WPC] wildStep done → line 0');
-                        this._currentLineIndex = 0;
-                        this._presentCurrentLine();
-                    } else {
-                        console.log('[WPC] wildStep done → loop (no lines)');
+                        console.log('[WPC] showAll done → loop');
                         this._isFirstCycle = false;
                         this._presentAllWins();
                     }
@@ -162,10 +161,14 @@ export class WinPresentationController {
                     console.log('[WPC] wildCelebration done (bonus entry)');
                     this._isWildCelebration = false;
                 } else {
-                    // Loop: show all wins again
-                    console.log('[WPC] line done → loop to allWins');
+                    // Loop: back to wilds (bonus) or all-wins (regular)
+                    console.log('[WPC] line done → loop');
                     this._isFirstCycle = false;
-                    this._presentAllWins();
+                    if (this._wildSource) {
+                        this._presentWildStep();
+                    } else {
+                        this._presentAllWins();
+                    }
                 }
             }
             return;
@@ -197,6 +200,7 @@ export class WinPresentationController {
         this._isShowingAll = false;
         this._isShowingWilds = false;
         this._isFirstCycle = true;
+        this._wildCycleCount = 0;
         this._isBonusPending = false;
         this._totalWin = 0;
         this._removeBonusDismissListeners();
@@ -213,41 +217,22 @@ export class WinPresentationController {
         this._isShowingAll = true;
 
         const allWinPositions = getWinPositions(this._pendingLineWins);
-
-        // Include wild positions so they animate in the "total" display
-        if (this._wildSource) {
-            for (let reel = 0; reel < REEL_COUNT; reel++) {
-                for (let row = 0; row < VISIBLE_ROWS; row++) {
-                    if (this._wildSource.grid[reel][row] === 'Wild_01.png') {
-                        allWinPositions.add(`${reel},${row}`);
-                    }
-                }
-            }
-        }
-
         const vfxFrames = getWinVfxFrames();
 
         for (let reel = 0; reel < REEL_COUNT; reel++) {
             const winRows = new Set<number>();
             const vfxRows = new Set<number>();
-            const goldRows = new Set<number>();
             for (let row = 0; row < VISIBLE_ROWS; row++) {
                 const key = `${reel},${row}`;
                 if (allWinPositions.has(key)) {
                     winRows.add(row);
                     vfxRows.add(row);
                 }
-                if (this._wildSource?.grid[reel][row] === 'Wild_01.png') {
-                    goldRows.add(row);
-                }
             }
-            this._reels[reel].setCelebration(winRows, vfxRows, this._vfxLayer, vfxFrames, goldRows);
+            this._reels[reel].setCelebration(winRows, vfxRows, this._vfxLayer, vfxFrames);
         }
 
         AudioManager.play('totalWin');
-        if (this._wildSource) {
-            AudioManager.play('bonusRoundAnnounce');
-        }
 
         this.onLinePresented?.({
             lineIndex: -1,
@@ -295,10 +280,14 @@ export class WinPresentationController {
             return;
         }
 
-        // Wrap around: loop back to all-wins (wilds are shown earlier in cycle)
+        // Wrap around: loop back to wilds (bonus) or all-wins (regular)
         if (nextIndex === 0) {
             this._isFirstCycle = false;
-            this._presentAllWins();
+            if (this._wildSource) {
+                this._presentWildStep();
+            } else {
+                this._presentAllWins();
+            }
             return;
         }
 
@@ -326,6 +315,11 @@ export class WinPresentationController {
         }
 
         AudioManager.play('wildWin');
+        const hasLines = this._pendingLineWins.length > 0;
+        if (hasLines || this._wildCycleCount % 2 === 0) {
+            AudioManager.play('bonusRoundAnnounce');
+        }
+        this._wildCycleCount++;
 
         const totalWin = this._chainSource?.winAmount ?? source.winAmount;
         this.onLinePresented?.({
