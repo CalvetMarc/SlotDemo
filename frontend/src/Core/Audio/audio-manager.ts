@@ -6,7 +6,6 @@ import {
   type AudioChannel,
   type SoundId,
 } from './audio-manifest';
-import { audioDebugLog } from '../Debug/audio-debug-overlay'; // TODO: remove
 
 const MUTE_STORAGE_KEY = 'slot_audio_muted';
 
@@ -262,7 +261,6 @@ class AudioManagerClass {
    * The new track is resumed from its previous position, or started fresh.
    */
   switchMusic(newKey: SoundId, fadeMs: number = 1000): void {
-    audioDebugLog(`switchMusic ${this._currentMusic} → ${newKey}`);
     const oldKey = this._currentMusic;
     if (oldKey === newKey) return;
 
@@ -296,7 +294,6 @@ class AudioManagerClass {
   /* ── Mute ───────────────────────────────────────────── */
 
   setMuted(muted: boolean): void {
-    audioDebugLog(`setMuted(${muted}) ctx=${Howler.ctx?.state} needsRecovery=${this._needsRecovery}`);
     this._isMuted = muted;
     // If audio was interrupted (iOS), recover fully — setMuted is called from user gesture
     if (this._needsRecovery) {
@@ -384,17 +381,14 @@ class AudioManagerClass {
     this._visibilityHandler = () => {
       if (document.hidden) {
         Howler.mute(true);
-        audioDebugLog(`HIDE music=${this._currentMusic} ctx=${Howler.ctx?.state}`);
       } else {
         const ctx = Howler.ctx;
         const state = ctx?.state ?? 'no-ctx';
-        audioDebugLog(`SHOW ctx=${state} music=${this._currentMusic} isMuted=${this._isMuted}`);
         Howler.mute(this._isMuted);
 
         if (state === 'suspended') {
           // Normal suspend (desktop or mobile without interruption) — just resume
           ctx!.resume().catch(() => {});
-          audioDebugLog('resumed suspended ctx');
         } else if (state === 'interrupted') {
           // iOS interrupted the context (video element was active) — needs nuclear recovery
           ctx!.resume().catch(() => {});
@@ -404,7 +398,6 @@ class AudioManagerClass {
           const howl = this._howls.get(this._currentMusic);
           const id = this._currentMusicInstanceId;
           const isPlaying = howl && id !== undefined && howl.playing(id);
-          audioDebugLog(`music check: playing=${isPlaying}`);
           if (!isPlaying) {
             this._startRecoverPoll();
           }
@@ -418,7 +411,6 @@ class AudioManagerClass {
   private _startRecoverPoll(): void {
     this._needsRecovery = true;
     this._installRecoverTouchHandler();
-    audioDebugLog('recovery: waiting for user gesture');
   }
 
   /**
@@ -429,7 +421,6 @@ class AudioManagerClass {
   private _installRecoverTouchHandler(): void {
     this._removeRecoverTouchHandler();
     this._recoverTouchHandler = () => {
-      audioDebugLog('recover: user gesture received');
       this._removeRecoverTouchHandler();
       this._recoverAudio();
     };
@@ -451,8 +442,6 @@ class AudioManagerClass {
    */
   private _recoverAudio(): void {
     this._needsRecovery = false;
-    audioDebugLog(`recover: creating new AudioContext`);
-
     const h = Howler as unknown as Record<string, unknown>;
 
     // 1. Close the old broken context
@@ -464,8 +453,6 @@ class AudioManagerClass {
     // 2. Create a brand new AudioContext (inside user gesture = guaranteed to work on iOS)
     const newCtx = new AudioContext();
     h.ctx = newCtx;
-    audioDebugLog(`recover: new ctx state=${newCtx.state}`);
-
     // 3. Create new masterGain connected to the new context
     const newGain = newCtx.createGain();
     newGain.gain.setValueAtTime(this._isMuted ? 0 : 1, newCtx.currentTime);
@@ -496,7 +483,6 @@ class AudioManagerClass {
       const newId = howl.play();
       howl.volume(vol, newId);
       this._currentMusicInstanceId = newId;
-      audioDebugLog(`recover: playing ${musicKey} id=${newId} vol=${vol}`);
     }
 
     // 7. Re-preload SFX in background
@@ -506,7 +492,6 @@ class AudioManagerClass {
     for (const key of sfxKeys) {
       this._getOrLoad(key);
     }
-    audioDebugLog(`recover: done, re-preloading ${sfxKeys.length} sfx`);
   }
 
   private _setupUnlockListener(): void {
