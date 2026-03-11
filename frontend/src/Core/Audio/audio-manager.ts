@@ -21,7 +21,6 @@ class AudioManagerClass {
   private _activeFades: Map<Howl, Map<number | undefined, ReturnType<typeof setInterval>>> = new Map();
   private _visibilityHandler?: () => void;
   private _unlockHandlers?: { handler: () => void; events: string[] };
-  private _recoverTimer?: ReturnType<typeof setInterval>;
   private _needsRecovery = false;
   private _recoverTouchHandler?: () => void;
 
@@ -66,7 +65,6 @@ class AudioManagerClass {
     this._currentMusicInstanceId = undefined;
     this._pendingActions.length = 0;
 
-    this._stopRecoverPoll();
     this._removeRecoverTouchHandler();
     if (this._visibilityHandler) {
       document.removeEventListener('visibilitychange', this._visibilityHandler);
@@ -385,7 +383,6 @@ class AudioManagerClass {
     }
     this._visibilityHandler = () => {
       if (document.hidden) {
-        this._stopRecoverPoll();
         Howler.mute(true);
         audioDebugLog(`HIDE music=${this._currentMusic} ctx=${Howler.ctx?.state}`);
       } else {
@@ -417,26 +414,11 @@ class AudioManagerClass {
     document.addEventListener('visibilitychange', this._visibilityHandler);
   }
 
-  /**
-   * Poll Howler.ctx.state after returning from background.
-   * iOS Safari may destroy and recreate the AudioContext, so we can't rely
-   * on statechange listeners (they're bound to the old, dead context).
-   * Instead, poll the current Howler.ctx until it's running, then recover audio.
-   */
+  /** Flag recovery needed and wait for user gesture to create a new AudioContext. */
   private _startRecoverPoll(): void {
-    this._stopRecoverPoll();
-    // Mark that we need recovery — the actual fix happens on user gesture
-    // because iOS requires a user gesture to create a working AudioContext
     this._needsRecovery = true;
     this._installRecoverTouchHandler();
     audioDebugLog('recovery: waiting for user gesture');
-  }
-
-  private _stopRecoverPoll(): void {
-    if (this._recoverTimer) {
-      clearInterval(this._recoverTimer);
-      this._recoverTimer = undefined;
-    }
   }
 
   /**
