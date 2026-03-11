@@ -392,10 +392,19 @@ class AudioManagerClass {
         const ctx = Howler.ctx;
         audioDebugLog(`SHOW ctx=${ctx?.state} music=${this._currentMusic} isMuted=${this._isMuted}`);
         Howler.mute(this._isMuted);
-        // Only trigger recovery when the AudioContext is broken (iOS Safari)
         if (ctx && ctx.state !== 'running') {
           ctx.resume().catch(() => {});
-          this._startRecoverPoll();
+        }
+        // Check if music that should be playing is actually playing.
+        // On desktop it will be; on iOS after interruption it won't.
+        if (this._currentMusic && !this._isMuted) {
+          const howl = this._howls.get(this._currentMusic);
+          const id = this._currentMusicInstanceId;
+          const isPlaying = howl && id !== undefined && howl.playing(id);
+          audioDebugLog(`music check: ${this._currentMusic} playing=${isPlaying}`);
+          if (!isPlaying) {
+            this._startRecoverPoll();
+          }
         }
       }
     };
