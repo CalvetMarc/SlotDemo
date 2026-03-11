@@ -389,14 +389,14 @@ class AudioManagerClass {
         Howler.mute(true);
         audioDebugLog(`HIDE music=${this._currentMusic} ctx=${Howler.ctx?.state}`);
       } else {
-        audioDebugLog(`SHOW ctx=${Howler.ctx?.state} music=${this._currentMusic} isMuted=${this._isMuted}`);
-        Howler.mute(this._isMuted);
-        // Try to resume, then poll until ctx is running and audio is recovered
         const ctx = Howler.ctx;
+        audioDebugLog(`SHOW ctx=${ctx?.state} music=${this._currentMusic} isMuted=${this._isMuted}`);
+        Howler.mute(this._isMuted);
+        // Only trigger recovery when the AudioContext is broken (iOS Safari)
         if (ctx && ctx.state !== 'running') {
           ctx.resume().catch(() => {});
+          this._startRecoverPoll();
         }
-        this._startRecoverPoll();
       }
     };
     document.addEventListener('visibilitychange', this._visibilityHandler);
