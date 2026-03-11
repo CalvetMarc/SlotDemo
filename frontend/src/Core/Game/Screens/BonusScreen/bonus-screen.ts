@@ -144,9 +144,9 @@ export class BonusScreen extends GameScreen {
 
         this._winCounter?.showGameOver(this._totalBonusWin);
 
-        // Apply the server-credited balance and store bonus win for animation
+        // Store bonus win and balance for celebration — balance applied after big win animation
         GameModel.setPendingBonusWin(this._totalBonusWin);
-        GameModel.setBalance(this._pendingBalance);
+        GameModel.setPendingBonusBalance(this._pendingBalance);
 
         // Wait then transition back to base
         this._endBonusTimeout = setTimeout(() => {

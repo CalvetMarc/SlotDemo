@@ -43,6 +43,7 @@ export class SlotMachineView extends View {
     private _waitingForCelebration = false;
     private _pendingBonusCelebration = -1;
     private _bonusEntryResult: SpinResultWithWins | null = null;
+    private _debugBonusBalance = -1;
     private _bonusCelebrationTimeout?: ReturnType<typeof setTimeout>;
     private _bonusAdvanceTimeout?: ReturnType<typeof setTimeout>;
 
@@ -97,6 +98,7 @@ export class SlotMachineView extends View {
         this._spinController.onSpinStarting = () => {
             this._clearAll();
             for (const reel of this._reels) reel.setDim(false);
+            GameModel.setBalance(GameModel.balance - GameModel.betAmount);
         };
         this._spinController.onAllReelsStopped = (result, isTension) => {
             this._onAllReelsStopped(result, isTension);
@@ -196,11 +198,14 @@ export class SlotMachineView extends View {
                     const bet = this._spinController.getBetAmount();
                     // Simulate balance: deduct bet, add win
                     forced.balance = GameModel.balance - bet + forced.winAmount;
-                    // Debug bonus spins bypass the server spin, so set up bonus on server via buy
+                    // Debug bonus spins bypass the server spin, so set up bonus on server via buy.
+                    // Store simulated balance so returning from bonus uses it instead of
+                    // the server balance (buy deducts 89×bet which diverges from client).
                     if (forced.bonusTriggered) {
                         try {
                             await ApiClient.post('/api/bonus/buy', { betAmount: bet, tier: 1 });
                         } catch { /* balance may be insufficient — bonus screen will handle */ }
+                        this._debugBonusBalance = forced.balance;
                     }
                     this._spinController.setForcedResult(forced);
                     this._spinController.startSpin().catch(err => console.error('[DebugSpin] failed:', err));
@@ -278,6 +283,11 @@ export class SlotMachineView extends View {
             this._clearAll();
             const bonusWin = GameModel.pendingBonusWin;
             GameModel.setPendingBonusWin(0);
+            // Debug spins use simulated balance — override server balance
+            if (this._debugBonusBalance >= 0) {
+                GameModel.setPendingBonusBalance(this._debugBonusBalance + bonusWin);
+                this._debugBonusBalance = -1;
+            }
             console.log('[BaseTransition]', { bonusWin });
             this._pendingBonusCelebration = bonusWin;
         });
@@ -447,10 +457,20 @@ export class SlotMachineView extends View {
         const bet = GameModel.betAmount;
         this._bonusEntryResult = null;
 
-        console.log('[BonusCelebration]', { bonusWin });
+        const pendingBalance = GameModel.pendingBonusBalance;
+        GameModel.setPendingBonusBalance(-1);
+
+        console.log('[BonusCelebration]', { bonusWin, pendingBalance });
+
+        const applyBalance = (): void => {
+            if (pendingBalance >= 0) {
+                GameModel.setBalance(pendingBalance);
+            }
+        };
 
         if (bonusWin <= 0) {
-            // No bonus prizes collected (skull on first chest) — skip celebration
+            // No bonus prizes collected (skull on first chest) — apply balance and skip celebration
+            applyBalance();
             if (GameModel.autoSpinRemaining > 0) {
                 this._fireNextAutoSpin();
             }
@@ -474,10 +494,12 @@ export class SlotMachineView extends View {
         if (isBigWin(bonusWin, bet)) {
             this._bigWinView.show(bonusWin, bet, false);
             this._bigWinView.onComplete = () => {
+                applyBalance();
                 this._bigWinView.hide();
                 showTotalAndAdvance();
             };
         } else {
+            applyBalance();
             showTotalAndAdvance();
         }
     }

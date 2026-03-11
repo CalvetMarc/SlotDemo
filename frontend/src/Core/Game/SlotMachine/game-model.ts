@@ -21,6 +21,7 @@ class GameModelClass {
     private _autoSpinRemaining = 0;
     private _lastResult: SpinResultWithWins | null = null;
     private _pendingBonusWin = 0;
+    private _pendingBonusBalance = -1;
 
     // ── Own signals ───────────────────────────────────────────────
     readonly balanceChanged = new Signal<{ value: number }>();
@@ -41,6 +42,7 @@ class GameModelClass {
     get autoSpinRemaining(): number { return this._autoSpinRemaining; }
     get lastResult(): SpinResultWithWins | null { return this._lastResult; }
     get pendingBonusWin(): number { return this._pendingBonusWin; }
+    get pendingBonusBalance(): number { return this._pendingBonusBalance; }
     get isMinBet(): boolean { return this._betIndex <= 0; }
     get isMaxBet(): boolean { return this._betIndex >= BET_STEPS.length - 1; }
 
@@ -93,6 +95,10 @@ class GameModelClass {
 
     setPendingBonusWin(value: number): void {
         this._pendingBonusWin = value;
+    }
+
+    setPendingBonusBalance(value: number): void {
+        this._pendingBonusBalance = value;
     }
 }
 
