@@ -496,6 +496,7 @@ export class InfoPanelView extends Container {
         this._scrollContent.addChild(bg);
 
         // ── Place sprites in 4-column grid (centered in each cell) ─
+        const symbolsSheet: Spritesheet | undefined = Assets.get('symbols_static');
         for (let i = 0; i < PAYTABLE_FRAMES.length; i++) {
             const col = i % cols;
             const row = Math.floor(i / cols);
@@ -503,10 +504,17 @@ export class InfoPanelView extends Container {
             const cellY = titleBottomY + pad + row * (cellH + rowGap);
             const frame = PAYTABLE_FRAMES[i];
 
-            if (sheet?.textures[frame]) {
-                const sprite = new Sprite(sheet.textures[frame]);
+            // Wild uses the in-game symbol sprite instead of the paytable asset
+            const isWild = frame === 'Wild_pay.png';
+            const tex = isWild
+                ? symbolsSheet?.textures['Wild_01.png']
+                : sheet?.textures[frame];
+
+            if (tex) {
+                const sprite = new Sprite(tex);
                 sprite.anchor.set(0.5);
-                sprite.scale.set(uniformScale);
+                const spriteScale = isWild ? colW / tex.width : uniformScale;
+                sprite.scale.set(spriteScale);
                 sprite.position.set(cellX + colW / 2, cellY + cellH / 2);
                 this._scrollContent.addChild(sprite);
             }
