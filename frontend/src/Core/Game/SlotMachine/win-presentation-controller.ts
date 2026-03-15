@@ -246,7 +246,7 @@ export class WinPresentationController {
                     vfxRows.add(row);
                 }
             }
-            this._reels[reel].setCelebration(winRows, vfxRows, this._vfxLayer, vfxFrames);
+            this._reels[reel].setCelebration(winRows, vfxRows, this._vfxLayer, vfxFrames, undefined, this._skipScreens);
         }
 
         AudioManager.play('totalWin');
@@ -276,7 +276,7 @@ export class WinPresentationController {
                 if (winPositions.has(key)) winRows.add(row);
                 if (fullPositions.has(key)) vfxRows.add(row);
             }
-            this._reels[reel].setCelebration(winRows, vfxRows, this._vfxLayer, vfxFrames);
+            this._reels[reel].setCelebration(winRows, vfxRows, this._vfxLayer, vfxFrames, undefined, this._skipScreens);
         }
 
         AudioManager.play('normalWin');

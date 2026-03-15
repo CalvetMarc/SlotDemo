@@ -370,9 +370,9 @@ export class SymbolView {
         }
     }
 
-    /** Whether this view has an active win animation (pulse). */
+    /** Whether this view has active work (win animation or VFX). */
     get hasAnimation(): boolean {
-        return this._isWinning;
+        return this._isWinning || this._vfxSprite !== undefined;
     }
 
     /** Remove all overlays, restore static sprite, remove dim filter. */

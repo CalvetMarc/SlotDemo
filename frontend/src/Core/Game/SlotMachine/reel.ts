@@ -337,7 +337,7 @@ export class Reel extends Container {
     // ── Celebration ─────────────────────────────────────────────
 
     /** Set up celebration visuals for this reel's symbols. */
-    setCelebration(winRows: Set<number>, vfxRows: Set<number>, vfxLayer: Container, vfxFrames: Texture[], goldRows?: Set<number> | boolean): void {
+    setCelebration(winRows: Set<number>, vfxRows: Set<number>, vfxLayer: Container, vfxFrames: Texture[], goldRows?: Set<number> | boolean, vfxOnly = false): void {
         const allGold = goldRows === true;
         const goldSet = goldRows instanceof Set ? goldRows : undefined;
         for (let row = 0; row < VISIBLE_ROWS; row++) {
@@ -347,7 +347,7 @@ export class Reel extends Container {
             sv.reset(this.index, row, symbolId, sprite);
 
             if (winRows.has(row)) {
-                sv.showWinAnimation(this);
+                if (!vfxOnly) sv.showWinAnimation(this);
             } else {
                 sv.dim(this._celebrationDimFilter);
             }
