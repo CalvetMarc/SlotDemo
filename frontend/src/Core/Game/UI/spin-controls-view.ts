@@ -11,6 +11,7 @@ export class SpinControlsView extends View {
     private autoButton!: AutoSpinButtonView;
     private turboButton!: TurboButtonView;
     private _pickerContainer!: Container;
+    private _turboPickerContainer!: Container;
     private _unsubSpinning?: () => void;
     private _unsubRemaining?: () => void;
 
@@ -47,6 +48,11 @@ export class SpinControlsView extends View {
         this._pickerContainer = this.autoButton.getPickerContainer();
         this._pickerContainer.position.set(this.autoButton.x, -35);
         this.addChild(this._pickerContainer);
+
+        // Turbo picker (positioned at turbo button's x)
+        this._turboPickerContainer = this.turboButton.getPickerContainer();
+        this._turboPickerContainer.position.set(this.turboButton.x, -35);
+        this.addChild(this._turboPickerContainer);
 
         // Toggle stop icon based on spinning + autoplay state
         this._unsubSpinning = GameModel.spinningChanged.connect(({ isSpinning }) => {

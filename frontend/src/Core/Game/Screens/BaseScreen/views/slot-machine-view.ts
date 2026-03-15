@@ -370,6 +370,11 @@ export class SlotMachineView extends View {
             this._winController.singleCycle = true;
         }
 
+        // Skip screens: only show total win, no individual lines or looping
+        if (GameModel.isTurbo && GameModel.isSkipScreens && !result.bonusTriggered) {
+            this._winController.skipScreens = true;
+        }
+
         if (shouldCelebrate && !isTension) {
             const hasWilds = this._reels.some(r => r.hasWildPops);
             const WIN_REVEAL_PAUSE = 100;

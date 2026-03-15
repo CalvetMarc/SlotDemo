@@ -18,6 +18,7 @@ class GameModelClass {
     private _isSpinning = false;
     private _isTurbo = false;
     private _isAutoSpin = false;
+    private _isSkipScreens = false;
     private _autoSpinRemaining = 0;
     private _lastResult: SpinResultWithWins | null = null;
     private _pendingBonusWin = 0;
@@ -29,6 +30,7 @@ class GameModelClass {
     readonly spinningChanged = new Signal<{ isSpinning: boolean }>();
     readonly turboChanged = new Signal<{ active: boolean }>();
     readonly autoSpinChanged = new Signal<{ active: boolean }>();
+    readonly skipScreensChanged = new Signal<{ active: boolean }>();
     readonly autoSpinRemainingChanged = new Signal<{ count: number }>();
 
     // ── Getters ───────────────────────────────────────────────────
@@ -39,6 +41,7 @@ class GameModelClass {
     get isSpinning(): boolean { return this._isSpinning; }
     get isTurbo(): boolean { return this._isTurbo; }
     get isAutoSpin(): boolean { return this._isAutoSpin; }
+    get isSkipScreens(): boolean { return this._isSkipScreens; }
     get autoSpinRemaining(): number { return this._autoSpinRemaining; }
     get lastResult(): SpinResultWithWins | null { return this._lastResult; }
     get pendingBonusWin(): number { return this._pendingBonusWin; }
@@ -82,6 +85,11 @@ class GameModelClass {
     setAutoSpin(active: boolean): void {
         this._isAutoSpin = active;
         this.autoSpinChanged.emit({ active });
+    }
+
+    setSkipScreens(active: boolean): void {
+        this._isSkipScreens = active;
+        this.skipScreensChanged.emit({ active });
     }
 
     setAutoSpinRemaining(count: number): void {

@@ -16,6 +16,7 @@ export class MobileControlsPanelView extends View {
     private menuButton!: MenuButtonView;
     private audioButton!: AudioButtonView;
     private _pickerContainer!: Container;
+    private _turboPickerContainer!: Container;
     private _unsubSpinning?: () => void;
     private _unsubRemaining?: () => void;
 
@@ -57,6 +58,12 @@ export class MobileControlsPanelView extends View {
         this._pickerContainer.scale.set(1.7);
         this._pickerContainer.position.set(cx - spacing, topY - 40);
         this.addChild(this._pickerContainer);
+
+        // Turbo picker positioned above turbo button
+        this._turboPickerContainer = this.turboButton.getPickerContainer();
+        this._turboPickerContainer.scale.set(1.7);
+        this._turboPickerContainer.position.set(cx + spacing, topY - 40);
+        this.addChild(this._turboPickerContainer);
 
         // Separator line
         const separator = new Graphics();

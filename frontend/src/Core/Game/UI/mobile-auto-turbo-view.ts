@@ -12,6 +12,7 @@ export class MobileAutoTurboView extends View {
     private autoButton!: AutoSpinButtonView;
     private turboButton!: TurboButtonView;
     private _pickerContainer!: Container;
+    private _turboPickerContainer!: Container;
     private _unsubSpinning?: () => void;
     private _unsubRemaining?: () => void;
 
@@ -46,6 +47,12 @@ export class MobileAutoTurboView extends View {
         this._pickerContainer.scale.set(1 / 0.6);
         this._pickerContainer.position.set(-27, -40);
         this.addChild(this._pickerContainer);
+
+        // Turbo picker positioned above turbo button
+        this._turboPickerContainer = this.turboButton.getPickerContainer();
+        this._turboPickerContainer.scale.set(1 / 0.6);
+        this._turboPickerContainer.position.set(27, -40);
+        this.addChild(this._turboPickerContainer);
 
         this._unsubSpinning = GameModel.spinningChanged.connect(({ isSpinning }) => {
             if (isSpinning) {

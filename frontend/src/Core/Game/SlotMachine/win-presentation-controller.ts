@@ -34,6 +34,7 @@ export class WinPresentationController {
 
     private _isBonusPending = false;
     private _singleCycle = false;
+    private _skipScreens = false;
     private _isWildCelebration = false;
     private _wildSource: SpinResultWithWins | null = null;
     private _chainSource: SpinResultWithWins | null = null;
@@ -94,6 +95,10 @@ export class WinPresentationController {
         this._singleCycle = value;
     }
 
+    set skipScreens(value: boolean) {
+        this._skipScreens = value;
+    }
+
     show(result: SpinResultWithWins, wildResult?: SpinResultWithWins): void {
         console.log('[WPC.show] guard:', { celebrating: this._reels[0].isCelebrating, idle: this._reels[0].isIdle });
         if (this._reels[0].isCelebrating || !this._reels[0].isIdle) {
@@ -111,7 +116,13 @@ export class WinPresentationController {
         this._wildSource = (wildResult && wildResult.wildCount >= 3) ? wildResult : null;
         this._chainSource = this._wildSource ? result : null;
 
-        if (this._wildSource) {
+        if (this._skipScreens) {
+            // Skip screens: show total win (same visuals), then auto-clear — no wild step or line cycling
+            if (this._pendingLineWins.length > 0) {
+                this._presentAllWins();
+            }
+            return;
+        } else if (this._wildSource) {
             this._presentWildStep();
         } else if (this._pendingLineWins.length > 0) {
             this._presentAllWins();
@@ -138,9 +149,14 @@ export class WinPresentationController {
                         this._presentWildStep();
                     }
                 } else if (this._isShowingAll) {
-                    // All-wins phase done → individual lines
+                    // All-wins phase done
                     this._isShowingAll = false;
-                    if (this._pendingLineWins.length > 0) {
+                    if (this._skipScreens) {
+                        // Skip screens: VFX played, total shown — done
+                        console.log('[WPC] showAll done → skipScreens clear');
+                        this.clear();
+                        return;
+                    } else if (this._pendingLineWins.length > 0) {
                         console.log('[WPC] showAll done → line 0');
                         this._currentLineIndex = 0;
                         this._presentCurrentLine();
@@ -196,6 +212,7 @@ export class WinPresentationController {
         this._currentLineIndex = 0;
         this._linePauseElapsed = -1;
         this._singleCycle = false;
+        this._skipScreens = false;
         this._isWildCelebration = false;
         this._isShowingAll = false;
         this._isShowingWilds = false;
