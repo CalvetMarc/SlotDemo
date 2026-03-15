@@ -1,12 +1,5 @@
 import { SYMBOL_IDS, REEL_COUNT, VISIBLE_ROWS } from '../../../shared/types.js';
 import type { SymbolId, LineWin } from '../../../shared/types.js';
-import { createPcgRng, type PcgRng } from './pcg-rng.js';
-
-let rng: PcgRng;
-
-export function initSpinRng(): void {
-    rng = createPcgRng();
-}
 
 const WILD: SymbolId = 'Wild_01.png';
 
@@ -166,7 +159,7 @@ export function generateSpin(totalBet: number): SpinServiceResult {
 
     for (let r = 0; r < REEL_COUNT; r++) {
         const strip = REEL_STRIPS[r];
-        const stopIndex = Math.floor(rng.random() * strip.length);
+        const stopIndex = Math.floor(Math.random() * strip.length);
         const column: SymbolId[] = [];
 
         for (let row = 0; row < VISIBLE_ROWS; row++) {
@@ -216,7 +209,7 @@ function generateConstrainedGrid(wildCount: number): SymbolId[][] {
     // Reel 0: random non-wild symbols
     const col0: SymbolId[] = [];
     for (let row = 0; row < VISIBLE_ROWS; row++) {
-        col0.push(NON_WILD_SYMBOLS[Math.floor(rng.random() * NON_WILD_SYMBOLS.length)]);
+        col0.push(NON_WILD_SYMBOLS[Math.floor(Math.random() * NON_WILD_SYMBOLS.length)]);
     }
     grid.push(col0);
 
@@ -225,7 +218,7 @@ function generateConstrainedGrid(wildCount: number): SymbolId[][] {
     for (let row = 0; row < VISIBLE_ROWS; row++) {
         let sym: SymbolId;
         do {
-            sym = NON_WILD_SYMBOLS[Math.floor(rng.random() * NON_WILD_SYMBOLS.length)];
+            sym = NON_WILD_SYMBOLS[Math.floor(Math.random() * NON_WILD_SYMBOLS.length)];
         } while (sym === col0[row]);
         col1.push(sym);
     }
@@ -235,7 +228,7 @@ function generateConstrainedGrid(wildCount: number): SymbolId[][] {
     for (let r = 2; r < REEL_COUNT; r++) {
         const column: SymbolId[] = [];
         for (let row = 0; row < VISIBLE_ROWS; row++) {
-            column.push(NON_WILD_SYMBOLS[Math.floor(rng.random() * NON_WILD_SYMBOLS.length)]);
+            column.push(NON_WILD_SYMBOLS[Math.floor(Math.random() * NON_WILD_SYMBOLS.length)]);
         }
         grid.push(column);
     }
@@ -243,13 +236,13 @@ function generateConstrainedGrid(wildCount: number): SymbolId[][] {
     // Place wilds (shuffled reels, max 1 per reel)
     const reels = [0, 1, 2, 3, 4];
     for (let i = reels.length - 1; i > 0; i--) {
-        const j = Math.floor(rng.random() * (i + 1));
+        const j = Math.floor(Math.random() * (i + 1));
         [reels[i], reels[j]] = [reels[j], reels[i]];
     }
 
     for (let i = 0; i < wildCount; i++) {
         const r = reels[i];
-        const row = Math.floor(rng.random() * VISIBLE_ROWS);
+        const row = Math.floor(Math.random() * VISIBLE_ROWS);
         grid[r][row] = WILD;
     }
 

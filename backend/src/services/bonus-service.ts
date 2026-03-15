@@ -1,11 +1,3 @@
-import { createPcgRng, type PcgRng } from './pcg-rng.js';
-
-let rng: PcgRng;
-
-export function initBonusRng(): void {
-    rng = createPcgRng();
-}
-
 export interface BonusSequenceResult {
     sequence: (number | null)[];
     totalBonusWin: number;
@@ -22,7 +14,7 @@ const EMPTY_COUNTS = [2, 1, 0]; // skulls per tier
 
 function shuffle<T>(arr: T[]): T[] {
     for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(rng.random() * (i + 1));
+        const j = Math.floor(Math.random() * (i + 1));
         [arr[i], arr[j]] = [arr[j], arr[i]];
     }
     return arr;

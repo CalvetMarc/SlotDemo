@@ -1,8 +1,5 @@
 import app from './app.js';
 import { sql } from './db.js';
-import { initPcgRng } from './services/pcg-rng.js';
-import { initSpinRng } from './services/spin-service.js';
-import { initBonusRng } from './services/bonus-service.js';
 
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
 
@@ -27,10 +24,8 @@ async function ensureSchema(): Promise<void> {
     `;
 }
 
-Promise.all([ensureSchema(), initPcgRng()])
+ensureSchema()
     .then(() => {
-        initSpinRng();
-        initBonusRng();
         app.listen(PORT, () => {
             console.log(`Backend running on http://localhost:${PORT}`);
         });
