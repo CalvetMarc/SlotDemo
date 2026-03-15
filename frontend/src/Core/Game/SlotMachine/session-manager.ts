@@ -1,5 +1,6 @@
 import type { StartResponse, SymbolId } from '@shared/types';
 import { GameModel } from './game-model';
+import { ConnectionIndicator } from '../../Debug/connection-indicator';
 
 const API_URL = import.meta.env.VITE_API_URL ?? `http://${window.location.hostname}:3000`;
 const STORAGE_KEY = 'slot_jwt';
@@ -19,6 +20,7 @@ class SessionManagerClass {
 
         if (!res.ok) {
             console.error('Failed to create session');
+            ConnectionIndicator.set('offline');
             return;
         }
 
@@ -28,6 +30,7 @@ class SessionManagerClass {
 
         localStorage.setItem(STORAGE_KEY, data.token);
         GameModel.setBalance(data.balance);
+        ConnectionIndicator.set('online');
     }
 
     getToken(): string {
