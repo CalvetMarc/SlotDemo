@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch --env-file=.env src/index.ts",
-    "build": "tsc && cp -r src/wasm dist/backend/src/",
+    "build": "tsc",
     "start": "node dist/backend/src/index.js"
   },
   "dependencies": {
