@@ -200,7 +200,7 @@ TOTAL_BET = 1  # normalised
 
 with tqdm(total=NUM_SPINS, desc="Spinning", ncols=100) as pbar:
     for spin in range(NUM_SPINS):
-        # Random reel stops -> build 5x3 grid
+        # Random reel stops -> build 3x5 grid
         grid = []
         wild_count = 0
         for r in range(N_REELS):
